@@ -55,12 +55,20 @@ export const ordersService = {
   },
 
   async listOrders(): Promise<Order[]> {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    return data || [];
+      if (error) {
+        console.error('[ordersService.listOrders]', error.message);
+        return [];
+      }
+      return data || [];
+    } catch (error) {
+      console.error('[ordersService.listOrders]', error);
+      return [];
+    }
   },
 };

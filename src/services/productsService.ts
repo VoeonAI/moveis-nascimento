@@ -22,68 +22,92 @@ export interface ProductsFilter {
 
 export const productsService = {
   async listPublicProducts(filter?: ProductsFilter): Promise<Product[]> {
-    let query = supabase
-      .from('products')
-      .select(`
-        *,
-        product_categories (
-          categories (*)
-        )
-      `)
-      .eq('active', true)
-      .order('created_at', { ascending: false });
+    try {
+      let query = supabase
+        .from('products')
+        .select(`
+          *,
+          product_categories (
+            categories (*)
+          )
+        `)
+        .eq('active', true)
+        .order('created_at', { ascending: false });
 
-    // Filter by category slug
-    if (filter?.categorySlug) {
-      query = query.contains('product_categories.categories.slug', filter.categorySlug);
+      // Filter by category slug
+      if (filter?.categorySlug) {
+        query = query.contains('product_categories.categories.slug', filter.categorySlug);
+      }
+
+      // Filter by search query (name or description)
+      if (filter?.q) {
+        query = query.or(`name.ilike.%${filter.q}%,description.ilike.%${filter.q}%`);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('[productsService.listPublicProducts]', error.message);
+        return [];
+      }
+
+      // Transform data to include categories array
+      return (data || []).map(product => ({
+        ...product,
+        categories: product.product_categories?.map((pc: any) => pc.categories) || [],
+      }));
+    } catch (error) {
+      console.error('[productsService.listPublicProducts]', error);
+      return [];
     }
-
-    // Filter by search query (name or description)
-    if (filter?.q) {
-      query = query.or(`name.ilike.%${filter.q}%,description.ilike.%${filter.q}%`);
-    }
-
-    const { data, error } = await query;
-
-    if (error) throw error;
-
-    // Transform data to include categories array
-    return (data || []).map(product => ({
-      ...product,
-      categories: product.product_categories?.map((pc: any) => pc.categories) || [],
-    }));
   },
 
   async getProductById(id: string): Promise<Product | null> {
-    const { data, error } = await supabase
-      .from('products')
-      .select(`
-        *,
-        product_categories (
-          categories (*)
-        )
-      `)
-      .eq('id', id)
-      .eq('active', true)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          product_categories (
+            categories (*)
+          )
+        `)
+        .eq('id', id)
+        .eq('active', true)
+        .single();
 
-    if (error) throw error;
-    if (!data) return null;
+      if (error) {
+        console.error('[productsService.getProductById]', error.message);
+        return null;
+      }
+      if (!data) return null;
 
-    return {
-      ...data,
-      categories: data.product_categories?.map((pc: any) => pc.categories) || [],
-    };
+      return {
+        ...data,
+        categories: data.product_categories?.map((pc: any) => pc.categories) || [],
+      };
+    } catch (error) {
+      console.error('[productsService.getProductById]', error);
+      return null;
+    }
   },
 
   async listAllProducts(): Promise<Product[]> {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    return data || [];
+      if (error) {
+        console.error('[productsService.listAllProducts]', error.message);
+        return [];
+      }
+      return data || [];
+    } catch (error) {
+      console.error('[productsService.listAllProducts]', error);
+      return [];
+    }
   },
 
   async createProduct(product: Omit<Product, 'id' | 'created_at'>): Promise<Product> {

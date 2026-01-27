@@ -9,13 +9,21 @@ export interface Category {
 
 export const categoriesService = {
   async listCategories(): Promise<Category[]> {
-    const { data, error } = await supabase
-      .from('categories')
-      .select('*')
-      .order('name', { ascending: true });
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name', { ascending: true });
 
-    if (error) throw error;
-    return data || [];
+      if (error) {
+        console.error('[categoriesService.listCategories]', error.message);
+        return [];
+      }
+      return data || [];
+    } catch (error) {
+      console.error('[categoriesService.listCategories]', error);
+      return [];
+    }
   },
 
   async upsertCategory(category: Partial<Category> & { name: string; slug: string }): Promise<Category> {
@@ -61,12 +69,20 @@ export const categoriesService = {
   },
 
   async getProductCategories(productId: string): Promise<Category[]> {
-    const { data, error } = await supabase
-      .from('product_categories')
-      .select('categories(*)')
-      .eq('product_id', productId);
+    try {
+      const { data, error } = await supabase
+        .from('product_categories')
+        .select('categories(*)')
+        .eq('product_id', productId);
 
-    if (error) throw error;
-    return data?.map(pc => pc.categories as Category) || [];
+      if (error) {
+        console.error('[categoriesService.getProductCategories]', error.message);
+        return [];
+      }
+      return data?.map(pc => pc.categories as Category) || [];
+    } catch (error) {
+      console.error('[categoriesService.getProductCategories]', error);
+      return [];
+    }
   },
 };

@@ -11,9 +11,12 @@ import {
   ArrowRightLeft,
   Menu,
   X,
-  LogOut
+  LogOut,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const sidebarItems = [
   { 
@@ -55,7 +58,7 @@ const sidebarItems = [
 ];
 
 const AppShell = () => {
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, profileLoading } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -87,52 +90,91 @@ const AppShell = () => {
               <h1 className="text-xl font-bold text-gray-900">Painel Interno</h1>
             </div>
 
+            {/* Role Warning */}
+            {!profileLoading && !profile && (
+              <div className="p-4">
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    Role não configurada para este usuário. Contate um administrador.
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
+
             {/* Navigation */}
             <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-              {sidebarItems.map((item) => (
-                <PermissionGate
-                  key={item.path}
-                  allowedRoles={item.roles}
-                >
-                  <Link
-                    to={item.path}
-                    onClick={() => setSidebarOpen(false)}
-                    className={`
-                      flex items-center gap-3 px-4 py-3 rounded-lg
-                      transition-colors
-                      ${location.pathname === item.path
-                        ? 'bg-blue-50 text-blue-600'
-                        : 'text-gray-700 hover:bg-gray-100'
-                      }
-                    `}
+              {profileLoading ? (
+                // Skeleton while loading profile
+                Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))
+              ) : (
+                // Render menu items filtered by role
+                sidebarItems.map((item) => (
+                  <PermissionGate
+                    key={item.path}
+                    allowedRoles={item.roles}
+                    fallback={null}
                   >
-                    <item.icon size={18} />
-                    <span>{item.label}</span>
-                  </Link>
-                </PermissionGate>
-              ))}
+                    <Link
+                      to={item.path}
+                      onClick={() => setSidebarOpen(false)}
+                      className={`
+                        flex items-center gap-3 px-4 py-3 rounded-lg
+                        transition-colors
+                        ${location.pathname === item.path
+                          ? 'bg-blue-50 text-blue-600'
+                          : 'text-gray-700 hover:bg-gray-100'
+                        }
+                      `}
+                    >
+                      <item.icon size={18} />
+                      <span>{item.label}</span>
+                    </Link>
+                  </PermissionGate>
+                ))
+              )}
+              
+              {/* Placeholder when no role */}
+              {!profileLoading && !profile && (
+                <div className="px-4 py-3 text-sm text-gray-500 italic">
+                  Nenhum menu disponível
+                </div>
+              )}
             </nav>
 
             {/* User Info */}
             <div className="p-4 border-t">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                  {profile?.email?.[0]?.toUpperCase() || '?'}
+              {profileLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{profile?.email}</p>
-                  <p className="text-xs text-gray-500 capitalize">{profile?.role}</p>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={signOut}
-              >
-                <LogOut size={16} className="mr-2" />
-                Sair
-              </Button>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                      {profile?.email?.[0]?.toUpperCase() || '?'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{profile?.email}</p>
+                      <p className="text-xs text-gray-500 capitalize">
+                        {profile?.role || 'Sem role'}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={signOut}
+                  >
+                    <LogOut size={16} className="mr-2" />
+                    Sair
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </aside>

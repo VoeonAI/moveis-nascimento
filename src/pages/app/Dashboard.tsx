@@ -4,13 +4,19 @@ import { LayoutDashboard, Users, ArrowRightLeft, Package } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const Dashboard = () => {
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [metrics, setMetrics] = useState<DashboardMetrics>({
+    totalActiveProducts: 0,
+    leadsByStatus: {},
+    ordersByStage: {},
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     dashboardService.getMetrics()
       .then(setMetrics)
-      .catch(console.error)
+      .catch(() => {
+        // Keep default values on error
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -29,6 +35,9 @@ const Dashboard = () => {
     );
   }
 
+  const totalLeads = Object.values(metrics.leadsByStatus).reduce((a, b) => a + b, 0);
+  const totalOrders = Object.values(metrics.ordersByStage).reduce((a, b) => a + b, 0);
+
   return (
     <div className="p-8">
       <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
@@ -41,7 +50,7 @@ const Dashboard = () => {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics?.totalActiveProducts || 0}</div>
+            <div className="text-2xl font-bold">{metrics.totalActiveProducts}</div>
           </CardContent>
         </Card>
 
@@ -51,9 +60,7 @@ const Dashboard = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {Object.values(metrics?.leadsByStatus || {}).reduce((a, b) => a + b, 0)}
-            </div>
+            <div className="text-2xl font-bold">{totalLeads}</div>
           </CardContent>
         </Card>
 
@@ -63,9 +70,7 @@ const Dashboard = () => {
             <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {Object.values(metrics?.ordersByStage || {}).reduce((a, b) => a + b, 0)}
-            </div>
+            <div className="text-2xl font-bold">{totalOrders}</div>
           </CardContent>
         </Card>
       </div>
@@ -78,13 +83,13 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {Object.entries(metrics?.leadsByStatus || {}).map(([status, count]) => (
+              {Object.entries(metrics.leadsByStatus).map(([status, count]) => (
                 <div key={status} className="flex justify-between items-center">
                   <span className="text-sm capitalize">{status.replace(/_/g, ' ')}</span>
                   <span className="font-semibold">{count}</span>
                 </div>
               ))}
-              {Object.keys(metrics?.leadsByStatus || {}).length === 0 && (
+              {Object.keys(metrics.leadsByStatus).length === 0 && (
                 <p className="text-sm text-gray-500">Nenhum lead ainda</p>
               )}
             </div>
@@ -97,13 +102,13 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {Object.entries(metrics?.ordersByStage || {}).map(([stage, count]) => (
+              {Object.entries(metrics.ordersByStage).map(([stage, count]) => (
                 <div key={stage} className="flex justify-between items-center">
                   <span className="text-sm capitalize">{stage.replace(/_/g, ' ')}</span>
                   <span className="font-semibold">{count}</span>
                 </div>
               ))}
-              {Object.keys(metrics?.ordersByStage || {}).length === 0 && (
+              {Object.keys(metrics.ordersByStage).length === 0 && (
                 <p className="text-sm text-gray-500">Nenhum pedido ainda</p>
               )}
             </div>

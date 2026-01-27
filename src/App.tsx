@@ -2,12 +2,21 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/core/auth/AuthProvider";
+import { RouteGuard } from "@/core/guards/RouteGuard";
+import { PermissionGate } from "@/core/guards/PermissionGate";
+import { Role } from "@/constants/domain";
 import Index from "./pages/Index";
 import ProductDetail from "./pages/ProductDetail";
 import Login from "./pages/app/Login";
+import AppShell from "./components/layout/AppShell";
+import Dashboard from "./pages/app/Dashboard";
+import Catalog from "./pages/app/Catalog";
+import CRM from "./pages/app/CRM";
 import Pipeline from "./pages/app/Pipeline";
+import Users from "./pages/app/Users";
+import Settings from "./pages/app/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,12 +31,60 @@ const App = () => (
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Index />} />
-            <Route path="/catalog" element={<Index />} /> {/* Alias for now */}
+            <Route path="/catalog" element={<Index />} />
             <Route path="/product/:id" element={<ProductDetail />} />
             
             {/* Internal Routes */}
             <Route path="/app/login" element={<Login />} />
-            <Route path="/app/pipeline" element={<Pipeline />} />
+            
+            {/* Protected Routes with AppShell */}
+            <Route
+              path="/app/*"
+              element={
+                <RouteGuard>
+                  <AppShell />
+                </RouteGuard>
+              }
+            >
+              <Route path="dashboard" element={
+                <PermissionGate allowedRoles={[Role.MASTER, Role.GESTOR]}>
+                  <Dashboard />
+                </PermissionGate>
+              } />
+              
+              <Route path="catalog" element={
+                <PermissionGate allowedRoles={[Role.MASTER, Role.GESTOR]}>
+                  <Catalog />
+                </PermissionGate>
+              } />
+              
+              <Route path="crm" element={
+                <PermissionGate allowedRoles={[Role.MASTER, Role.GESTOR]}>
+                  <CRM />
+                </PermissionGate>
+              } />
+              
+              <Route path="pipeline" element={
+                <PermissionGate allowedRoles={[Role.MASTER, Role.GESTOR, Role.ESTOQUE]}>
+                  <Pipeline />
+                </PermissionGate>
+              } />
+              
+              <Route path="users" element={
+                <PermissionGate allowedRoles={[Role.MASTER]}>
+                  <Users />
+                </PermissionGate>
+              } />
+              
+              <Route path="settings" element={
+                <PermissionGate allowedRoles={[Role.MASTER]}>
+                  <Settings />
+                </PermissionGate>
+              } />
+              
+              {/* Default redirect for /app */}
+              <Route index element={<Navigate to="/app/dashboard" replace />} />
+            </Route>
             
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />

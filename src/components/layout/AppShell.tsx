@@ -90,13 +90,13 @@ const AppShell = () => {
               <h1 className="text-xl font-bold text-gray-900">Painel Interno</h1>
             </div>
 
-            {/* Role Warning */}
+            {/* Profile Warning - só mostra se não está carregando E profile é null */}
             {!profileLoading && !profile && (
               <div className="p-4">
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription className="text-xs">
-                    Role não configurada para este usuário. Contate um administrador.
+                    Perfil não configurado. Contate o administrador.
                   </AlertDescription>
                 </Alert>
               </div>
@@ -105,42 +105,44 @@ const AppShell = () => {
             {/* Navigation */}
             <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
               {profileLoading ? (
-                // Skeleton while loading profile
+                // Skeleton enquanto carrega profile
                 Array.from({ length: 6 }).map((_, i) => (
                   <Skeleton key={i} className="h-12 w-full" />
                 ))
               ) : (
-                // Render menu items filtered by role
-                sidebarItems.map((item) => (
-                  <PermissionGate
-                    key={item.path}
-                    allowedRoles={item.roles}
-                    fallback={null}
-                  >
-                    <Link
-                      to={item.path}
-                      onClick={() => setSidebarOpen(false)}
-                      className={`
-                        flex items-center gap-3 px-4 py-3 rounded-lg
-                        transition-colors
-                        ${location.pathname === item.path
-                          ? 'bg-blue-50 text-blue-600'
-                          : 'text-gray-700 hover:bg-gray-100'
-                        }
-                      `}
+                // Renderiza menu filtrado por role
+                <>
+                  {sidebarItems.map((item) => (
+                    <PermissionGate
+                      key={item.path}
+                      allowedRoles={item.roles}
+                      fallback={null}
                     >
-                      <item.icon size={18} />
-                      <span>{item.label}</span>
-                    </Link>
-                  </PermissionGate>
-                ))
-              )}
-              
-              {/* Placeholder when no role */}
-              {!profileLoading && !profile && (
-                <div className="px-4 py-3 text-sm text-gray-500 italic">
-                  Nenhum menu disponível
-                </div>
+                      <Link
+                        to={item.path}
+                        onClick={() => setSidebarOpen(false)}
+                        className={`
+                          flex items-center gap-3 px-4 py-3 rounded-lg
+                          transition-colors
+                          ${location.pathname === item.path
+                            ? 'bg-blue-50 text-blue-600'
+                            : 'text-gray-700 hover:bg-gray-100'
+                          }
+                        `}
+                      >
+                        <item.icon size={18} />
+                        <span>{item.label}</span>
+                      </Link>
+                    </PermissionGate>
+                  ))}
+                  
+                  {/* Placeholder quando profile é null (não deve ocorrer com trigger) */}
+                  {!profile && (
+                    <div className="px-4 py-3 text-sm text-gray-500 italic">
+                      Menu indisponível - aguarde configuração
+                    </div>
+                  )}
+                </>
               )}
             </nav>
 

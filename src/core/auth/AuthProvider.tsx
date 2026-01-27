@@ -73,7 +73,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .single();
 
       if (error) {
-        console.error('[AuthProvider] Error fetching profile:', error.message);
+        // Profile não encontrado (não deve ocorrer com o trigger)
+        console.error('[AuthProvider] Profile not found or error:', error.message);
         if (mountedRef.current) setProfile(null);
       } else if (mountedRef.current) {
         setProfile(data);

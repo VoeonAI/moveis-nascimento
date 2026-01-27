@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { productsService } from '@/services/productsService';
-import { crmService } from '@/services/crmService';
+import { supabase } from '@/core/supabaseClient';
 import { Product } from '@/types';
-import { showSuccess } from '@/utils/toast';
+import { showSuccess, showError } from '@/utils/toast';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -22,20 +23,30 @@ const ProductDetail = () => {
   const handleInterest = async () => {
     if (!product) return;
     
-    // Simulated user data for MVP (in real app, would ask for input)
-    const leadData = {
-      name: 'Cliente Interessado',
-      email: 'cliente@exemplo.com',
-      phone: '11999999999',
-      product_id: product.id,
-    };
+    setSubmitting(true);
 
     try {
-      await crmService.createLeadFromInterest(leadData);
-      showSuccess('Interesse registrado! Nossa IA entrará em contato.');
+      const { data, error } = await supabase.functions.invoke('interest_create', {
+        body: {
+          product_id: product.id,
+          source: 'site',
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.ok) {
+        showSuccess('Interesse registrado! Nossa IA entrará em contato em breve.');
+      } else {
+        throw new Error('Failed to register interest');
+      }
     } catch (error) {
-      console.error(error);
-      showSuccess('Erro ao registrar interesse (verifique console).'); // Using success toast as fallback for visibility
+      console.error('Error registering interest:', error);
+      showError('Erro ao registrar interesse. Tente novamente.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -57,9 +68,10 @@ const ProductDetail = () => {
           </span>
           <button 
             onClick={handleInterest}
-            className="bg-green-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-green-700 transition"
+            disabled={submitting}
+            className="bg-green-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Tenho Interesse
+            {submitting ? 'Registrando...' : 'Tenho Interesse'}
           </button>
         </div>
       </div>

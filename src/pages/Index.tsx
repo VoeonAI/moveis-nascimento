@@ -45,6 +45,14 @@ const Index = () => {
     );
   }
 
+  const getPrice = (product: Product): string => {
+    const price = product.metadata?.price;
+    if (price === undefined || price === null) {
+      return 'Preço sob consulta';
+    }
+    return `R$ ${Number(price).toFixed(2)}`;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <h1 className="text-3xl font-bold mb-8 text-center">Catálogo de Produtos</h1>
@@ -64,7 +72,7 @@ const Index = () => {
             )}
             <div className="flex justify-between items-center">
               <span className="text-lg font-bold text-green-600">
-                R$ {product.price.toFixed(2)}
+                {getPrice(product)}
               </span>
               <Link 
                 to={`/product/${product.id}`}

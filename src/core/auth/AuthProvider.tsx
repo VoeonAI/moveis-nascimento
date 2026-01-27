@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../supabaseClient';
 import { Profile } from '@/types';
@@ -20,15 +20,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    let mounted = true;
-
     // 1. Get initial session
     const initializeAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (mounted) {
+      if (mountedRef.current) {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
@@ -43,7 +42,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // 2. Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        if (mounted) {
+        if (mountedRef.current) {
           setSession(session);
           setUser(session?.user ?? null);
           
@@ -59,7 +58,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     );
 
     return () => {
-      mounted = false;
+      mountedRef.current = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -75,13 +74,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (error) {
         console.error('[AuthProvider] Error fetching profile:', error.message);
-        if (mounted) setProfile(null);
-      } else if (mounted) {
+        if (mountedRef.current) setProfile(null);
+      } else if (mountedRef.current) {
         setProfile(data);
       }
     } catch (error) {
       console.error('[AuthProvider] Unexpected error fetching profile:', error);
-      if (mounted) setProfile(null);
+      if (mountedRef.current) setProfile(null);
     } finally {
       setProfileLoading(false);
     }

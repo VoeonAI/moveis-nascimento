@@ -4,7 +4,8 @@ import { Order } from '@/types';
 import { OrderStage, ORDER_STAGES_FLOW } from '@/constants/domain';
 import { useAuth } from '@/core/auth/AuthProvider';
 import { RouteGuard } from '@/core/guards/RouteGuard';
-import { PermissionGate, Role } from '@/core/guards/PermissionGate';
+import { PermissionGate } from '@/core/guards/PermissionGate';
+import { Role } from '@/constants/domain';
 
 const Pipeline = () => {
   const [orders, setOrders] = useState<Order[]>([]);

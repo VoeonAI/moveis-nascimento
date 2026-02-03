@@ -3,17 +3,39 @@ import { ordersService } from '@/services/ordersService';
 import { Order } from '@/types';
 import { OrderStage, ORDER_STAGES_FLOW } from '@/constants/domain';
 import { useAuth } from '@/core/auth/AuthProvider';
+import { AlertCircle, RefreshCw } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 
 const Pipeline = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
 
+  const fetchOrders = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await ordersService.listOrders();
+      setOrders(data);
+    } catch (err: any) {
+      console.error('[Pipeline] Failed to fetch orders:', err);
+      const message = err?.message || 'Erro ao carregar pedidos';
+      
+      // Tratamento específico para erros de permissão
+      if (message.includes('401') || message.includes('403') || message.includes('permission')) {
+        setError('Você não tem permissão para acessar esta página.');
+      } else {
+        setError(message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    ordersService.listOrders()
-      .then(setOrders)
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    fetchOrders();
   }, []);
 
   const handleMoveStage = async (orderId: string, currentStage: OrderStage) => {
@@ -26,15 +48,42 @@ const Pipeline = () => {
     
     try {
       await ordersService.moveOrderStage(orderId, nextStage, user.id);
-      const updated = await ordersService.listOrders();
-      setOrders(updated);
+      await fetchOrders();
     } catch (error) {
-      console.error('Failed to move stage:', error);
+      console.error('[Pipeline] Failed to move stage:', error);
       alert('Erro ao mover pedido');
     }
   };
 
-  if (loading) return <div className="p-8">Carregando Pipeline...</div>;
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/3" />
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-64 bg-gray-200 rounded" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <Alert variant="destructive" className="max-w-md">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="mb-4">{error}</AlertDescription>
+          <Button size="sm" variant="outline" onClick={fetchOrders}>
+            <RefreshCw size={14} className="mr-2" />
+            Tentar novamente
+          </Button>
+        </Alert>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8">

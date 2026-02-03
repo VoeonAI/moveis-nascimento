@@ -25,15 +25,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     // 1. Get initial session
     const initializeAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (mountedRef.current) {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await fetchProfile(session.user.id);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (mountedRef.current) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          if (session?.user) {
+            await fetchProfile(session.user.id);
+          }
         }
-        setLoading(false);
+      } catch (error) {
+        console.error('[AuthProvider] Error initializing auth:', error);
+      } finally {
+        if (mountedRef.current) {
+          setLoading(false);
+        }
       }
     };
 
@@ -66,23 +73,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const fetchProfile = async (userId: string) => {
     setProfileLoading(true);
     try {
+      // Usar maybeSingle para não falhar se profile não existir
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
-        console.error('[AuthProvider] Profile not found or error:', error.message);
+        console.error('[AuthProvider] Failed to fetch profile:', error.message);
         if (mountedRef.current) setProfile(null);
       } else if (mountedRef.current) {
+        // Se data é null, profile não existe (role será null)
         setProfile(data);
       }
     } catch (error) {
       console.error('[AuthProvider] Unexpected error fetching profile:', error);
       if (mountedRef.current) setProfile(null);
     } finally {
-      setProfileLoading(false);
+      if (mountedRef.current) {
+        setProfileLoading(false);
+      }
     }
   };
 

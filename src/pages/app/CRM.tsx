@@ -1,3 +1,4 @@
+Pedido">
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { crmService } from '@/services/crmService';
@@ -93,10 +94,10 @@ const CRM = () => {
       // 1. Update stage to WON
       await crmService.updateOpportunityStage(opportunityId, OpportunityStage.WON);
       
-      // 2. Create Order
+      // 2. Create Order (idempotent)
       const order = await ordersService.createOrderFromOpportunity(opportunityId);
       
-      showSuccess('Oportunidade ganha! Pedido criado com sucesso.');
+      showSuccess('Pedido criado com sucesso!');
       
       // 3. Redirect to Pipeline
       navigate('/app/pipeline');

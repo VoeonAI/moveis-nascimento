@@ -13,16 +13,19 @@ import { showSuccess, showError } from '@/utils/toast';
 const Pipeline = () => {
   const [ordersByStage, setOrdersByStage] = useState<Record<OrderStage, Order[]>>({} as Record<OrderStage, Order[]>);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [movingOrder, setMovingOrder] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   const fetchOrders = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await ordersService.listOrdersByStage();
       setOrdersByStage(data);
     } catch (err: any) {
       console.error('[Pipeline] Failed to fetch orders:', err);
+      setError(err.message || 'Erro ao carregar pedidos');
       showError('Erro ao carregar pedidos');
     } finally {
       setLoading(false);
@@ -43,6 +46,14 @@ const Pipeline = () => {
     }
 
     const nextStage = ORDER_STAGES_FLOW[currentIndex + 1];
+    
+    // Role Rule: Estoque cannot cancel (implicitly handled as CANCELED is not in flow)
+    // If we were to add a cancel button, we would check:
+    // if (profile?.role === 'estoque' && nextStage === OrderStage.CANCELED) {
+    //   showError('Estoque não pode cancelar pedidos');
+    //   return;
+    // }
+
     setMovingOrder(order.id);
     
     try {
@@ -99,6 +110,13 @@ const Pipeline = () => {
           Atualizar
         </Button>
       </div>
+      
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
       
       <div className="flex gap-4 overflow-x-auto pb-4">
         {ORDER_STAGES_FLOW.map((stage) => (

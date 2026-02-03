@@ -5,6 +5,23 @@ import { webhooksService } from './webhooksService';
 
 export const ordersService = {
   async createOrderFromOpportunity(opportunityId: string): Promise<Order> {
+    // 0. Check for existing order (Idempotency)
+    const { data: existingOrder, error: checkError } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('opportunity_id', opportunityId)
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('[ordersService.createOrderFromOpportunity] Check error:', checkError);
+      // Continue to creation if check fails (might be a permission issue or other)
+    }
+
+    if (existingOrder) {
+      console.log('[ordersService.createOrderFromOpportunity] Order already exists, returning existing:', existingOrder.id);
+      return existingOrder;
+    }
+
     // 1. Fetch opportunity details with lead info
     const { data: opportunity, error: oppError } = await supabase
       .from('opportunities')
@@ -101,7 +118,7 @@ export const ordersService = {
 
     if (fetchError) throw fetchError;
 
-    const fromStage = currentOrder.stage;
+    const fromStage = currentOrder.current_stage; // Fixed: was .stage
 
     // 2. Update Order Stage
     const { data: updatedOrder, error: updateError } = await supabase

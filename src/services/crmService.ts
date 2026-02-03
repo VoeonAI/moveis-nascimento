@@ -41,17 +41,78 @@ export const crmService = {
 
       if (error) {
         console.error('[crmService.listLeads] Supabase error:', error.message, error.details);
-        throw error; // Propaga erro para a UI
+        throw error;
       }
 
       return data || [];
     } catch (error: any) {
       console.error('[crmService.listLeads] Unexpected error:', error.message, error);
-      throw error; // Propaga erro para a UI
+      throw error;
     }
   },
 
+  // NOVO: getLeadDetail com isolamento de erros
+  async getLeadDetail(leadId: string): Promise<{ lead: Lead; opportunities: OpportunityWithProduct[]; timeline: TimelineEvent[] }> {
+    // 1. Lead (Obrigatório)
+    const { data: lead, error: leadError } = await supabase
+      .from('leads')
+      .select('*')
+      .eq('id', leadId)
+      .single();
+
+    if (leadError) {
+      console.error('[crmService.getLeadDetail] Lead fetch error:', leadError.message);
+      throw leadError; // Se lead falha, falha fatal
+    }
+
+    // 2. Opportunities (Opcional - não trava se falhar)
+    let opportunities: OpportunityWithProduct[] = [];
+    try {
+      const { data: opps, error: oppError } = await supabase
+        .from('opportunities')
+        .select(`
+          *,
+          products (name)
+        `)
+        .eq('lead_id', leadId)
+        .eq('archived', false)
+        .order('created_at', { ascending: false });
+
+      if (oppError) {
+        console.error('[crmService.getLeadDetail] Opportunities fetch error:', oppError.message);
+      } else if (opps) {
+        opportunities = opps.map((opp: any) => ({
+          ...opp,
+          product_name: opp.products?.name,
+        }));
+      }
+    } catch (err) {
+      console.error('[crmService.getLeadDetail] Opportunities unexpected error:', err);
+    }
+
+    // 3. Timeline (Opcional - não trava se falhar)
+    let timeline: TimelineEvent[] = [];
+    try {
+      const { data: events, error: timelineError } = await supabase
+        .from('lead_timeline')
+        .select('*')
+        .eq('lead_id', leadId)
+        .order('created_at', { ascending: false });
+
+      if (timelineError) {
+        console.error('[crmService.getLeadDetail] Timeline fetch error:', timelineError.message);
+      } else if (events) {
+        timeline = events;
+      }
+    } catch (err) {
+      console.error('[crmService.getLeadDetail] Timeline unexpected error:', err);
+    }
+
+    return { lead, opportunities, timeline };
+  },
+
   async getLeadWithOpportunities(leadId: string): Promise<{ lead: Lead; opportunities: OpportunityWithProduct[] }> {
+    // Mantido para compatibilidade, mas recomenda-se usar getLeadDetail
     try {
       const { data: lead, error: leadError } = await supabase
         .from('leads')
@@ -68,7 +129,7 @@ export const crmService = {
           products (name)
         `)
         .eq('lead_id', leadId)
-        .eq('archived', false) // Nota: se migration falhou, isso pode falhar, mas é aceitável no detalhe
+        .eq('archived', false)
         .order('created_at', { ascending: false });
 
       if (oppError) throw oppError;

@@ -50,8 +50,7 @@ const CRM = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
-  const [leadDetails, setLeadDetails] = useState<{ lead: Lead; opportunities: OpportunityWithProduct[] } | null>(null);
-  const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
+  const [leadDetails, setLeadDetails] = useState<{ lead: Lead; opportunities: OpportunityWithProduct[]; timeline: TimelineEvent[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [updatingStage, setUpdatingStage] = useState<string | null>(null);
   const [savingNote, setSavingNote] = useState(false);
@@ -113,7 +112,6 @@ const CRM = () => {
       setLeads(data);
     } catch (err: any) {
       console.error('[CRM] Failed to load leads', err);
-      // Captura a mensagem de erro detalhada do Supabase
       const errorMessage = err?.message || err?.details || 'Erro desconhecido ao carregar leads';
       setError(errorMessage);
       showError('Erro ao carregar leads');
@@ -130,13 +128,10 @@ const CRM = () => {
   const handleSelectLead = async (leadId: string) => {
     setSelectedLeadId(leadId);
     try {
-      const [details, timelineData] = await Promise.all([
-        crmService.getLeadWithOpportunities(leadId),
-        crmService.listLeadTimeline(leadId),
-      ]);
+      // PATCH: Usar getLeadDetail para garantir que falhas em opportunities/timeline não travem a tela
+      const details = await crmService.getLeadDetail(leadId);
       
       setLeadDetails(details);
-      setTimeline(timelineData);
       
       await crmService.markLeadAsSeen(leadId);
       
@@ -149,6 +144,7 @@ const CRM = () => {
     } catch (err) {
       console.error('[CRM] Failed to load lead details', err);
       showError('Erro ao carregar detalhes do lead');
+      // Não limpa selectedLeadId para não deixar tela em branco se o lead existir mas algo falhou
     }
   };
 
@@ -515,7 +511,6 @@ const CRM = () => {
           onClick={() => {
             setSelectedLeadId(null);
             setLeadDetails(null);
-            setTimeline([]);
           }}
         >
           <ArrowLeft size={16} className="mr-2" />
@@ -650,11 +645,11 @@ const CRM = () => {
               <CardTitle className="text-lg">Linha do Tempo</CardTitle>
             </CardHeader>
             <CardContent>
-              {timeline.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-4">Nenhuma atividade registrada</p>
+              {leadDetails.timeline.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-4">Sem histórico ainda</p>
               ) : (
                 <div className="space-y-4">
-                  {timeline.map((event) => (
+                  {leadDetails.timeline.map((event) => (
                     <div key={event.id} className="flex gap-3">
                       <div className="mt-1">
                         {getTimelineIcon(event.type)}

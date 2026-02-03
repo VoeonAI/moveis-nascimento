@@ -3,18 +3,20 @@ import { Lead, Opportunity } from '@/types';
 import { OpportunityStage } from '@/constants/domain';
 import { webhooksService } from './webhooksService';
 
-// Extended interface for internal use with product data
 export interface OpportunityWithProduct extends Opportunity {
   product_name?: string;
 }
 
-// Timeline event types
 export type TimelineEventType = 
   | 'note'
   | 'opportunity_created'
   | 'opportunity_stage_changed'
   | 'followup_set'
-  | 'lead_created';
+  | 'lead_created'
+  | 'lead_archived'
+  | 'lead_restored'
+  | 'opportunity_archived'
+  | 'opportunity_restored';
 
 export interface TimelineEvent {
   id: string;
@@ -27,11 +29,26 @@ export interface TimelineEvent {
 }
 
 export const crmService = {
-  async listLeads(): Promise<Lead[]> {
+  async listLeads(includeArchived: boolean = false): Promise<Lead[]> {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('leads')
-        .select('*')
+        .select('*');
+
+      // Non-master users can only see non-archived leads
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      const isMaster = profile?.role === 'master';
+
+      if (!includeArchived || !isMaster) {
+        query = query.eq('archived', false);
+      }
+
+      const { data, error } = await query
         .order('last_activity_at', { ascending: false });
 
       if (error) throw error;
@@ -59,11 +76,11 @@ export const crmService = {
           products (name)
         `)
         .eq('lead_id', leadId)
+        .eq('archived', false)
         .order('created_at', { ascending: false });
 
       if (oppError) throw oppError;
 
-      // Transform to include product_name
       const opportunitiesWithProduct = (opportunities || []).map((opp: any) => ({
         ...opp,
         product_name: opp.products?.name,
@@ -76,12 +93,94 @@ export const crmService = {
     }
   },
 
+  async archiveLead(leadId: string, archived: boolean, userId?: string): Promise<void> {
+    const { error } = await supabase
+      .from('leads')
+      .update({ archived })
+      .eq('id', leadId);
+
+    if (error) throw error;
+
+    await this._addTimelineEvent(
+      leadId,
+      archived ? 'lead_archived' : 'lead_restored',
+      archived ? 'Lead arquivado' : 'Lead restaurado',
+      {},
+      userId
+    );
+  },
+
+  async deleteLead(leadId: string): Promise<void> {
+    // Check for existing opportunities
+    const { data: opportunities } = await supabase
+      .from('opportunities')
+      .select('id')
+      .eq('lead_id', leadId)
+      .eq('archived', false);
+
+    if (opportunities && opportunities.length > 0) {
+      throw new Error('Não é possível excluir lead com oportunidades ativas. Arquive primeiro.');
+    }
+
+    // Check for existing orders
+    const { data: orders } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('lead_id', leadId);
+
+    if (orders && orders.length > 0) {
+      throw new Error('Não é possível excluir lead com pedidos vinculados. Arquive primeiro.');
+    }
+
+    const { error } = await supabase
+      .from('leads')
+      .delete()
+      .eq('id', leadId);
+
+    if (error) throw error;
+  },
+
+  async archiveOpportunity(opportunityId: string, archived: boolean, leadId: string, userId?: string): Promise<void> {
+    const { error } = await supabase
+      .from('opportunities')
+      .update({ archived })
+      .eq('id', opportunityId);
+
+    if (error) throw error;
+
+    await this._addTimelineEvent(
+      leadId,
+      archived ? 'opportunity_archived' : 'opportunity_restored',
+      archived ? 'Oportunidade arquivada' : 'Oportunidade restaurada',
+      { opportunity_id: opportunityId },
+      userId
+    );
+  },
+
+  async deleteOpportunity(opportunityId: string): Promise<void> {
+    // Check for existing orders
+    const { data: orders } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('opportunity_id', opportunityId);
+
+    if (orders && orders.length > 0) {
+      throw new Error('Não é possível excluir oportunidade com pedido vinculado. Arquive primeiro.');
+    }
+
+    const { error } = await supabase
+      .from('opportunities')
+      .delete()
+      .eq('id', opportunityId);
+
+    if (error) throw error;
+  },
+
   async updateOpportunityStage(
     opportunityId: string,
     newStage: OpportunityStage,
     leadId: string
   ): Promise<Opportunity> {
-    // 1. Get current stage
     const { data: currentOpp } = await supabase
       .from('opportunities')
       .select('stage')
@@ -92,7 +191,6 @@ export const crmService = {
 
     const fromStage = currentOpp.stage;
 
-    // 2. Update stage
     const { data, error } = await supabase
       .from('opportunities')
       .update({ stage: newStage, updated_at: new Date().toISOString() })
@@ -102,14 +200,12 @@ export const crmService = {
 
     if (error) throw error;
 
-    // 3. Create timeline event
     await this._addTimelineEvent(leadId, 'opportunity_stage_changed', null, {
       opportunity_id: opportunityId,
       from: fromStage,
       to: newStage,
     });
 
-    // 4. Update lead activity
     await this._updateLeadActivity(leadId);
 
     return data;
@@ -129,7 +225,6 @@ export const crmService = {
 
     if (error) throw error;
 
-    // Update last_activity_at
     await this._updateLeadActivity(leadId);
 
     return data;
@@ -162,7 +257,6 @@ export const crmService = {
 
     if (error) throw error;
 
-    // Create timeline event
     if (needed) {
       await this._addTimelineEvent(leadId, 'followup_set', null, {
         follow_up_at: at?.toISOString(),
@@ -204,9 +298,6 @@ export const crmService = {
 
     if (oppError) throw oppError;
 
-    // Note: Timeline creation is handled by the edge function for this specific flow
-    // to ensure atomicity with the product context
-
     await webhooksService.emit('lead.created_from_interest', {
       lead,
       opportunity,
@@ -215,7 +306,6 @@ export const crmService = {
     return lead;
   },
 
-  // Internal helpers
   async _addTimelineEvent(
     leadId: string,
     type: TimelineEventType,

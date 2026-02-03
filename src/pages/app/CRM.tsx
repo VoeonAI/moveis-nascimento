@@ -27,8 +27,15 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import { 
   ArrowLeft, CheckCircle, Clock, User, Phone, MessageSquare, Package, 
-  Calendar as CalendarIcon, RefreshCw, Plus, Bell, AlertCircle
+  Calendar as CalendarIcon, RefreshCw, Plus, Bell, AlertCircle,
+  Archive, ArchiveRestore, Trash2, MoreHorizontal, X
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -52,15 +59,19 @@ const CRM = () => {
   // Filters
   const [filter, setFilter] = useState<FilterType>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [showArchived, setShowArchived] = useState(false);
 
   // Note & Follow-up
   const [noteText, setNoteText] = useState('');
   const [followUpNeeded, setFollowUpNeeded] = useState(false);
   const [followUpDate, setFollowUpDate] = useState<Date | undefined>();
 
+  // Check if user is master
+  const isMaster = profile?.role === 'master';
+
   useEffect(() => {
     loadLeads();
-  }, []);
+  }, [showArchived]);
 
   // Apply filters and sorting
   useEffect(() => {
@@ -97,7 +108,7 @@ const CRM = () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await crmService.listLeads();
+      const data = await crmService.listLeads(showArchived);
       setLeads(data);
     } catch (err: any) {
       console.error('[CRM] Failed to load leads', err);
@@ -106,6 +117,11 @@ const CRM = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const clearFilters = () => {
+    setFilter('all');
+    setStatusFilter('all');
   };
 
   const handleSelectLead = async (leadId: string) => {
@@ -119,20 +135,51 @@ const CRM = () => {
       setLeadDetails(details);
       setTimeline(timelineData);
       
-      // Mark as seen
       await crmService.markLeadAsSeen(leadId);
       
-      // Update local state to remove badge immediately
       setLeads(prev => prev.map(l => 
         l.id === leadId ? { ...l, unread_interest_count: 0 } : l
       ));
 
-      // Set follow-up state
       setFollowUpNeeded(details.lead.follow_up_needed || false);
       setFollowUpDate(details.lead.follow_up_at ? new Date(details.lead.follow_up_at) : undefined);
     } catch (err) {
       console.error('[CRM] Failed to load lead details', err);
       showError('Erro ao carregar detalhes do lead');
+    }
+  };
+
+  const handleArchiveLead = async (leadId: string, archived: boolean) => {
+    try {
+      await crmService.archiveLead(leadId, archived, user?.id);
+      showSuccess(archived ? 'Lead arquivado' : 'Lead restaurado');
+      await loadLeads();
+      if (selectedLeadId === leadId) {
+        setSelectedLeadId(null);
+        setLeadDetails(null);
+      }
+    } catch (error: any) {
+      console.error('[CRM] Failed to archive lead', error);
+      showError(error.message || 'Erro ao arquivar lead');
+    }
+  };
+
+  const handleDeleteLead = async (leadId: string) => {
+    if (!confirm('Tem certeza que deseja excluir este lead permanentemente?')) {
+      return;
+    }
+
+    try {
+      await crmService.deleteLead(leadId);
+      showSuccess('Lead excluído permanentemente');
+      await loadLeads();
+      if (selectedLeadId === leadId) {
+        setSelectedLeadId(null);
+        setLeadDetails(null);
+      }
+    } catch (error: any) {
+      console.error('[CRM] Failed to delete lead', error);
+      showError(error.message || 'Erro ao excluir lead');
     }
   };
 
@@ -144,7 +191,6 @@ const CRM = () => {
       await crmService.updateOpportunityStage(opportunityId, newStage as OpportunityStage, selectedLeadId);
       showSuccess('Estágio atualizado com sucesso');
       
-      // Refresh
       await handleSelectLead(selectedLeadId);
       await loadLeads();
     } catch (error) {
@@ -173,6 +219,36 @@ const CRM = () => {
       showError('Erro ao criar pedido');
     } finally {
       setUpdatingStage(null);
+    }
+  };
+
+  const handleArchiveOpportunity = async (opportunityId: string, archived: boolean) => {
+    if (!selectedLeadId) return;
+
+    try {
+      await crmService.archiveOpportunity(opportunityId, archived, selectedLeadId, user?.id);
+      showSuccess(archived ? 'Oportunidade arquivada' : 'Oportunidade restaurada');
+      await handleSelectLead(selectedLeadId);
+      await loadLeads();
+    } catch (error: any) {
+      console.error('[CRM] Failed to archive opportunity', error);
+      showError(error.message || 'Erro ao arquivar oportunidade');
+    }
+  };
+
+  const handleDeleteOpportunity = async (opportunityId: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta oportunidade permanentemente?')) {
+      return;
+    }
+
+    try {
+      await crmService.deleteOpportunity(opportunityId);
+      showSuccess('Oportunidade excluída permanentemente');
+      await handleSelectLead(selectedLeadId);
+      await loadLeads();
+    } catch (error: any) {
+      console.error('[CRM] Failed to delete opportunity', error);
+      showError(error.message || 'Erro ao excluir oportunidade');
     }
   };
 
@@ -241,6 +317,10 @@ const CRM = () => {
       case 'opportunity_created': return <Package size={16} className="text-green-500" />;
       case 'opportunity_stage_changed': return <ArrowLeft size={16} className="text-orange-500 rotate-180" />;
       case 'followup_set': return <CalendarIcon size={16} className="text-purple-500" />;
+      case 'lead_archived': return <Archive size={16} className="text-gray-500" />;
+      case 'lead_restored': return <ArchiveRestore size={16} className="text-blue-500" />;
+      case 'opportunity_archived': return <Archive size={16} className="text-gray-500" />;
+      case 'opportunity_restored': return <ArchiveRestore size={16} className="text-blue-500" />;
       default: return <Clock size={16} className="text-gray-500" />;
     }
   };
@@ -257,6 +337,11 @@ const CRM = () => {
         return event.meta.follow_up_at 
           ? `Follow-up agendado para ${format(new Date(event.meta.follow_up_at), 'dd/MM/yyyy')}`
           : 'Follow-up marcado como pendente';
+      case 'lead_archived':
+      case 'lead_restored':
+      case 'opportunity_archived':
+      case 'opportunity_restored':
+        return event.message || 'Atividade registrada';
       default:
         return event.message || 'Atividade registrada';
     }
@@ -272,21 +357,42 @@ const CRM = () => {
       <div className="p-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Gestão de Leads</h1>
-          <Button onClick={loadLeads} variant="outline" size="sm">
-            <RefreshCw size={16} className="mr-2" />
-            Atualizar
-          </Button>
+          <div className="flex gap-2">
+            {isMaster && (
+              <Button
+                onClick={() => setShowArchived(!showArchived)}
+                variant={showArchived ? "default" : "outline"}
+                size="sm"
+              >
+                <Archive size={16} className="mr-2" />
+                {showArchived ? 'Ocultar Arquivados' : 'Ver Arquivados'}
+              </Button>
+            )}
+            <Button onClick={loadLeads} variant="outline" size="sm">
+              <RefreshCw size={16} className="mr-2" />
+              Atualizar
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}
-        <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)} className="mb-6">
-          <TabsList>
-            <TabsTrigger value="all">Todos ({leads.length})</TabsTrigger>
-            <TabsTrigger value="new">Novos ({leads.filter(l => (l.unread_interest_count || 0) > 0).length})</TabsTrigger>
-            <TabsTrigger value="followup">Follow-up ({leads.filter(l => l.follow_up_needed).length})</TabsTrigger>
-            <TabsTrigger value="status">Por Status</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex items-center gap-4 mb-6">
+          <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)}>
+            <TabsList>
+              <TabsTrigger value="all">Todos ({leads.length})</TabsTrigger>
+              <TabsTrigger value="new">Novos ({leads.filter(l => (l.unread_interest_count || 0) > 0).length})</TabsTrigger>
+              <TabsTrigger value="followup">Follow-up ({leads.filter(l => l.follow_up_needed).length})</TabsTrigger>
+              <TabsTrigger value="status">Por Status</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {(filter !== 'all' || statusFilter !== 'all') && (
+            <Button onClick={clearFilters} variant="ghost" size="sm">
+              <X size={14} className="mr-1" />
+              Limpar filtros
+            </Button>
+          )}
+        </div>
 
         {filter === 'status' && (
           <div className="mb-4">
@@ -324,7 +430,7 @@ const CRM = () => {
             {filteredLeads.map((lead) => (
               <Card 
                 key={lead.id} 
-                className="cursor-pointer hover:shadow-md transition-shadow"
+                className={`cursor-pointer hover:shadow-md transition-shadow ${lead.archived ? 'opacity-60' : ''}`}
                 onClick={() => handleSelectLead(lead.id)}
               >
                 <CardHeader>
@@ -333,12 +439,20 @@ const CRM = () => {
                       <User size={16} className="text-gray-500" />
                       <CardTitle className="text-lg">{lead.name}</CardTitle>
                     </div>
-                    {(lead.unread_interest_count || 0) > 0 && (
-                      <Badge className="bg-blue-600 text-white">
-                        <Bell size={12} className="mr-1" />
-                        Novo ({lead.unread_interest_count})
-                      </Badge>
-                    )}
+                    <div className="flex gap-1">
+                      {(lead.unread_interest_count || 0) > 0 && (
+                        <Badge className="bg-blue-600 text-white">
+                          <Bell size={12} className="mr-1" />
+                          Novo ({lead.unread_interest_count})
+                        </Badge>
+                      )}
+                      {lead.archived && (
+                        <Badge variant="outline" className="text-gray-500">
+                          <Archive size={12} className="mr-1" />
+                          Arquivado
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   {lead.phone && (
                     <CardDescription className="flex items-center gap-2">
@@ -348,7 +462,6 @@ const CRM = () => {
                   )}
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {/* Status */}
                   <div className="flex items-center justify-between">
                     <Badge variant="outline" className="capitalize">
                       {lead.status.replace(/_/g, ' ')}
@@ -358,7 +471,6 @@ const CRM = () => {
                     </span>
                   </div>
 
-                  {/* Last Activity */}
                   <div className="text-xs text-gray-600 flex items-center gap-1">
                     <Clock size={12} />
                     Última atividade: {formatDistanceToNow(new Date(lead.last_activity_at || lead.created_at), { 
@@ -367,7 +479,6 @@ const CRM = () => {
                     })}
                   </div>
 
-                  {/* Follow-up */}
                   {lead.follow_up_needed && (
                     <div className="text-xs text-orange-600 flex items-center gap-1 font-medium">
                       <AlertCircle size={12} />
@@ -389,27 +500,65 @@ const CRM = () => {
   // Detail View
   return (
     <div className="p-8">
-      <Button 
-        variant="ghost" 
-        onClick={() => {
-          setSelectedLeadId(null);
-          setLeadDetails(null);
-          setTimeline([]);
-        }}
-        className="mb-6"
-      >
-        <ArrowLeft size={16} className="mr-2" />
-        Voltar para Lista
-      </Button>
+      <div className="flex items-center justify-between mb-6">
+        <Button 
+          variant="ghost" 
+          onClick={() => {
+            setSelectedLeadId(null);
+            setLeadDetails(null);
+            setTimeline([]);
+          }}
+        >
+          <ArrowLeft size={16} className="mr-2" />
+          Voltar para Lista
+        </Button>
+        
+        {leadDetails && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <MoreHorizontal size={16} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {leadDetails.lead.archived ? (
+                <DropdownMenuItem onClick={() => handleArchiveLead(leadDetails.lead.id, false)}>
+                  <ArchiveRestore size={16} className="mr-2" />
+                  Restaurar Lead
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onClick={() => handleArchiveLead(leadDetails.lead.id, true)}>
+                  <Archive size={16} className="mr-2" />
+                  Arquivar Lead
+                </DropdownMenuItem>
+              )}
+              {isMaster && (
+                <DropdownMenuItem 
+                  onClick={() => handleDeleteLead(leadDetails.lead.id)}
+                  className="text-red-600"
+                >
+                  <Trash2 size={16} className="mr-2" />
+                  Excluir Permanentemente
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
 
       {leadDetails && (
         <div className="space-y-6">
-          {/* Lead Info */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User size={20} />
                 {leadDetails.lead.name}
+                {leadDetails.lead.archived && (
+                  <Badge variant="outline" className="ml-2">
+                    <Archive size={12} className="mr-1" />
+                    Arquivado
+                  </Badge>
+                )}
               </CardTitle>
               {leadDetails.lead.phone && (
                 <CardDescription className="flex items-center gap-2 mt-2">
@@ -428,7 +577,6 @@ const CRM = () => {
             )}
           </Card>
 
-          {/* Notes & Follow-up */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
@@ -488,7 +636,6 @@ const CRM = () => {
             </Card>
           </div>
 
-          {/* Timeline */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Linha do Tempo</CardTitle>
@@ -516,7 +663,6 @@ const CRM = () => {
             </CardContent>
           </Card>
 
-          {/* Opportunities */}
           <div>
             <h2 className="text-xl font-semibold mb-4">Oportunidades</h2>
             
@@ -594,6 +740,28 @@ const CRM = () => {
                               {updatingStage === opp.id ? 'Processando...' : 'Venda Concluída'}
                             </Button>
                           )}
+
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={() => handleArchiveOpportunity(opp.id, !opp.archived)}
+                              variant="outline"
+                              size="sm"
+                              className="flex-1"
+                            >
+                              <Archive size={14} className="mr-1" />
+                              {opp.archived ? 'Restaurar' : 'Arquivar'}
+                            </Button>
+                            {isMaster && (
+                              <Button
+                                onClick={() => handleDeleteOpportunity(opp.id)}
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 size={14} />
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </CardContent>

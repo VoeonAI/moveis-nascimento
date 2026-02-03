@@ -17,6 +17,16 @@ const Index = () => {
       .finally(() => setLoading(false));
   }, []);
 
+  // Helper seguro para obter preço
+  const getPrice = (product: Product): string => {
+    const price = product.price ?? product.metadata?.price ?? null;
+    if (price === null || price === undefined) {
+      return 'Preço sob consulta';
+    }
+    const numPrice = Number(price);
+    return isNaN(numPrice) ? 'Preço sob consulta' : `R$ ${numPrice.toFixed(2)}`;
+  };
+
   if (loading) return <div className="p-8 text-center">Carregando catálogo...</div>;
 
   if (products.length === 0) {
@@ -44,14 +54,6 @@ const Index = () => {
       </div>
     );
   }
-
-  const getPrice = (product: Product): string => {
-    const price = product.metadata?.price;
-    if (price === undefined || price === null) {
-      return 'Preço sob consulta';
-    }
-    return `R$ ${Number(price).toFixed(2)}`;
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">

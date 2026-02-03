@@ -24,6 +24,16 @@ const Catalog = () => {
       .finally(() => setLoading(false));
   }, []);
 
+  // Helper seguro para formatar preço
+  const formatPrice = (product: Product): string => {
+    const price = product.price ?? product.metadata?.price ?? null;
+    if (price === null || price === undefined) {
+      return 'Preço sob consulta';
+    }
+    const numPrice = Number(price);
+    return isNaN(numPrice) ? 'Preço sob consulta' : `R$ ${numPrice.toFixed(2)}`;
+  };
+
   if (loading) return <div className="p-8">Carregando catálogo...</div>;
 
   return (
@@ -64,7 +74,7 @@ const Catalog = () => {
               </p>
               <div className="flex items-center justify-between">
                 <span className="font-bold text-green-600">
-                  R$ {product.price.toFixed(2)}
+                  {formatPrice(product)}
                 </span>
                 <div className="flex gap-2">
                   <Button variant="ghost" size="icon">

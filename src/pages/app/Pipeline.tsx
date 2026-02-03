@@ -3,32 +3,27 @@ import { ordersService } from '@/services/ordersService';
 import { Order } from '@/types';
 import { OrderStage, ORDER_STAGES_FLOW } from '@/constants/domain';
 import { useAuth } from '@/core/auth/AuthProvider';
-import { AlertCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle, RefreshCw, ArrowRight, Package, Calendar } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { showSuccess, showError } from '@/utils/toast';
 
 const Pipeline = () => {
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersByStage, setOrdersByStage] = useState<Record<OrderStage, Order[]>>({} as Record<OrderStage, Order[]>);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [movingOrder, setMovingOrder] = useState<string | null>(null);
   const { user } = useAuth();
 
   const fetchOrders = async () => {
     setLoading(true);
-    setError(null);
     try {
-      const data = await ordersService.listOrders();
-      setOrders(data);
+      const data = await ordersService.listOrdersByStage();
+      setOrdersByStage(data);
     } catch (err: any) {
       console.error('[Pipeline] Failed to fetch orders:', err);
-      const message = err?.message || 'Erro ao carregar pedidos';
-      
-      // Tratamento específico para erros de permissão
-      if (message.includes('401') || message.includes('403') || message.includes('permission')) {
-        setError('Você não tem permissão para acessar esta página.');
-      } else {
-        setError(message);
-      }
+      showError('Erro ao carregar pedidos');
     } finally {
       setLoading(false);
     }
@@ -38,20 +33,45 @@ const Pipeline = () => {
     fetchOrders();
   }, []);
 
-  const handleMoveStage = async (orderId: string, currentStage: OrderStage) => {
+  const handleMoveStage = async (order: Order) => {
     if (!user) return;
     
-    const currentIndex = ORDER_STAGES_FLOW.indexOf(currentStage);
-    if (currentIndex === -1 || currentIndex >= ORDER_STAGES_FLOW.length - 1) return;
+    const currentIndex = ORDER_STAGES_FLOW.indexOf(order.current_stage);
+    if (currentIndex === -1 || currentIndex >= ORDER_STAGES_FLOW.length - 1) {
+      showError('Não é possível avançar deste estágio');
+      return;
+    }
 
     const nextStage = ORDER_STAGES_FLOW[currentIndex + 1];
+    setMovingOrder(order.id);
     
     try {
-      await ordersService.moveOrderStage(orderId, nextStage, user.id);
+      await ordersService.moveOrderStage(
+        order.id, 
+        nextStage, 
+        user.id, 
+        `Movido para ${nextStage}`
+      );
+      showSuccess(`Pedido movido para ${nextStage.replace(/_/g, ' ')}`);
       await fetchOrders();
     } catch (error) {
       console.error('[Pipeline] Failed to move stage:', error);
-      alert('Erro ao mover pedido');
+      showError('Erro ao mover pedido');
+    } finally {
+      setMovingOrder(null);
+    }
+  };
+
+  const getStageColor = (stage: string) => {
+    switch (stage) {
+      case OrderStage.ORDER_CREATED: return 'bg-blue-100 text-blue-800 border-blue-200';
+      case OrderStage.PRODUCTION_OR_PURCHASE: return 'bg-purple-100 text-purple-800 border-purple-200';
+      case OrderStage.QUALITY_CHECK: return 'bg-orange-100 text-orange-800 border-orange-200';
+      case OrderStage.READY_TO_SHIP: return 'bg-green-100 text-green-800 border-green-200';
+      case OrderStage.SHIPPED: return 'bg-teal-100 text-teal-800 border-teal-200';
+      case OrderStage.DELIVERED: return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      case OrderStage.CANCELED: return 'bg-red-100 text-red-800 border-red-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -70,53 +90,94 @@ const Pipeline = () => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="p-8">
-        <Alert variant="destructive" className="max-w-md">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="mb-4">{error}</AlertDescription>
-          <Button size="sm" variant="outline" onClick={fetchOrders}>
-            <RefreshCw size={14} className="mr-2" />
-            Tentar novamente
-          </Button>
-        </Alert>
-      </div>
-    );
-  }
-
   return (
     <div className="p-8">
-      <h1 className="text-2xl font-bold mb-6">Pipeline de Pedidos</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Pipeline de Pedidos</h1>
+        <Button onClick={fetchOrders} variant="outline" size="sm">
+          <RefreshCw size={16} className="mr-2" />
+          Atualizar
+        </Button>
+      </div>
       
       <div className="flex gap-4 overflow-x-auto pb-4">
         {ORDER_STAGES_FLOW.map((stage) => (
-          <div key={stage} className="flex-shrink-0 w-80 bg-gray-50 rounded-lg p-4 border">
-            <h2 className="font-semibold mb-4 capitalize text-center border-b pb-2">
-              {stage.replace(/_/g, ' ')}
-            </h2>
-            <div className="space-y-3">
-              {orders
-                .filter((o) => o.stage === stage)
-                .map((order) => (
-                  <div key={order.id} className="bg-white p-3 rounded shadow-sm border">
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="font-bold text-sm">#{order.id.slice(0, 8)}</span>
-                      <span className="text-green-600 font-bold">
-                        R$ {order.total_value.toFixed(2)}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500 mb-3">
-                      Criado em: {new Date(order.created_at).toLocaleDateString()}
-                    </p>
-                    <button
-                      onClick={() => handleMoveStage(order.id, order.stage)}
-                      className="w-full bg-blue-50 text-blue-600 text-xs py-1 rounded hover:bg-blue-100"
-                    >
-                      Avançar →
-                    </button>
-                  </div>
-                ))}
+          <div key={stage} className="flex-shrink-0 w-80 bg-gray-50 rounded-lg border flex flex-col max-h-[calc(100vh-140px)]">
+            {/* Stage Header */}
+            <div className={`p-4 border-b rounded-t-lg ${getStageColor(stage)}`}>
+              <h2 className="font-semibold text-center capitalize">
+                {stage.replace(/_/g, ' ')}
+              </h2>
+              <div className="text-center text-sm mt-1 opacity-75">
+                {ordersByStage[stage]?.length || 0} pedidos
+              </div>
+            </div>
+
+            {/* Orders List */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-3">
+              {ordersByStage[stage]?.length === 0 ? (
+                <div className="text-center text-gray-400 text-sm py-8">
+                  Nenhum pedido
+                </div>
+              ) : (
+                ordersByStage[stage]?.map((order) => (
+                  <Card key={order.id} className="shadow-sm hover:shadow-md transition-shadow">
+                    <CardContent className="p-4 space-y-3">
+                      {/* Order Header */}
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-2">
+                          <Package size={16} className="text-gray-500" />
+                          <span className="font-bold text-sm">#{order.id.slice(0, 8)}</span>
+                        </div>
+                        <Badge variant="secondary" className="text-xs">
+                          R$ {order.total_value.toFixed(2)}
+                        </Badge>
+                      </div>
+
+                      {/* Customer Info */}
+                      {order.customer_name && (
+                        <div className="text-sm">
+                          <span className="text-gray-500">Cliente: </span>
+                          <span className="font-medium">{order.customer_name}</span>
+                        </div>
+                      )}
+
+                      {/* Date */}
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <Calendar size={12} />
+                        {new Date(order.created_at).toLocaleDateString()}
+                      </div>
+
+                      {/* Notes */}
+                      {order.notes && (
+                        <div className="text-xs text-gray-600 bg-gray-100 p-2 rounded">
+                          {order.notes}
+                        </div>
+                      )}
+
+                      {/* Action Button */}
+                      {stage !== OrderStage.DELIVERED && stage !== OrderStage.CANCELED && (
+                        <Button
+                          onClick={() => handleMoveStage(order)}
+                          disabled={movingOrder === order.id}
+                          size="sm"
+                          className="w-full"
+                          variant="outline"
+                        >
+                          {movingOrder === order.id ? (
+                            'Movendo...'
+                          ) : (
+                            <>
+                              Avançar
+                              <ArrowRight size={14} className="ml-2" />
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </div>
           </div>
         ))}

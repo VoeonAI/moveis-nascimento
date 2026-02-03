@@ -50,6 +50,17 @@ const ProductDetail = () => {
     }
   };
 
+  // Helper seguro para obter preço
+  const getPrice = (product: Product | null): string => {
+    if (!product) return 'Preço sob consulta';
+    const price = product.price ?? product.metadata?.price ?? null;
+    if (price === null || price === undefined) {
+      return 'Preço sob consulta';
+    }
+    const numPrice = Number(price);
+    return isNaN(numPrice) ? 'Preço sob consulta' : `R$ ${numPrice.toFixed(2)}`;
+  };
+
   if (loading) return <div className="p-8 text-center">Carregando...</div>;
   if (!product) return <div className="p-8 text-center">Produto não encontrado.</div>;
 
@@ -64,7 +75,7 @@ const ProductDetail = () => {
         
         <div className="flex items-center justify-between border-t pt-6">
           <span className="text-3xl font-bold text-green-600">
-            R$ {product.price.toFixed(2)}
+            {getPrice(product)}
           </span>
           <button 
             onClick={handleInterest}

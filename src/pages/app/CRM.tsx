@@ -32,6 +32,7 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { 
   ArrowLeft, CheckCircle, Clock, User, Phone, MessageSquare, Package, 
   Calendar as CalendarIcon, RefreshCw, Plus, Bell, AlertCircle,
@@ -86,7 +87,7 @@ const CRM = () => {
       filtered = filtered.filter(l => l.status === statusFilter);
     }
 
-    // Sort: 1) unread desc, 2) follow_up_needed desc, 3) last_activity_at desc
+    // Sort: 1) unread desc, 2) follow_up_needed desc, 3) created_at desc (fallback)
     filtered.sort((a, b) => {
       const aUnread = a.unread_interest_count || 0;
       const bUnread = b.unread_interest_count || 0;
@@ -96,8 +97,8 @@ const CRM = () => {
       const bFollowUp = b.follow_up_needed ? 1 : 0;
       if (aFollowUp !== bFollowUp) return bFollowUp - aFollowUp;
 
-      const aTime = new Date(a.last_activity_at || a.created_at).getTime();
-      const bTime = new Date(b.last_activity_at || b.created_at).getTime();
+      const aTime = new Date(a.created_at).getTime();
+      const bTime = new Date(b.created_at).getTime();
       return bTime - aTime;
     });
 
@@ -112,7 +113,9 @@ const CRM = () => {
       setLeads(data);
     } catch (err: any) {
       console.error('[CRM] Failed to load leads', err);
-      setError(err.message);
+      // Captura a mensagem de erro detalhada do Supabase
+      const errorMessage = err?.message || err?.details || 'Erro desconhecido ao carregar leads';
+      setError(errorMessage);
       showError('Erro ao carregar leads');
     } finally {
       setLoading(false);
@@ -413,13 +416,22 @@ const CRM = () => {
           </div>
         )}
 
+        {/* Error Banner with Retry */}
         {error && (
-          <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg">
-            {error}
-          </div>
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Erro ao carregar dados</AlertTitle>
+            <AlertDescription className="flex items-center justify-between mt-2">
+              <span>{error}</span>
+              <Button onClick={loadLeads} variant="outline" size="sm" className="ml-4">
+                <RefreshCw size={14} className="mr-1" />
+                Tentar Novamente
+              </Button>
+            </AlertDescription>
+          </Alert>
         )}
 
-        {filteredLeads.length === 0 ? (
+        {filteredLeads.length === 0 && !error ? (
           <Card>
             <CardContent className="p-12 text-center text-gray-500">
               Nenhum lead encontrado.
@@ -473,10 +485,7 @@ const CRM = () => {
 
                   <div className="text-xs text-gray-600 flex items-center gap-1">
                     <Clock size={12} />
-                    Última atividade: {formatDistanceToNow(new Date(lead.last_activity_at || lead.created_at), { 
-                      addSuffix: true, 
-                      locale: ptBR 
-                    })}
+                    Criado em: {format(new Date(lead.created_at), 'dd/MM/yyyy')}
                   </div>
 
                   {lead.follow_up_needed && (

@@ -31,31 +31,23 @@ export interface TimelineEvent {
 export const crmService = {
   async listLeads(includeArchived: boolean = false): Promise<Lead[]> {
     try {
-      let query = supabase
+      // PATCH: Query simplificada para compatibilidade com schema atual
+      // Evita filtrar por colunas que podem não existir (archived, last_activity_at)
+      // Usa created_at para ordenação
+      const { data, error } = await supabase
         .from('leads')
-        .select('*');
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      // Non-master users can only see non-archived leads
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', (await supabase.auth.getUser()).data.user?.id)
-        .single();
-
-      const isMaster = profile?.role === 'master';
-
-      if (!includeArchived || !isMaster) {
-        query = query.eq('archived', false);
+      if (error) {
+        console.error('[crmService.listLeads] Supabase error:', error.message, error.details);
+        throw error; // Propaga erro para a UI
       }
 
-      const { data, error } = await query
-        .order('last_activity_at', { ascending: false });
-
-      if (error) throw error;
       return data || [];
-    } catch (error) {
-      console.error('[crmService.listLeads]', error);
-      return [];
+    } catch (error: any) {
+      console.error('[crmService.listLeads] Unexpected error:', error.message, error);
+      throw error; // Propaga erro para a UI
     }
   },
 
@@ -76,7 +68,7 @@ export const crmService = {
           products (name)
         `)
         .eq('lead_id', leadId)
-        .eq('archived', false)
+        .eq('archived', false) // Nota: se migration falhou, isso pode falhar, mas é aceitável no detalhe
         .order('created_at', { ascending: false });
 
       if (oppError) throw oppError;

@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, RefreshCw, LogOut } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle, RefreshCw, LogOut, User } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 
 interface RouteGuardProps {
@@ -33,7 +33,10 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
         <div className="w-full max-w-md">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription className="mb-4">Tempo limite excedido</AlertDescription>
+            <AlertTitle>Tempo limite excedido</AlertTitle>
+            <AlertDescription className="mb-4">
+              Não foi possível conectar ao servidor de autenticação.
+            </AlertDescription>
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={() => window.location.reload()}>
                 <RefreshCw size={14} className="mr-2" />
@@ -77,16 +80,40 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
   }
 
   if (!profile) {
+    // Mostrar user.id para facilitar debug (sem dados sensíveis)
+    const userIdShort = user.id.slice(0, 8);
+    
     return (
       <div className="flex items-center justify-center min-h-screen p-4">
         <div className="w-full max-w-md">
           <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
+            <User className="h-4 w-4" />
+            <AlertTitle>Perfil não configurado</AlertTitle>
+            <AlertDescription className="mt-2">
               {loadingTimeout 
                 ? 'Tempo limite excedido. Recarregue a página.'
-                : 'Perfil não configurado. Contate o administrador.'}
+                : 'Seu usuário não possui um perfil configurado no sistema.'}
             </AlertDescription>
+            <AlertDescription className="text-xs mt-2 font-mono">
+              ID do usuário: ...{userIdShort}
+            </AlertDescription>
+            <div className="flex gap-2 mt-4">
+              <Button size="sm" variant="outline" onClick={() => window.location.reload()}>
+                <RefreshCw size={14} className="mr-2" />
+                Recarregar
+              </Button>
+              <Button 
+                size="sm" 
+                variant="destructive"
+                onClick={async () => {
+                  await signOut();
+                  navigate('/app/login');
+                }}
+              >
+                <LogOut size={14} className="mr-2" />
+                Sair
+              </Button>
+            </div>
           </Alert>
         </div>
       </div>

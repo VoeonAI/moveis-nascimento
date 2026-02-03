@@ -34,6 +34,9 @@ const App = () => (
             <Route path="/catalog" element={<Index />} />
             <Route path="/product/:id" element={<ProductDetail />} />
             
+            {/* Login Route Alias */}
+            <Route path="/login" element={<Navigate to="/app/login" replace />} />
+            
             {/* Internal Routes */}
             <Route path="/app/login" element={<Login />} />
             

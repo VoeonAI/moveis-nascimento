@@ -82,16 +82,11 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
         <div className="w-full max-w-md">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription className="mb-2">
+            <AlertDescription>
               {loadingTimeout 
                 ? 'Tempo limite excedido. Recarregue a página.'
                 : 'Perfil não configurado. Contate o administrador.'}
             </AlertDescription>
-            {!loadingTimeout && (
-              <AlertDescription className="text-xs font-mono mt-2">
-                ID do usuário: {user.id}
-              </AlertDescription>
-            )}
           </Alert>
         </div>
       </div>

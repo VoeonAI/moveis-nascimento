@@ -3,6 +3,11 @@ import { Lead, Opportunity } from '@/types';
 import { OpportunityStage } from '@/constants/domain';
 import { webhooksService } from './webhooksService';
 
+// Extended interface for internal use with product data
+export interface OpportunityWithProduct extends Opportunity {
+  product_name?: string;
+}
+
 export const crmService = {
   async listLeads(): Promise<Lead[]> {
     try {
@@ -19,7 +24,7 @@ export const crmService = {
     }
   },
 
-  async getLeadWithOpportunities(leadId: string): Promise<{ lead: Lead; opportunities: Opportunity[] }> {
+  async getLeadWithOpportunities(leadId: string): Promise<{ lead: Lead; opportunities: OpportunityWithProduct[] }> {
     try {
       const { data: lead, error: leadError } = await supabase
         .from('leads')
@@ -31,13 +36,22 @@ export const crmService = {
 
       const { data: opportunities, error: oppError } = await supabase
         .from('opportunities')
-        .select('*')
+        .select(`
+          *,
+          products (name)
+        `)
         .eq('lead_id', leadId)
         .order('created_at', { ascending: false });
 
       if (oppError) throw oppError;
 
-      return { lead, opportunities: opportunities || [] };
+      // Transform to include product_name
+      const opportunitiesWithProduct = (opportunities || []).map((opp: any) => ({
+        ...opp,
+        product_name: opp.products?.name,
+      }));
+
+      return { lead, opportunities: opportunitiesWithProduct };
     } catch (error) {
       console.error('[crmService.getLeadWithOpportunities]', error);
       throw error;

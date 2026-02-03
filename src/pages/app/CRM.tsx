@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { crmService } from '@/services/crmService';
+import { crmService, OpportunityWithProduct } from '@/services/crmService';
 import { ordersService } from '@/services/ordersService';
-import { Lead, Opportunity } from '@/types';
+import { Lead } from '@/types';
 import { OpportunityStage } from '@/constants/domain';
 import { useAuth } from '@/core/auth/AuthProvider';
 import { 
@@ -21,7 +21,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { ArrowLeft, CheckCircle, Clock, User, Phone, MessageSquare } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Clock, User, Phone, MessageSquare, Package } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 
 const CRM = () => {
@@ -29,7 +29,7 @@ const CRM = () => {
   const { user } = useAuth();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
-  const [leadDetails, setLeadDetails] = useState<{ lead: Lead; opportunities: Opportunity[] } | null>(null);
+  const [leadDetails, setLeadDetails] = useState<{ lead: Lead; opportunities: OpportunityWithProduct[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [updatingStage, setUpdatingStage] = useState<string | null>(null);
 
@@ -232,6 +232,14 @@ const CRM = () => {
                     <CardContent className="p-6">
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex-1 space-y-2">
+                          {/* Product Name */}
+                          {opp.product_name && (
+                            <div className="flex items-center gap-2">
+                              <Package size={16} className="text-gray-500" />
+                              <span className="font-medium">{opp.product_name}</span>
+                            </div>
+                          )}
+
                           <div className="flex items-center gap-2">
                             <Clock size={16} className="text-gray-500" />
                             <span className="text-sm text-gray-500">

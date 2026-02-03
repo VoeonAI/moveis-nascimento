@@ -59,6 +59,13 @@ const ProductDetail = () => {
     setSubmitting(true);
 
     try {
+      console.log('[ProductDetail] Sending interest request:', {
+        product_id: product?.id,
+        name: formData.name,
+        phone: formData.phone,
+        message: formData.message,
+      });
+
       const { data, error } = await supabase.functions.invoke('interest_create', {
         body: {
           product_id: product?.id,
@@ -70,18 +77,39 @@ const ProductDetail = () => {
         },
       });
 
+      // Logar resposta completa para debug
+      console.log('[ProductDetail] Response:', { data, error });
+
       if (error) {
-        throw error;
+        // Erro estruturado do Supabase
+        console.error('[ProductDetail] Supabase error:', {
+          name: error.name,
+          status: error.status,
+          message: error.message,
+          details: error.details,
+          context: error.context,
+        });
+        
+        // Tentar extrair mensagem mais detalhada
+        const errorMessage = error.message || error.details || 'Erro ao registrar interesse';
+        showError(errorMessage);
+        return;
       }
 
-      if (data?.ok) {
-        showSuccess('Recebido! Vamos te chamar no WhatsApp.');
-        handleModalClose();
-      } else {
-        throw new Error('Failed to register interest');
+      if (!data?.ok) {
+        // Erro retornado pela função (data.ok = false)
+        console.error('[ProductDetail] Function returned error:', data);
+        const errorMessage = data.message || data.error || 'Erro ao registrar interesse';
+        showError(errorMessage);
+        return;
       }
+
+      // Sucesso
+      showSuccess('Recebido! Vamos te chamar no WhatsApp.');
+      handleModalClose();
+      
     } catch (error) {
-      console.error('Error registering interest:', error);
+      console.error('[ProductDetail] Unexpected error:', error);
       showError('Erro ao registrar interesse. Tente novamente.');
     } finally {
       setSubmitting(false);

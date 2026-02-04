@@ -9,25 +9,19 @@ export enum OpportunityStage {
 
 export enum OrderStage {
   ORDER_CREATED = 'order_created',
-  PRODUCTION_OR_PURCHASE = 'production_or_purchase',
-  QUALITY_CHECK = 'quality_check',
+  PREPARING_ORDER = 'preparing_order',
+  ASSEMBLY = 'assembly',
   READY_TO_SHIP = 'ready_to_ship',
-  SHIPPED = 'shipped',
+  DELIVERY_ROUTE = 'delivery_route',
   DELIVERED = 'delivered',
   CANCELED = 'canceled',
 }
 
-export enum Role {
-  MASTER = 'master',
-  GESTOR = 'gestor',
-  ESTOQUE = 'estoque',
-}
-
 export const ORDER_STAGES_FLOW: OrderStage[] = [
   OrderStage.ORDER_CREATED,
-  OrderStage.PRODUCTION_OR_PURCHASE,
-  OrderStage.QUALITY_CHECK,
+  OrderStage.PREPARING_ORDER,
+  OrderStage.ASSEMBLY,
   OrderStage.READY_TO_SHIP,
-  OrderStage.SHIPPED,
+  OrderStage.DELIVERY_ROUTE,
   OrderStage.DELIVERED,
 ];

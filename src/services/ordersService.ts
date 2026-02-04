@@ -3,10 +3,15 @@ import { Order, OrderEvent } from '@/types';
 import { OrderStage, ORDER_STAGES_FLOW } from '@/constants/domain';
 import { webhooksService } from './webhooksService';
 
-// Type alias for the complex return type
-type OrderWithProduct = Order & { 
+// Type alias for the complex return type including lead and product data
+type OrderWithDetails = Order & { 
   opportunities?: { 
+    lead_id: string;
     product_id: string; 
+    leads?: { 
+      name: string;
+      phone: string;
+    }; 
     products?: { 
       id: string; 
       name: string 
@@ -14,7 +19,7 @@ type OrderWithProduct = Order & {
   } 
 };
 
-type OrdersByStage = Record<OrderStage, OrderWithProduct[]>;
+type OrdersByStage = Record<OrderStage, OrderWithDetails[]>;
 
 export const ordersService = {
   async ensureOrderForOpportunity(opportunityId: string, userId?: string): Promise<Order> {
@@ -57,7 +62,7 @@ export const ordersService = {
       throw new Error('Lead not found for this opportunity');
     }
 
-    // 3. Create order with minimal fields
+    // 3. Create order with minimal fields + customer data from lead
     console.log('[ensureOrderForOpportunity] Creating order...');
     const { data: order, error: orderError } = await supabase
       .from('orders')
@@ -274,7 +279,15 @@ export const ordersService = {
     try {
       const { data, error } = await supabase
         .from('orders')
-        .select('*, opportunities (product_id, products (id, name))')
+        .select(`
+          *,
+          opportunities (
+            lead_id,
+            product_id,
+            leads (name, phone),
+            products (id, name)
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -287,6 +300,8 @@ export const ordersService = {
 
       // Group orders by stage
       (data || []).forEach((order) => {
+        // Handle legacy stages or invalid stages by putting them in the first stage or ignoring
+        // For now, we just check if the key exists
         if (grouped[order.current_stage]) {
           grouped[order.current_stage].push(order);
         }

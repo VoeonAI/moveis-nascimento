@@ -25,7 +25,7 @@ import {
 import { showSuccess, showError } from '@/utils/toast';
 
 const Pipeline = () => {
-  const [ordersByStage, setOrdersByStage] = useState<Record<OrderStage, (Order & { opportunities?: { products?: { name: string } } })[]>>({} as Record<OrderStage, (Order & { opportunities?: { products?: { name: string } } })[]>);
+  const [ordersByStage, setOrdersByStage] = useState<Record<OrderStage, any>>({} as Record<OrderStage, any>);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [movingOrder, setMovingOrder] = useState<string | null>(null);
@@ -75,10 +75,10 @@ const Pipeline = () => {
   const getStageColor = (stage: string) => {
     switch (stage) {
       case OrderStage.ORDER_CREATED: return 'bg-blue-100 text-blue-800 border-blue-200';
-      case OrderStage.PRODUCTION_OR_PURCHASE: return 'bg-purple-100 text-purple-800 border-purple-200';
-      case OrderStage.QUALITY_CHECK: return 'bg-orange-100 text-orange-800 border-orange-200';
+      case OrderStage.PREPARING_ORDER: return 'bg-purple-100 text-purple-800 border-purple-200';
+      case OrderStage.ASSEMBLY: return 'bg-orange-100 text-orange-800 border-orange-200';
       case OrderStage.READY_TO_SHIP: return 'bg-green-100 text-green-800 border-green-200';
-      case OrderStage.SHIPPED: return 'bg-teal-100 text-teal-800 border-teal-200';
+      case OrderStage.DELIVERY_ROUTE: return 'bg-teal-100 text-teal-800 border-teal-200';
       case OrderStage.DELIVERED: return 'bg-emerald-100 text-emerald-800 border-emerald-200';
       case OrderStage.CANCELED: return 'bg-red-100 text-red-800 border-red-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
@@ -137,104 +137,107 @@ const Pipeline = () => {
                   Nenhum pedido
                 </div>
               ) : (
-                ordersByStage[stage]?.map((order) => (
-                  <Card key={order.id} className="shadow-sm hover:shadow-md transition-shadow">
-                    <CardContent className="p-4 space-y-3">
-                      {/* Order Header */}
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-center gap-2">
-                          <Package size={16} className="text-gray-500" />
-                          <span className="font-bold text-sm">#{order.id.slice(0, 8)}</span>
+                ordersByStage[stage]?.map((order: any) => {
+                  // Fallback logic for customer name
+                  const displayName = order.customer_name ?? order.opportunities?.leads?.name ?? 'Cliente não informado';
+                  
+                  return (
+                    <Card key={order.id} className="shadow-sm hover:shadow-md transition-shadow">
+                      <CardContent className="p-4 space-y-3">
+                        {/* Order Header */}
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-center gap-2">
+                            <Package size={16} className="text-gray-500" />
+                            <span className="font-bold text-sm">#{order.id.slice(0, 8)}</span>
+                          </div>
+                          <Badge variant="secondary" className="text-xs">
+                            R$ {(order.total_value ?? 0).toFixed(2)}
+                          </Badge>
                         </div>
-                        <Badge variant="secondary" className="text-xs">
-                          R$ {(order.total_value ?? 0).toFixed(2)}
-                        </Badge>
-                      </div>
 
-                      {/* Customer Info */}
-                      <div className="text-sm">
-                        <span className="text-gray-500">Cliente: </span>
-                        <span className="font-medium">
-                          {order.customer_name || 'Cliente não informado'}
-                        </span>
-                      </div>
-
-                      {/* Product Name */}
-                      {order.opportunities?.products?.name && (
+                        {/* Customer Info */}
                         <div className="text-sm">
-                          <span className="text-gray-500">Produto: </span>
-                          <span className="font-medium truncate block" title={order.opportunities.products.name}>
-                            {order.opportunities.products.name}
-                          </span>
+                          <span className="text-gray-500">Cliente: </span>
+                          <span className="font-medium">{displayName}</span>
                         </div>
-                      )}
 
-                      {/* Date */}
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <Calendar size={12} />
-                        {new Date(order.created_at).toLocaleDateString()}
-                      </div>
+                        {/* Product Name */}
+                        {order.opportunities?.products?.name && (
+                          <div className="text-sm">
+                            <span className="text-gray-500">Produto: </span>
+                            <span className="font-medium truncate block" title={order.opportunities.products.name}>
+                              {order.opportunities.products.name}
+                            </span>
+                          </div>
+                        )}
 
-                      {/* Notes */}
-                      {order.notes && (
-                        <div className="text-xs text-gray-600 bg-gray-100 p-2 rounded">
-                          {order.notes}
+                        {/* Date */}
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <Calendar size={12} />
+                          {new Date(order.created_at).toLocaleDateString()}
                         </div>
-                      )}
 
-                      {/* Action Buttons */}
-                      {stage !== OrderStage.DELIVERED && stage !== OrderStage.CANCELED && (
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={() => {
-                              const currentIndex = ORDER_STAGES_FLOW.indexOf(stage);
-                              if (currentIndex !== -1 && currentIndex < ORDER_STAGES_FLOW.length - 1) {
-                                handleMoveStage(order, ORDER_STAGES_FLOW[currentIndex + 1]);
-                              }
-                            }}
-                            disabled={movingOrder === order.id}
-                            size="sm"
-                            className="flex-1"
-                            variant="outline"
-                          >
-                            {movingOrder === order.id ? (
-                              'Movendo...'
-                            ) : (
-                              <>
-                                Avançar
-                                <ArrowRight size={14} className="ml-2" />
-                              </>
-                            )}
-                          </Button>
+                        {/* Notes */}
+                        {order.notes && (
+                          <div className="text-xs text-gray-600 bg-gray-100 p-2 rounded">
+                            {order.notes}
+                          </div>
+                        )}
 
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={movingOrder === order.id}
-                              >
-                                <MoreHorizontal size={14} />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {ORDER_STAGES_FLOW.map((targetStage) => (
-                                targetStage !== stage && (
-                                  <DropdownMenuItem
-                                    key={targetStage}
-                                    onClick={() => handleMoveStage(order, targetStage)}
-                                  >
-                                    {ORDER_STAGE_LABELS[targetStage]}
-                                  </DropdownMenuItem>
-                                )
-                              ))}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))
+                        {/* Action Buttons */}
+                        {stage !== OrderStage.DELIVERED && stage !== OrderStage.CANCELED && (
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={() => {
+                                const currentIndex = ORDER_STAGES_FLOW.indexOf(stage);
+                                if (currentIndex !== -1 && currentIndex < ORDER_STAGES_FLOW.length - 1) {
+                                  handleMoveStage(order, ORDER_STAGES_FLOW[currentIndex + 1]);
+                                }
+                              }}
+                              disabled={movingOrder === order.id}
+                              size="sm"
+                              className="flex-1"
+                              variant="outline"
+                            >
+                              {movingOrder === order.id ? (
+                                'Movendo...'
+                              ) : (
+                                <>
+                                  Avançar
+                                  <ArrowRight size={14} className="ml-2" />
+                                </>
+                              )}
+                            </Button>
+
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={movingOrder === order.id}
+                                >
+                                  <MoreHorizontal size={14} />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {ORDER_STAGES_FLOW.map((targetStage) => (
+                                  targetStage !== stage && (
+                                    <DropdownMenuItem
+                                      key={targetStage}
+                                      onClick={() => handleMoveStage(order, targetStage)}
+                                    >
+                                      {ORDER_STAGE_LABELS[targetStage]}
+                                    </DropdownMenuItem>
+                                  )
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })
               )}
             </div>
           </div>

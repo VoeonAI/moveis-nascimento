@@ -11,10 +11,10 @@ export const OPPORTUNITY_STAGE_LABELS: Record<OpportunityStage, string> = {
 
 export const ORDER_STAGE_LABELS: Record<OrderStage, string> = {
   [OrderStage.ORDER_CREATED]: 'Pedido Criado',
-  [OrderStage.PRODUCTION_OR_PURCHASE]: 'Produção/Compra',
-  [OrderStage.QUALITY_CHECK]: 'Controle de Qualidade',
+  [OrderStage.PREPARING_ORDER]: 'Preparando Pedido',
+  [OrderStage.ASSEMBLY]: 'Em Montagem',
   [OrderStage.READY_TO_SHIP]: 'Pronto para Envio',
-  [OrderStage.SHIPPED]: 'Enviado',
+  [OrderStage.DELIVERY_ROUTE]: 'Rota de Entrega',
   [OrderStage.DELIVERED]: 'Entregue',
   [OrderStage.CANCELED]: 'Cancelado',
 };

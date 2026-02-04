@@ -150,16 +150,16 @@ const Settings = () => {
       const result = await webhooksManagementService.testEndpoint(endpoint);
       
       if (result.success) {
-        showSuccess(`Webhook testado com sucesso (${result.statusCode})`);
+        showSuccess(`Webhook testado com sucesso (status: ${result.status_code})`);
       } else {
-        showError(`Falha no teste (${result.statusCode}): ${result.error || 'Erro desconhecido'}`);
+        showError(`Falha no teste: ${result.error || 'Erro desconhecido'}`);
       }
       
       // Reload logs to show test
       await loadData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Settings] Failed to test endpoint', error);
-      showError('Erro ao testar webhook');
+      showError(`Erro ao testar webhook: ${error.message || 'Erro desconhecido'}`);
     } finally {
       setTestingEndpoint(null);
     }
@@ -454,7 +454,7 @@ const Settings = () => {
                             </div>
                             <div className="flex items-center gap-2">
                               <Badge variant={log.success ? 'default' : 'destructive'}>
-                                {log.status_code}
+                                {log.status_code ?? 'Erro'}
                               </Badge>
                               <CollapsibleTrigger asChild>
                                 <Button variant="ghost" size="sm">

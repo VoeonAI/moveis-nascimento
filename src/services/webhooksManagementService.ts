@@ -16,7 +16,7 @@ export interface WebhookLog {
   endpoint_id: string;
   event_type: string;
   payload: Record<string, any>;
-  status_code: number;
+  status_code: number | null;
   success: boolean;
   error?: string;
   created_at: string;
@@ -104,46 +104,54 @@ export const webhooksManagementService = {
     if (error) throw error;
   },
 
-  async testEndpoint(endpoint: WebhookEndpoint): Promise<{ success: boolean; statusCode: number; error?: string }> {
+  async testEndpoint(endpoint: WebhookEndpoint): Promise<{ success: boolean; status_code: number | null; error?: string }> {
     try {
-      // Use webhooksService.emit with specific endpointId
-      await webhooksService.emit('webhook.test', {
-        test: true,
-        timestamp: new Date().toISOString(),
-        message: 'Teste de webhook',
-        endpoint_name: endpoint.name,
-      }, endpoint.id);
+      // Use edge function directly with specific endpointId
+      const { data, error } = await supabase.functions.invoke('webhooks_dispatch', {
+        body: {
+          endpointId: endpoint.id,
+          eventType: 'webhook.test',
+          payload: { ping: true, at: new Date().toISOString() },
+        },
+      });
 
-      // Wait a moment for async webhook to complete
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Check recent logs for this endpoint
-      const { data: recentLogs, error: logsError } = await supabase
-        .from('webhook_logs')
-        .select('*')
-        .eq('endpoint_id', endpoint.id)
-        .eq('event_type', 'webhook.test')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (logsError || !recentLogs) {
+      if (error) {
+        console.error('[testEndpoint] Edge function error:', error);
         return {
           success: false,
-          statusCode: 0,
-          error: 'Não foi possível verificar o resultado do teste',
+          status_code: null,
+          error: error.message || 'Erro ao chamar função de teste',
+        };
+      }
+
+      if (!data?.ok) {
+        console.error('[testEndpoint] Edge function returned error:', data.error);
+        return {
+          success: false,
+          status_code: null,
+          error: data.error || 'Erro desconhecido na função',
+        };
+      }
+
+      // Return first result (or generic success if no results)
+      const result = data.results?.[0];
+      if (result) {
+        return {
+          success: result.success,
+          status_code: result.status_code,
+          error: result.error,
         };
       }
 
       return {
-        success: recentLogs.success,
-        statusCode: recentLogs.status_code,
-        error: recentLogs.error || undefined,
+        success: true,
+        status_code: 200,
       };
     } catch (error: any) {
+      console.error('[testEndpoint] Unexpected error:', error);
       return {
         success: false,
-        statusCode: 0,
+        status_code: null,
         error: error.message || 'Erro de conexão',
       };
     }
@@ -154,7 +162,14 @@ export const webhooksManagementService = {
       const { data, error } = await supabase
         .from('webhook_logs')
         .select(`
-          *,
+          id,
+          endpoint_id,
+          event_type,
+          payload,
+          status_code,
+          success,
+          error,
+          created_at,
           webhook_endpoints (name, url)
         `)
         .order('created_at', { ascending: false })

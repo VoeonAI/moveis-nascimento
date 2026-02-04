@@ -60,10 +60,10 @@ serve(async (req) => {
     // Dispatch to each endpoint and log results
     const results = await Promise.all(
       endpoints.map(async (endpoint) => {
-        let statusCode = 0
+        let statusCode: number | null = null
         let success = false
-        let responseBody = null
-        let error = null
+        let error: string | null = null
+        let bodyPreview: string | null = null
 
         try {
           const headers: Record<string, string> = {
@@ -90,13 +90,27 @@ serve(async (req) => {
           // Try to read response body (limit size)
           try {
             const text = await response.text()
-            responseBody = text.length > 1000 ? text.slice(0, 1000) + '...' : text
+            bodyPreview = text.length > 500 ? text.slice(0, 500) + '...' : text
           } catch {
-            responseBody = null
+            bodyPreview = null
           }
         } catch (err: any) {
           error = err?.message || 'Network error'
           console.error(`[webhooks_dispatch] Failed to dispatch to ${endpoint.url}:`, err)
+        }
+
+        // Build log payload
+        const logPayload = {
+          eventType,
+          sentAt: new Date().toISOString(),
+          request: {
+            endpoint: endpoint.name,
+            url: endpoint.url,
+          },
+          response: {
+            status: statusCode,
+            bodyPreview,
+          },
         }
 
         // Log attempt
@@ -104,7 +118,7 @@ serve(async (req) => {
           await supabase.from('webhook_logs').insert({
             endpoint_id: endpoint.id,
             event_type: eventType,
-            payload,
+            payload: logPayload,
             status_code: statusCode,
             success,
             error,

@@ -150,10 +150,15 @@ const Settings = () => {
     try {
       const result = await webhooksManagementService.testEndpoint(endpoint.id);
       
-      if (result.success) {
-        showSuccess(`Teste enviado com sucesso - Status: ${result.status_code}`);
+      console.log('[Settings] Test result:', result);
+      
+      if (result.error) {
+        showError(result.error);
       } else {
-        showError(`Erro no teste: ${result.error}`);
+        const firstResult = result.data?.results?.[0];
+        const success = firstResult?.success ?? true;
+        const statusCode = firstResult?.status_code ?? 'sem status';
+        showSuccess(`Teste: ${success ? 'OK' : 'Falhou'} (${statusCode})`);
       }
       
       // Reload logs to show test

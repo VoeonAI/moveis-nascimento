@@ -103,10 +103,10 @@ export const webhooksManagementService = {
     if (error) throw error;
   },
 
-  async testEndpoint(endpointId: string): Promise<{ success: boolean; status_code: number | null; error?: string }> {
+  async testEndpoint(endpointId: string): Promise<{ success: boolean; status_code: number | null; error?: string; data?: any }> {
+    console.log('[testEndpoint] Starting test for endpoint:', endpointId);
+    
     try {
-      console.log('[testEndpoint] Invoking webhooks_dispatch with endpointId:', endpointId);
-      
       const { data, error } = await supabase.functions.invoke('webhooks_dispatch', {
         body: {
           endpointId,
@@ -115,12 +115,15 @@ export const webhooksManagementService = {
         },
       });
 
+      console.log('[testEndpoint] Response received:', { data, error });
+
       if (error) {
         console.error('[testEndpoint] Edge function error:', error);
         return {
           success: false,
           status_code: null,
           error: error.message || 'Erro ao chamar função de teste',
+          data,
         };
       }
 
@@ -130,6 +133,7 @@ export const webhooksManagementService = {
           success: false,
           status_code: null,
           error: data.error || 'Erro desconhecido na função',
+          data,
         };
       }
 
@@ -140,12 +144,14 @@ export const webhooksManagementService = {
           success: result.success,
           status_code: result.status_code,
           error: result.error,
+          data,
         };
       }
 
       return {
         success: true,
         status_code: 200,
+        data,
       };
     } catch (error: any) {
       console.error('[testEndpoint] Unexpected error:', error);

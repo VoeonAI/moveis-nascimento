@@ -41,7 +41,9 @@ import {
   RefreshCw,
   Globe,
   Clock,
-  ChevronRight
+  ChevronRight,
+  Filter,
+  X
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { format } from 'date-fns';
@@ -57,6 +59,10 @@ const Settings = () => {
   const [logs, setLogs] = useState<WebhookLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [testingEndpoint, setTestingEndpoint] = useState<string | null>(null);
+
+  // Filters
+  const [filterEndpointId, setFilterEndpointId] = useState<string>('all');
+  const [filterEventType, setFilterEventType] = useState<string>('all');
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -133,13 +139,16 @@ const Settings = () => {
   const handleTest = async (endpoint: WebhookEndpoint) => {
     setTestingEndpoint(endpoint.id);
     try {
-      const result = await webhooksManagementService.testEndpoint(endpoint.url, endpoint.secret);
+      const result = await webhooksManagementService.testEndpoint(endpoint);
       
       if (result.success) {
         showSuccess(`Webhook testado com sucesso (${result.statusCode})`);
       } else {
         showError(`Falha no teste (${result.statusCode}): ${result.error || 'Erro desconhecido'}`);
       }
+      
+      // Reload logs to show the test
+      await loadData();
     } catch (error) {
       console.error('[Settings] Failed to test endpoint', error);
       showError('Erro ao testar webhook');
@@ -187,11 +196,37 @@ const Settings = () => {
     }));
   };
 
+  const clearFilters = () => {
+    setFilterEndpointId('all');
+    setFilterEventType('all');
+  };
+
+  const getFilteredLogs = () => {
+    return logs.filter(log => {
+      if (filterEndpointId !== 'all' && log.endpoint_id !== filterEndpointId) {
+        return false;
+      }
+      if (filterEventType !== 'all' && log.event_type !== filterEventType) {
+        return false;
+      }
+      return true;
+    });
+  };
+
   const getLogStatusIcon = (log: WebhookLog) => {
     if (log.success) {
       return <CheckCircle size={16} className="text-green-600" />;
     }
     return <XCircle size={16} className="text-red-600" />;
+  };
+
+  const getPayloadSummary = (payload: any) => {
+    try {
+      const str = typeof payload === 'string' ? payload : JSON.stringify(payload);
+      return str.length > 100 ? str.slice(0, 100) + '...' : str;
+    } catch {
+      return 'Payload inválido';
+    }
   };
 
   return (
@@ -319,23 +354,71 @@ const Settings = () => {
           <TabsContent value="logs">
             <Card>
               <CardHeader>
-                <CardTitle>Logs de Webhooks</CardTitle>
-                <CardDescription>
-                  Histórico de envios de webhooks
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Logs de Webhooks</CardTitle>
+                    <CardDescription>
+                      Histórico de envios de webhooks
+                    </CardDescription>
+                  </div>
+                  {(filterEndpointId !== 'all' || filterEventType !== 'all') && (
+                    <Button onClick={clearFilters} variant="ghost" size="sm">
+                      <X size={14} className="mr-1" />
+                      Limpar filtros
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
+                {/* Filters */}
+                <div className="flex gap-4 mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Filter size={14} />
+                      <label className="text-sm font-medium">Endpoint</label>
+                    </div>
+                    <Select value={filterEndpointId} onValueChange={setFilterEndpointId}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os endpoints</SelectItem>
+                        {endpoints.map(ep => (
+                          <SelectItem key={ep.id} value={ep.id}>{ep.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Filter size={14} />
+                      <label className="text-sm font-medium">Tipo de Evento</label>
+                    </div>
+                    <Select value={filterEventType} onValueChange={setFilterEventType}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os eventos</SelectItem>
+                        {Object.entries(WEBHOOK_EVENT_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>{label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
                 {loading ? (
                   <div className="text-center py-8 text-gray-500">
                     Carregando...
                   </div>
-                ) : logs.length === 0 ? (
+                ) : getFilteredLogs().length === 0 ? (
                   <div className="text-center py-12 text-gray-500">
                     Nenhum log encontrado
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {logs.map((log) => (
+                    {getFilteredLogs().map((log) => (
                       <div key={log.id} className="border rounded-lg p-4 space-y-2">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
@@ -359,6 +442,10 @@ const Settings = () => {
                             <span className="font-medium">Endpoint:</span> {(log as any).webhook_endpoints.name}
                           </div>
                         )}
+                        
+                        <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded font-mono">
+                          {getPayloadSummary(log.payload)}
+                        </div>
                         
                         {!log.success && log.error && (
                           <div className="text-sm text-red-600 bg-red-50 p-2 rounded">

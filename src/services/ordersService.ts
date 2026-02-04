@@ -3,7 +3,7 @@ import { Order, OrderEvent } from '@/types';
 import { OrderStage, ORDER_STAGES_FLOW } from '@/constants/domain';
 import { webhooksService } from './webhooksService';
 
-// Type alias for the complex return type including lead and product data
+// Type alias for complex return type including lead and product data
 type OrderWithDetails = Order & { 
   opportunities?: { 
     lead_id: string;
@@ -103,11 +103,8 @@ export const ordersService = {
     }
 
     // 5. Emit webhook (best-effort)
-    try {
-      await webhooksService.emit('order.created', { order, opportunity });
-    } catch (webhookError) {
-      console.warn('[ensureOrderForOpportunity] Webhook failed:', webhookError);
-    }
+    webhooksService.emit('order.created', { order, opportunity })
+      .catch(err => console.error('[ensureOrderForOpportunity] Webhook failed:', err));
 
     return order;
   },
@@ -193,11 +190,8 @@ export const ordersService = {
     console.log('[createOrderFromOpportunity] Order event created (or failed gracefully)');
 
     // 4. Emit Webhook (best-effort, não trava se falhar)
-    try {
-      await webhooksService.emit('order.created', { order, opportunity });
-    } catch (webhookError) {
-      console.warn('[createOrderFromOpportunity] Webhook failed (non-critical):', webhookError);
-    }
+    webhooksService.emit('order.created', { order, opportunity })
+      .catch(err => console.error('[createOrderFromOpportunity] Webhook failed:', err));
 
     console.log('[createOrderFromOpportunity] Completed successfully');
     return order;
@@ -259,14 +253,10 @@ export const ordersService = {
     }
 
     // 4. Emit Webhook (best-effort)
-    try {
-      await webhooksService.emit('order.stage_changed', {
-        order: updatedOrder,
-        event: { order_id: orderId, from_stage: fromStage, to_stage: toStage },
-      });
-    } catch (webhookError) {
-      console.warn('[updateOrderStage] Webhook failed (non-critical):', webhookError);
-    }
+    webhooksService.emit('order.stage_changed', {
+      order: updatedOrder,
+      event: { order_id: orderId, from_stage: fromStage, to_stage: toStage },
+    }).catch(err => console.error('[updateOrderStage] Webhook failed:', err));
 
     return updatedOrder;
   },
@@ -385,14 +375,10 @@ export const ordersService = {
     }
 
     // 4. Emit Webhook (best-effort)
-    try {
-      await webhooksService.emit('order.stage_changed', {
-        order: updatedOrder,
-        event: { order_id: orderId, from_stage: fromStage, to_stage: toStage },
-      });
-    } catch (webhookError) {
-      console.warn('[moveOrderStage] Webhook failed (non-critical):', webhookError);
-    }
+    webhooksService.emit('order.stage_changed', {
+      order: updatedOrder,
+      event: { order_id: orderId, from_stage: fromStage, to_stage: toStage },
+    }).catch(err => console.error('[moveOrderStage] Webhook failed:', err));
 
     return updatedOrder;
   },

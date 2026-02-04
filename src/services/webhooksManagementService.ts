@@ -1,4 +1,5 @@
 import { supabase } from '@/core/supabaseClient';
+import { webhooksService } from './webhooksService';
 
 export interface WebhookEndpoint {
   id: string;
@@ -101,24 +102,41 @@ export const webhooksManagementService = {
     if (error) throw error;
   },
 
-  async testEndpoint(url: string, secret?: string): Promise<{ success: boolean; statusCode: number; error?: string }> {
+  async testEndpoint(endpoint: WebhookEndpoint): Promise<{ success: boolean; statusCode: number; error?: string }> {
     try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(secret ? { 'X-Webhook-Secret': secret } : {}),
-        },
-        body: JSON.stringify({
-          test: true,
-          timestamp: new Date().toISOString(),
-          message: 'Teste de webhook',
-        }),
+      // Use webhooksService.emit for consistent testing
+      await webhooksService.emit('webhook.test', {
+        test: true,
+        timestamp: new Date().toISOString(),
+        message: 'Teste de webhook',
+        endpoint_name: endpoint.name,
       });
 
+      // Wait a moment for the async webhook to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Check recent logs for this endpoint
+      const { data: recentLogs, error: logsError } = await supabase
+        .from('webhook_logs')
+        .select('*')
+        .eq('endpoint_id', endpoint.id)
+        .eq('event_type', 'webhook.test')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (logsError || !recentLogs) {
+        return {
+          success: false,
+          statusCode: 0,
+          error: 'Não foi possível verificar o resultado do teste',
+        };
+      }
+
       return {
-        success: response.ok,
-        statusCode: response.status,
+        success: recentLogs.success,
+        statusCode: recentLogs.status_code,
+        error: recentLogs.error || undefined,
       };
     } catch (error: any) {
       return {

@@ -1,56 +1,87 @@
 import { supabase } from '@/core/supabaseClient';
-import { WebhookLog } from '@/types';
 
 export const webhooksService = {
   async emit(eventType: string, payload: Record<string, any>) {
-    // 1. Find active endpoints for this event type
-    const { data: endpoints, error: fetchError } = await supabase
-      .from('webhook_endpoints')
-      .select('*')
-      .eq('event_type', eventType)
-      .eq('is_active', true);
+    try {
+      // 1. Find active endpoints subscribed to this event type
+      const { data: endpoints, error: fetchError } = await supabase
+        .from('webhook_endpoints')
+        .select('*')
+        .eq('active', true)
+        .contains('events', [eventType]);
 
-    if (fetchError) {
-      console.error('Error fetching webhook endpoints:', fetchError);
-      return;
-    }
+      if (fetchError) {
+        console.error('[webhooksService.emit] Error fetching endpoints:', fetchError);
+        return;
+      }
 
-    if (!endpoints || endpoints.length === 0) return;
+      if (!endpoints || endpoints.length === 0) {
+        console.log('[webhooksService.emit] No active endpoints for event:', eventType);
+        return;
+      }
 
-    // 2. Fire and forget for each endpoint (log result)
-    for (const endpoint of endpoints) {
-      this.sendAndLog(endpoint, payload);
+      // 2. Send webhook to each endpoint (fire and forget, best-effort)
+      const promises = endpoints.map((endpoint) => 
+        this.sendAndLog(endpoint, eventType, payload)
+      );
+
+      // Wait for all webhooks to complete (or fail) but don't block main flow
+      await Promise.allSettled(promises);
+    } catch (error) {
+      console.error('[webhooksService.emit] Unexpected error:', error);
+      // Never fail the main flow
     }
   },
 
-  async sendAndLog(endpoint: any, payload: Record<string, any>) {
+  async sendAndLog(
+    endpoint: any, 
+    eventType: string, 
+    payload: Record<string, any>
+  ) {
     let statusCode = 500;
-    let responseBody = '';
+    let success = false;
+    let error = null;
 
     try {
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+
+      // Add secret header if configured
+      if (endpoint.secret) {
+        headers['X-Webhook-Secret'] = endpoint.secret;
+      }
+
       const response = await fetch(endpoint.url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(payload),
       });
+
       statusCode = response.status;
-      responseBody = await response.text();
-    } catch (error) {
-      console.error(`Webhook failed for ${endpoint.url}:`, error);
+      success = response.ok;
+    } catch (err: any) {
+      console.error(`[webhooksService.sendAndLog] Webhook failed for ${endpoint.url}:`, err);
       statusCode = 0; // Network error
+      success = false;
+      error = err?.message || 'Network error';
     }
 
-    // 3. Log attempt
-    const { error: logError } = await supabase
-      .from('webhook_logs')
-      .insert({
-        endpoint_id: endpoint.id,
-        payload,
-        status_code: statusCode,
-        response_body: responseBody,
-        attempted_at: new Date().toISOString(),
-      });
-
-    if (logError) console.error('Error logging webhook:', logError);
+    // Log attempt (best-effort)
+    try {
+      await supabase
+        .from('webhook_logs')
+        .insert({
+          endpoint_id: endpoint.id,
+          event_type: eventType,
+          payload,
+          status_code: statusCode,
+          success,
+          error,
+          created_at: new Date().toISOString(),
+        });
+    } catch (logError) {
+      console.error('[webhooksService.sendAndLog] Failed to log webhook:', logError);
+    }
   },
 };

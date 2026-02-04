@@ -56,23 +56,28 @@ const CRM = () => {
   const [savingNote, setSavingNote] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Filters
   const [filter, setFilter] = useState<FilterType>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showArchived, setShowArchived] = useState(false);
 
+  // Note & Follow-up
   const [noteText, setNoteText] = useState('');
   const [followUpNeeded, setFollowUpNeeded] = useState(false);
   const [followUpDate, setFollowUpDate] = useState<Date | undefined>();
 
+  // Check if user is master
   const isMaster = profile?.role === 'master';
 
   useEffect(() => {
     loadLeads();
   }, [showArchived]);
 
+  // Apply filters and sorting
   useEffect(() => {
     let filtered = [...leads];
 
+    // Filter by type
     if (filter === 'new') {
       filtered = filtered.filter(l => (l.unread_interest_count || 0) > 0);
     } else if (filter === 'followup') {
@@ -81,6 +86,7 @@ const CRM = () => {
       filtered = filtered.filter(l => l.status === statusFilter);
     }
 
+    // Sort: 1) unread desc, 2) follow_up_needed desc, 3) created_at desc (fallback)
     filtered.sort((a, b) => {
       const aUnread = a.unread_interest_count || 0;
       const bUnread = b.unread_interest_count || 0;
@@ -204,12 +210,12 @@ const CRM = () => {
     setUpdatingStage(opportunityId);
     try {
       await crmService.updateOpportunityStage(opportunityId, OpportunityStage.WON, selectedLeadId);
-      const order = await ordersService.createOrderFromOpportunity(opportunityId);
+      const order = await ordersService.createOrderFromOpportunity(opportunityId, user.id);
       showSuccess('Pedido criado com sucesso!');
       navigate('/app/pipeline');
-    } catch (error) {
+    } catch (error: any) {
       console.error('[CRM] Failed to mark as won', error);
-      showError('Erro ao criar pedido');
+      showError(error.message || 'Erro ao criar pedido');
     } finally {
       setUpdatingStage(null);
     }
@@ -349,6 +355,7 @@ const CRM = () => {
   }
 
   if (!selectedLeadId) {
+    // List View
     return (
       <div className="p-8">
         <div className="flex items-center justify-between mb-6">
@@ -371,6 +378,7 @@ const CRM = () => {
           </div>
         </div>
 
+        {/* Filters */}
         <div className="flex items-center gap-4 mb-6">
           <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)}>
             <TabsList>
@@ -408,6 +416,7 @@ const CRM = () => {
           </div>
         )}
 
+        {/* Error Banner with Retry */}
         {error && (
           <Alert variant="destructive" className="mb-6">
             <AlertCircle className="h-4 w-4" />
@@ -497,6 +506,7 @@ const CRM = () => {
     );
   }
 
+  // Detail View
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
@@ -677,6 +687,7 @@ const CRM = () => {
                     <CardContent className="p-6">
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex-1 space-y-2">
+                          {/* PATCH: Exibir nome do produto com fallback */}
                           {opp.products?.name ? (
                             <div className="flex items-center gap-2">
                               <Package size={16} className="text-gray-500" />

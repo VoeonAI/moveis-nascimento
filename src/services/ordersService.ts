@@ -4,7 +4,7 @@ import { OrderStage, ORDER_STAGES_FLOW } from '@/constants/domain';
 import { webhooksService } from './webhooksService';
 
 export const ordersService = {
-  async createOrderFromOpportunity(opportunityId: string): Promise<Order> {
+  async createOrderFromOpportunity(opportunityId: string, userId?: string): Promise<Order> {
     // 0. Check for existing order (Idempotency)
     const { data: existingOrder, error: checkError } = await supabase
       .from('orders')
@@ -13,12 +13,11 @@ export const ordersService = {
       .maybeSingle();
 
     if (checkError) {
-      console.error('[ordersService.createOrderFromOpportunity] Check error:', checkError);
-      // Continue to creation if check fails (might be a permission issue or other)
+      console.error('[createOrder] Check error:', checkError.message, checkError.details);
     }
 
     if (existingOrder) {
-      console.log('[ordersService.createOrderFromOpportunity] Order already exists, returning existing:', existingOrder.id);
+      console.log('[createOrder] Order already exists, returning existing:', existingOrder.id);
       return existingOrder;
     }
 
@@ -32,12 +31,18 @@ export const ordersService = {
       .eq('id', opportunityId)
       .single();
 
-    if (oppError) throw oppError;
+    if (oppError) {
+      console.error('[createOrder]', oppError.message, oppError.details);
+      throw oppError;
+    }
 
     const lead = opportunity.leads;
-    if (!lead) throw new Error('Lead not found for this opportunity');
+    if (!lead) {
+      console.error('[createOrder] Lead not found for opportunity:', opportunityId);
+      throw new Error('Lead not found for this opportunity');
+    }
 
-    // 2. Create Order
+    // 2. Create Order - usando EXATAMENTE os campos existentes
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
@@ -51,19 +56,26 @@ export const ordersService = {
       .select()
       .single();
 
-    if (orderError) throw orderError;
+    if (orderError) {
+      console.error('[createOrder]', orderError.message, orderError.details);
+      throw orderError;
+    }
 
-    // 3. Create initial Order Event
+    // 3. Create initial Order Event - com created_by
     const { error: eventError } = await supabase
       .from('order_events')
       .insert({
         order_id: order.id,
         from_stage: null,
         to_stage: OrderStage.ORDER_CREATED,
-        note: 'Pedido criado automaticamente a partir da oportunidade',
+        note: 'Pedido criado',
+        created_by: userId,
       });
 
-    if (eventError) throw eventError;
+    if (eventError) {
+      console.error('[createOrder]', eventError.message, eventError.details);
+      throw eventError;
+    }
 
     // 4. Emit Webhook
     await webhooksService.emit('order.created', { order, opportunity });
@@ -71,8 +83,7 @@ export const ordersService = {
     return order;
   },
 
-  // PATCH: Adicionar join com opportunities e products
-  async listOrdersByStage(): Promise<Record<OrderStage, (Order & { opportunities?: { product_id: string; products?: { id: string; name: string } } })[]>> {
+  async listOrdersByStage(): Promise<Record<OrderStage, (Order & { opportunities?: { product_id: string; products?: { id: string; name: string } })[]>> {
     try {
       const { data, error } = await supabase
         .from('orders')
@@ -85,7 +96,7 @@ export const ordersService = {
       const grouped = ORDER_STAGES_FLOW.reduce((acc, stage) => {
         acc[stage] = [];
         return acc;
-      }, {} as Record<OrderStage, (Order & { opportunities?: { product_id: string; products?: { id: string; name: string } } })[]>);
+      }, {} as Record<OrderStage, (Order & { opportunities?: { product_id: string; products?: { id: string; name: string } })[]>);
 
       // Group orders by stage
       (data || []).forEach((order) => {
@@ -96,11 +107,11 @@ export const ordersService = {
 
       return grouped;
     } catch (error) {
-      console.error('[ordersService.listOrdersByStage]', error);
+      console.error('[ordersService.listOrdersByStage]', error.message, error.details);
       return ORDER_STAGES_FLOW.reduce((acc, stage) => {
         acc[stage] = [];
         return acc;
-      }, {} as Record<OrderStage, (Order & { opportunities?: { product_id: string; products?: { id: string; name: string } } })[]>);
+      }, {} as Record<OrderStage, (Order & { opportunities?: { product_id: string; products?: { id: string; name: string } })[]>);
     }
   },
 
@@ -117,7 +128,10 @@ export const ordersService = {
       .eq('id', orderId)
       .single();
 
-    if (fetchError) throw fetchError;
+    if (fetchError) {
+      console.error('[moveOrderStage]', fetchError.message, fetchError.details);
+      throw fetchError;
+    }
 
     const fromStage = currentOrder.current_stage;
 
@@ -132,7 +146,10 @@ export const ordersService = {
       .select()
       .single();
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      console.error('[moveOrderStage]', updateError.message, updateError.details);
+      throw updateError;
+    }
 
     // 3. Create Order Event
     const { error: eventError } = await supabase
@@ -145,7 +162,10 @@ export const ordersService = {
         note: note || `Movido de ${fromStage} para ${toStage}`,
       });
 
-    if (eventError) throw eventError;
+    if (eventError) {
+      console.error('[moveOrderStage]', eventError.message, eventError.details);
+      throw eventError;
+    }
 
     // 4. Emit Webhook
     await webhooksService.emit('order.stage_changed', {
@@ -164,12 +184,12 @@ export const ordersService = {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('[ordersService.listOrders]', error.message);
+        console.error('[listOrders]', error.message, error.details);
         return [];
       }
       return data || [];
     } catch (error) {
-      console.error('[ordersService.listOrders]', error);
+      console.error('[listOrders]', error.message, error.details);
       return [];
     }
   },

@@ -27,6 +27,7 @@ export const WEBHOOK_EVENTS = {
   ORDER_CREATED: 'order.created',
   ORDER_STAGE_CHANGED: 'order.stage_changed',
   OPPORTUNITY_CREATED: 'opportunity.created_from_interest',
+  WEBHOOK_TEST: 'webhook.test',
 } as const;
 
 export type WebhookEventType = typeof WEBHOOK_EVENTS[keyof typeof WEBHOOK_EVENTS];
@@ -36,6 +37,7 @@ export const WEBHOOK_EVENT_LABELS: Record<WebhookEventType, string> = {
   [WEBHOOK_EVENTS.ORDER_CREATED]: 'Pedido Criado',
   [WEBHOOK_EVENTS.ORDER_STAGE_CHANGED]: 'Mudança de Estágio do Pedido',
   [WEBHOOK_EVENTS.OPPORTUNITY_CREATED]: 'Nova Oportunidade',
+  [WEBHOOK_EVENTS.WEBHOOK_TEST]: 'Teste de Webhook',
 };
 
 export const webhooksManagementService = {
@@ -104,16 +106,16 @@ export const webhooksManagementService = {
 
   async testEndpoint(endpoint: WebhookEndpoint): Promise<{ success: boolean; statusCode: number; error?: string }> {
     try {
-      // Use webhooksService.emit for consistent testing
+      // Use webhooksService.emit with specific endpointId
       await webhooksService.emit('webhook.test', {
         test: true,
         timestamp: new Date().toISOString(),
         message: 'Teste de webhook',
         endpoint_name: endpoint.name,
-      });
+      }, endpoint.id);
 
-      // Wait a moment for the async webhook to complete
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Wait a moment for async webhook to complete
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
       // Check recent logs for this endpoint
       const { data: recentLogs, error: logsError } = await supabase
@@ -147,7 +149,7 @@ export const webhooksManagementService = {
     }
   },
 
-  async listLogs(limit: number = 50): Promise<WebhookLog[]> {
+  async listLogs(limit: number = 100): Promise<WebhookLog[]> {
     try {
       const { data, error } = await supabase
         .from('webhook_logs')

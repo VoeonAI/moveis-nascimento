@@ -13,7 +13,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -32,6 +31,11 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { 
+  Collapsible, 
+  CollapsibleContent, 
+  CollapsibleTrigger 
+} from '@/components/ui/collapsible';
+import { 
   Plus, 
   Edit, 
   Trash2, 
@@ -42,6 +46,7 @@ import {
   Globe,
   Clock,
   ChevronRight,
+  ChevronDown,
   Filter,
   X
 } from 'lucide-react';
@@ -64,6 +69,9 @@ const Settings = () => {
   const [filterEndpointId, setFilterEndpointId] = useState<string>('all');
   const [filterEventType, setFilterEventType] = useState<string>('all');
 
+  // Expanded logs
+  const [expandedLogIds, setExpandedLogIds] = useState<Set<string>>(new Set());
+
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEndpoint, setEditingEndpoint] = useState<WebhookEndpoint | null>(null);
@@ -85,7 +93,7 @@ const Settings = () => {
     try {
       const [endpointsData, logsData] = await Promise.all([
         webhooksManagementService.listEndpoints(),
-        isMaster ? webhooksManagementService.listLogs(50) : Promise.resolve([]),
+        isMaster ? webhooksManagementService.listLogs(100) : Promise.resolve([]),
       ]);
       setEndpoints(endpointsData);
       setLogs(logsData);
@@ -147,7 +155,7 @@ const Settings = () => {
         showError(`Falha no teste (${result.statusCode}): ${result.error || 'Erro desconhecido'}`);
       }
       
-      // Reload logs to show the test
+      // Reload logs to show test
       await loadData();
     } catch (error) {
       console.error('[Settings] Failed to test endpoint', error);
@@ -196,6 +204,18 @@ const Settings = () => {
     }));
   };
 
+  const toggleLogExpanded = (logId: string) => {
+    setExpandedLogIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(logId)) {
+        newSet.delete(logId);
+      } else {
+        newSet.add(logId);
+      }
+      return newSet;
+    });
+  };
+
   const clearFilters = () => {
     setFilterEndpointId('all');
     setFilterEventType('all');
@@ -220,12 +240,11 @@ const Settings = () => {
     return <XCircle size={16} className="text-red-600" />;
   };
 
-  const getPayloadSummary = (payload: any) => {
+  const formatJson = (obj: any) => {
     try {
-      const str = typeof payload === 'string' ? payload : JSON.stringify(payload);
-      return str.length > 100 ? str.slice(0, 100) + '...' : str;
+      return JSON.stringify(obj, null, 2);
     } catch {
-      return 'Payload inválido';
+      return String(obj);
     }
   };
 
@@ -419,40 +438,63 @@ const Settings = () => {
                 ) : (
                   <div className="space-y-3">
                     {getFilteredLogs().map((log) => (
-                      <div key={log.id} className="border rounded-lg p-4 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            {getLogStatusIcon(log)}
-                            <div>
-                              <div className="font-medium">
-                                {WEBHOOK_EVENT_LABELS[log.event_type as keyof typeof WEBHOOK_EVENT_LABELS] || log.event_type}
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                {format(new Date(log.created_at), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}
+                      <Collapsible key={log.id} open={expandedLogIds.has(log.id)} onOpenChange={() => toggleLogExpanded(log.id)}>
+                        <div className="border rounded-lg p-4 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              {getLogStatusIcon(log)}
+                              <div>
+                                <div className="font-medium">
+                                  {WEBHOOK_EVENT_LABELS[log.event_type as keyof typeof WEBHOOK_EVENT_LABELS] || log.event_type}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {format(new Date(log.created_at), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}
+                                </div>
                               </div>
                             </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={log.success ? 'default' : 'destructive'}>
+                                {log.status_code}
+                              </Badge>
+                              <CollapsibleTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  {expandedLogIds.has(log.id) ? (
+                                    <ChevronDown size={14} />
+                                  ) : (
+                                    <ChevronRight size={14} />
+                                  )}
+                                </Button>
+                              </CollapsibleTrigger>
+                            </div>
                           </div>
-                          <Badge variant={log.success ? 'default' : 'destructive'}>
-                            {log.status_code}
-                          </Badge>
+                          
+                          {(log as any).webhook_endpoints && (
+                            <div className="text-sm text-gray-600">
+                              <span className="font-medium">Endpoint:</span> {(log as any).webhook_endpoints.name}
+                            </div>
+                          )}
+                          
+                          <CollapsibleContent>
+                            <div className="space-y-3 pt-2 border-t">
+                              <div>
+                                <div className="text-xs font-medium text-gray-500 mb-1">Payload</div>
+                                <pre className="text-xs bg-gray-50 p-2 rounded overflow-x-auto">
+                                  {formatJson(log.payload)}
+                                </pre>
+                              </div>
+                              
+                              {!log.success && log.error && (
+                                <div>
+                                  <div className="text-xs font-medium text-red-500 mb-1">Error</div>
+                                  <div className="text-xs bg-red-50 p-2 rounded text-red-600">
+                                    {log.error}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </CollapsibleContent>
                         </div>
-                        
-                        {(log as any).webhook_endpoints && (
-                          <div className="text-sm text-gray-600">
-                            <span className="font-medium">Endpoint:</span> {(log as any).webhook_endpoints.name}
-                          </div>
-                        )}
-                        
-                        <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded font-mono">
-                          {getPayloadSummary(log.payload)}
-                        </div>
-                        
-                        {!log.success && log.error && (
-                          <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
-                            {log.error}
-                          </div>
-                        )}
-                      </div>
+                      </Collapsible>
                     ))}
                   </div>
                 )}
@@ -501,18 +543,20 @@ const Settings = () => {
             <div className="space-y-2">
               <Label>Eventos *</Label>
               <div className="space-y-2">
-                {Object.entries(WEBHOOK_EVENT_LABELS).map(([value, label]) => (
-                  <div key={value} className="flex items-center gap-2">
-                    <Switch
-                      id={`event-${value}`}
-                      checked={formData.events.includes(value)}
-                      onCheckedChange={() => toggleEvent(value)}
-                    />
-                    <Label htmlFor={`event-${value}`} className="cursor-pointer">
-                      {label}
-                    </Label>
-                  </div>
-                ))}
+                {Object.entries(WEBHOOK_EVENT_LABELS)
+                  .filter(([key]) => key !== WEBHOOK_EVENTS.WEBHOOK_TEST)
+                  .map(([value, label]) => (
+                    <div key={value} className="flex items-center gap-2">
+                      <Switch
+                        id={`event-${value}`}
+                        checked={formData.events.includes(value)}
+                        onCheckedChange={() => toggleEvent(value)}
+                      />
+                      <Label htmlFor={`event-${value}`} className="cursor-pointer">
+                        {label}
+                      </Label>
+                    </div>
+                  ))}
               </div>
             </div>
 

@@ -55,12 +55,11 @@ export const ordersService = {
       throw new Error('Lead not found for this opportunity');
     }
 
-    // 2. Create Order - usando EXATAMENTE os campos existentes
+    // 2. Create Order - usando APENAS campos existentes (SEM lead_id)
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
         opportunity_id: opportunity.id,
-        lead_id: lead.id,
         current_stage: OrderStage.ORDER_CREATED,
         customer_name: lead.name,
         customer_phone: lead.phone,

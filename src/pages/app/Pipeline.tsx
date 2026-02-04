@@ -141,7 +141,7 @@ const Pipeline = () => {
                           <span className="font-bold text-sm">#{order.id.slice(0, 8)}</span>
                         </div>
                         <Badge variant="secondary" className="text-xs">
-                          R$ {order.total_value.toFixed(2)}
+                          R$ {(order.total_value ?? 0).toFixed(2)}
                         </Badge>
                       </div>
 

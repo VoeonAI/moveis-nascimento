@@ -83,23 +83,26 @@ export const ordersService = {
 
     console.log('[ensureOrderForOpportunity] Order created:', order.id);
 
-    // 4. Create initial order event
-    const { error: eventError } = await supabase
-      .from('order_events')
-      .insert({
-        order_id: order.id,
-        from_stage: null,
-        to_stage: OrderStage.ORDER_CREATED,
-        note: 'Pedido criado automaticamente',
-        created_by: userId,
-      });
+    // 4. Create initial order event (best-effort)
+    try {
+      const { error: eventError } = await supabase
+        .from('order_events')
+        .insert({
+          order_id: order.id,
+          from_stage: null,
+          to_stage: OrderStage.ORDER_CREATED,
+          note: 'Pedido criado automaticamente',
+          created_by: userId,
+        });
 
-    if (eventError) {
-      console.error('[ensureOrderForOpportunity]', eventError.message);
-      throw eventError;
+      if (eventError) {
+        console.error('[ensureOrderForOpportunity] Failed to create order event (non-critical):', eventError.message);
+      }
+    } catch (eventError) {
+      console.error('[ensureOrderForOpportunity] Failed to create order event (non-critical):', eventError);
     }
 
-    // 5. Emit webhook
+    // 5. Emit webhook (best-effort)
     try {
       await webhooksService.emit('order.created', { order, opportunity });
     } catch (webhookError) {
@@ -168,24 +171,26 @@ export const ordersService = {
 
     console.log('[createOrderFromOpportunity] Order created:', order.id);
 
-    // 3. Create initial Order Event
-    console.log('[createOrderFromOpportunity] Creating order event...');
-    const { error: eventError } = await supabase
-      .from('order_events')
-      .insert({
-        order_id: order.id,
-        from_stage: null,
-        to_stage: OrderStage.ORDER_CREATED,
-        note: 'Pedido criado',
-        created_by: userId,
-      });
+    // 3. Create initial Order Event (best-effort)
+    try {
+      const { error: eventError } = await supabase
+        .from('order_events')
+        .insert({
+          order_id: order.id,
+          from_stage: null,
+          to_stage: OrderStage.ORDER_CREATED,
+          note: 'Pedido criado',
+          created_by: userId,
+        });
 
-    if (eventError) {
-      console.error('[createOrderFromOpportunity] Order event error:', eventError.message, eventError.details);
-      throw eventError;
+      if (eventError) {
+        console.error('[createOrderFromOpportunity] Failed to create order event (non-critical):', eventError.message, eventError.details);
+      }
+    } catch (eventError) {
+      console.error('[createOrderFromOpportunity] Failed to create order event (non-critical):', eventError);
     }
 
-    console.log('[createOrderFromOpportunity] Order event created');
+    console.log('[createOrderFromOpportunity] Order event created (or failed gracefully)');
 
     // 4. Emit Webhook (best-effort, não trava se falhar)
     try {
@@ -212,13 +217,13 @@ export const ordersService = {
       .single();
 
     if (fetchError) {
-      console.error('[updateOrderStage]', fetchError.message);
+      console.error('[updateOrderStage] Fetch error:', fetchError.message, fetchError.details);
       throw fetchError;
     }
 
     const fromStage = currentOrder.current_stage;
 
-    // 2. Update Order Stage
+    // 2. Update Order Stage (CRITICAL - must succeed)
     const { data: updatedOrder, error: updateError } = await supabase
       .from('orders')
       .update({ 
@@ -230,31 +235,38 @@ export const ordersService = {
       .single();
 
     if (updateError) {
-      console.error('[updateOrderStage]', updateError.message);
+      console.error('[updateOrderStage] Update error:', updateError.message, updateError.details);
       throw updateError;
     }
 
-    // 3. Create Order Event
-    const { error: eventError } = await supabase
-      .from('order_events')
-      .insert({
-        order_id: orderId,
-        from_stage: fromStage,
-        to_stage: toStage,
-        triggered_by: userId,
-        note: note || `Movido de ${fromStage} para ${toStage}`,
-      });
+    // 3. Create Order Event (best-effort - don't fail if this fails)
+    try {
+      const { error: eventError } = await supabase
+        .from('order_events')
+        .insert({
+          order_id: orderId,
+          from_stage: fromStage,
+          to_stage: toStage,
+          triggered_by: userId,
+          note: note || `Movido de ${fromStage} para ${toStage}`,
+        });
 
-    if (eventError) {
-      console.error('[updateOrderStage]', eventError.message);
-      throw eventError;
+      if (eventError) {
+        console.error('[updateOrderStage] Failed to create order event (non-critical):', eventError.message, eventError.details);
+      }
+    } catch (eventError) {
+      console.error('[updateOrderStage] Failed to create order event (non-critical):', eventError);
     }
 
-    // 4. Emit Webhook
-    await webhooksService.emit('order.stage_changed', {
-      order: updatedOrder,
-      event: { order_id: orderId, from_stage: fromStage, to_stage: toStage },
-    });
+    // 4. Emit Webhook (best-effort)
+    try {
+      await webhooksService.emit('order.stage_changed', {
+        order: updatedOrder,
+        event: { order_id: orderId, from_stage: fromStage, to_stage: toStage },
+      });
+    } catch (webhookError) {
+      console.warn('[updateOrderStage] Webhook failed (non-critical):', webhookError);
+    }
 
     return updatedOrder;
   },
@@ -268,7 +280,7 @@ export const ordersService = {
       .single();
 
     if (error) {
-      console.error('[updateOrder]', error.message);
+      console.error('[updateOrder]', error.message, error.details);
       throw error;
     }
 
@@ -300,8 +312,8 @@ export const ordersService = {
 
       // Group orders by stage
       (data || []).forEach((order) => {
-        // Handle legacy stages or invalid stages by putting them in the first stage or ignoring
-        // For now, we just check if the key exists
+        // Handle legacy stages or invalid stages by putting them in first stage or ignoring
+        // For now, we just check if key exists
         if (grouped[order.current_stage]) {
           grouped[order.current_stage].push(order);
         }
@@ -331,13 +343,13 @@ export const ordersService = {
       .single();
 
     if (fetchError) {
-      console.error('[moveOrderStage]', fetchError.message, fetchError.details);
+      console.error('[moveOrderStage] Fetch error:', fetchError.message, fetchError.details);
       throw fetchError;
     }
 
     const fromStage = currentOrder.current_stage;
 
-    // 2. Update Order Stage
+    // 2. Update Order Stage (CRITICAL - must succeed)
     const { data: updatedOrder, error: updateError } = await supabase
       .from('orders')
       .update({ 
@@ -349,31 +361,38 @@ export const ordersService = {
       .single();
 
     if (updateError) {
-      console.error('[moveOrderStage]', updateError.message, updateError.details);
+      console.error('[moveOrderStage] Update error:', updateError.message, updateError.details);
       throw updateError;
     }
 
-    // 3. Create Order Event
-    const { error: eventError } = await supabase
-      .from('order_events')
-      .insert({
-        order_id: orderId,
-        from_stage: fromStage,
-        to_stage: toStage,
-        triggered_by: userId,
-        note: note || `Movido de ${fromStage} para ${toStage}`,
-      });
+    // 3. Create Order Event (best-effort - don't fail if this fails)
+    try {
+      const { error: eventError } = await supabase
+        .from('order_events')
+        .insert({
+          order_id: orderId,
+          from_stage: fromStage,
+          to_stage: toStage,
+          triggered_by: userId,
+          note: note || `Movido de ${fromStage} para ${toStage}`,
+        });
 
-    if (eventError) {
-      console.error('[moveOrderStage]', eventError.message, eventError.details);
-      throw eventError;
+      if (eventError) {
+        console.error('[moveOrderStage] Failed to create order event (non-critical):', eventError.message, eventError.details);
+      }
+    } catch (eventError) {
+      console.error('[moveOrderStage] Failed to create order event (non-critical):', eventError);
     }
 
-    // 4. Emit Webhook
-    await webhooksService.emit('order.stage_changed', {
-      order: updatedOrder,
-      event: { order_id: orderId, from_stage: fromStage, to_stage: toStage },
-    });
+    // 4. Emit Webhook (best-effort)
+    try {
+      await webhooksService.emit('order.stage_changed', {
+        order: updatedOrder,
+        event: { order_id: orderId, from_stage: fromStage, to_stage: toStage },
+      });
+    } catch (webhookError) {
+      console.warn('[moveOrderStage] Webhook failed (non-critical):', webhookError);
+    }
 
     return updatedOrder;
   },

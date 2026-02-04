@@ -39,8 +39,9 @@ const Pipeline = () => {
       setOrdersByStage(data);
     } catch (err: any) {
       console.error('[Pipeline] Failed to fetch orders:', err);
-      setError(err.message || 'Erro ao carregar pedidos');
-      showError('Erro ao carregar pedidos');
+      const errorMessage = err?.message || err?.details || 'Erro ao carregar pedidos';
+      setError(errorMessage);
+      showError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -64,9 +65,10 @@ const Pipeline = () => {
       );
       showSuccess(`Pedido movido para ${ORDER_STAGE_LABELS[targetStage]}`);
       await fetchOrders();
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Pipeline] Failed to move stage:', error);
-      showError('Erro ao mover pedido');
+      const errorMessage = error?.message || error?.details || 'Erro ao mover pedido';
+      showError(errorMessage);
     } finally {
       setMovingOrder(null);
     }

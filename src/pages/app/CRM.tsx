@@ -130,7 +130,6 @@ const CRM = () => {
     try {
       const details = await crmService.getLeadDetail(leadId);
       
-      // PATCH: Logar oportunidades para debug
       console.log('[CRM Detail] opportunities', details.opportunities);
       
       setLeadDetails(details);
@@ -269,12 +268,16 @@ const CRM = () => {
     }
   };
 
+  // PATCH: handleFollowUpChange agora limpa data se desmarcado
   const handleFollowUpChange = async (needed: boolean) => {
     if (!selectedLeadId) return;
-    setFollowUpNeeded(needed);
     
     try {
-      await crmService.setFollowUp(selectedLeadId, needed, followUpDate, user?.id);
+      await crmService.setFollowUp(selectedLeadId, needed, needed ? followUpDate : undefined);
+      setFollowUpNeeded(needed);
+      if (!needed) {
+        setFollowUpDate(undefined);
+      }
       showSuccess(needed ? 'Follow-up ativado' : 'Follow-up desativado');
       await loadLeads();
     } catch (error) {
@@ -283,13 +286,15 @@ const CRM = () => {
     }
   };
 
+  // PATCH: handleFollowUpDateChange salva imediatamente
   const handleFollowUpDateChange = async (date: Date | undefined) => {
     if (!selectedLeadId) return;
-    setFollowUpDate(date);
     
-    if (followUpNeeded) {
+    if (date) {
       try {
-        await crmService.setFollowUp(selectedLeadId, true, date, user?.id);
+        await crmService.setFollowUp(selectedLeadId, true, date);
+        setFollowUpDate(date);
+        setFollowUpNeeded(true);
         showSuccess('Data de follow-up atualizada');
         await loadLeads();
       } catch (error) {

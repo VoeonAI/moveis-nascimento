@@ -290,24 +290,46 @@ export const crmService = {
     }
   },
 
-  async setFollowUp(leadId: string, needed: boolean, at?: Date, userId?: string): Promise<void> {
+  // PATCH: Normalizar data e atualizar last_activity_at
+  async setFollowUp(leadId: string, needed: boolean, at?: Date | string): Promise<void> {
+    let isoDate: string | null = null;
+
+    if (needed && at) {
+      if (at instanceof Date) {
+        isoDate = at.toISOString();
+      } else if (typeof at === 'string') {
+        // Se for formato YYYY-MM-DD, adiciona hora
+        if (/^\d{4}-\d{2}-\d{2}$/.test(at)) {
+          isoDate = `${at}T00:00:00.000Z`;
+        } else {
+          // Tenta converter a string para Date
+          const parsedDate = new Date(at);
+          if (!isNaN(parsedDate.getTime())) {
+            isoDate = parsedDate.toISOString();
+          }
+        }
+      }
+    }
+
     const { error } = await supabase
       .from('leads')
       .update({
         follow_up_needed: needed,
-        follow_up_at: at ? at.toISOString() : null,
+        follow_up_at: isoDate,
+        last_activity_at: new Date().toISOString(),
       })
       .eq('id', leadId);
 
-    if (error) throw error;
+    if (error) {
+      console.error('[crmService.setFollowUp]', error.message, error.details);
+      throw error;
+    }
 
     if (needed) {
       await this._addTimelineEvent(leadId, 'followup_set', null, {
-        follow_up_at: at?.toISOString(),
-      }, userId);
+        follow_up_at: isoDate,
+      });
     }
-
-    await this._updateLeadActivity(leadId);
   },
 
   async markLeadAsSeen(leadId: string): Promise<void> {

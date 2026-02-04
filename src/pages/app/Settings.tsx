@@ -3,6 +3,7 @@ import { useAuth } from '@/core/auth/AuthProvider';
 import { PermissionGate } from '@/core/guards/PermissionGate';
 import { Role } from '@/constants/domain';
 import { webhooksManagementService, WebhookEndpoint, WebhookLog, WEBHOOK_EVENTS, WEBHOOK_EVENT_LABELS } from '@/services/webhooksManagementService';
+import { supabase } from '@/core/supabaseClient';
 import { 
   Card, 
   CardContent, 
@@ -145,24 +146,32 @@ const Settings = () => {
   };
 
   const handleTest = async (endpoint: WebhookEndpoint) => {
+    console.log('[Webhook Test] clicked', endpoint.id);
+    console.log('[Webhook Test] supabaseUrl', (supabase as any)?.supabaseUrl ?? 'no supabaseUrl field');
+    
     setTestingEndpoint(endpoint.id);
-    try {
-      const result = await webhooksManagementService.testEndpoint(endpoint);
-      
-      if (result.success) {
-        showSuccess(`Webhook testado com sucesso (status: ${result.status_code})`);
-      } else {
-        showError(`Falha no teste: ${result.error || 'Erro desconhecido'}`);
-      }
-      
-      // Reload logs to show test
-      await loadData();
-    } catch (error: any) {
-      console.error('[Settings] Failed to test endpoint', error);
-      showError(`Erro ao testar webhook: ${error.message || 'Erro desconhecido'}`);
-    } finally {
-      setTestingEndpoint(null);
+
+    // ALWAYS invoke the edge function - no early returns
+    const { data, error } = await supabase.functions.invoke('webhooks_dispatch', {
+      body: {
+        endpointId: endpoint.id,
+        eventType: 'webhook.test',
+        payload: { ping: true, at: new Date().toISOString() },
+      },
+    });
+
+    console.log('[Webhook Test] data', data);
+    console.log('[Webhook Test] error', error);
+
+    if (error) {
+      showError(error.message);
+    } else {
+      showSuccess('Teste enviado');
     }
+
+    // Reload logs to show test
+    await loadData();
+    setTestingEndpoint(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

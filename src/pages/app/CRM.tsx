@@ -200,22 +200,37 @@ const CRM = () => {
     }
   };
 
-  const handleMarkAsWon = async (opportunityId: string) => {
+  const handleMarkAsWon = async (opportunity: Opportunity) => {
     if (!user || !selectedLeadId) return;
 
     if (!confirm('Deseja marcar esta oportunidade como ganha e criar o pedido?')) {
       return;
     }
 
-    setUpdatingStage(opportunityId);
+    setUpdatingStage(opportunity.id);
+    
     try {
-      await crmService.updateOpportunityStage(opportunityId, OpportunityStage.WON, selectedLeadId);
-      const order = await ordersService.createOrderFromOpportunity(opportunityId, user.id);
+      // 1. Update opportunity stage to 'won'
+      console.log('[won] opportunityId', opportunity.id);
+      await crmService.updateOpportunityStage(opportunity.id, OpportunityStage.WON, selectedLeadId);
+      console.log('[won] Stage updated to won');
+
+      // 2. Create order
+      console.log('[won] Creating order...');
+      const order = await ordersService.createOrderFromOpportunity(opportunity.id, user.id);
+      console.log('[won] Order created:', order?.id);
+
+      // 3. Success - navigate to pipeline
       showSuccess('Pedido criado com sucesso!');
       navigate('/app/pipeline');
     } catch (error: any) {
-      console.error('[CRM] Failed to mark as won', error);
-      showError(error.message || 'Erro ao criar pedido');
+      console.error('[won] Failed:', error);
+      
+      // Extract error message
+      const errorMessage = error?.message || error?.details || 'Erro ao criar pedido';
+      showError(errorMessage);
+      
+      // Do NOT navigate - let user see the error
     } finally {
       setUpdatingStage(null);
     }
@@ -736,7 +751,7 @@ const CRM = () => {
 
                           {opp.stage !== OpportunityStage.WON && opp.stage !== OpportunityStage.LOST && (
                             <Button
-                              onClick={() => handleMarkAsWon(opp.id)}
+                              onClick={() => handleMarkAsWon(opp)}
                               disabled={updatingStage === opp.id}
                               className="w-full"
                               size="sm"

@@ -18,6 +18,8 @@ type OrdersByStage = Record<OrderStage, OrderWithProduct[]>;
 
 export const ordersService = {
   async createOrderFromOpportunity(opportunityId: string, userId?: string): Promise<Order> {
+    console.log('[createOrderFromOpportunity] Starting', { opportunityId, userId });
+
     // 0. Check for existing order (Idempotency)
     const { data: existingOrder, error: checkError } = await supabase
       .from('orders')
@@ -26,15 +28,16 @@ export const ordersService = {
       .maybeSingle();
 
     if (checkError) {
-      console.error('[createOrder] Check error:', checkError.message, checkError.details);
+      console.error('[createOrderFromOpportunity] Check error:', checkError.message, checkError.details);
     }
 
     if (existingOrder) {
-      console.log('[createOrder] Order already exists, returning existing:', existingOrder.id);
+      console.log('[createOrderFromOpportunity] Order already exists, returning existing:', existingOrder.id);
       return existingOrder;
     }
 
     // 1. Fetch opportunity details with lead info
+    console.log('[createOrderFromOpportunity] Fetching opportunity...');
     const { data: opportunity, error: oppError } = await supabase
       .from('opportunities')
       .select(`
@@ -45,35 +48,36 @@ export const ordersService = {
       .single();
 
     if (oppError) {
-      console.error('[createOrder]', oppError.message, oppError.details);
+      console.error('[createOrderFromOpportunity] Opportunity fetch error:', oppError.message, oppError.details);
       throw oppError;
     }
 
     const lead = opportunity.leads;
     if (!lead) {
-      console.error('[createOrder] Lead not found for opportunity:', opportunityId);
+      console.error('[createOrderFromOpportunity] Lead not found for opportunity:', opportunityId);
       throw new Error('Lead not found for this opportunity');
     }
 
-    // 2. Create Order - usando APENAS campos existentes (SEM lead_id)
+    console.log('[createOrderFromOpportunity] Creating order with minimal insert...');
+    // 2. Create Order - insert MINIMAL (apenas campos obrigatórios)
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
-        opportunity_id: opportunity.id,
+        opportunity_id: opportunityId,
         current_stage: OrderStage.ORDER_CREATED,
-        customer_name: lead.name,
-        customer_phone: lead.phone,
-        total_value: opportunity.estimated_value || 0,
       })
       .select()
       .single();
 
     if (orderError) {
-      console.error('[createOrder]', orderError.message, orderError.details);
+      console.error('[createOrderFromOpportunity] Order insert error:', orderError.message, orderError.details);
       throw orderError;
     }
 
-    // 3. Create initial Order Event - com created_by
+    console.log('[createOrderFromOpportunity] Order created:', order.id);
+
+    // 3. Create initial Order Event
+    console.log('[createOrderFromOpportunity] Creating order event...');
     const { error: eventError } = await supabase
       .from('order_events')
       .insert({
@@ -85,13 +89,20 @@ export const ordersService = {
       });
 
     if (eventError) {
-      console.error('[createOrder]', eventError.message, eventError.details);
+      console.error('[createOrderFromOpportunity] Order event error:', eventError.message, eventError.details);
       throw eventError;
     }
 
-    // 4. Emit Webhook
-    await webhooksService.emit('order.created', { order, opportunity });
+    console.log('[createOrderFromOpportunity] Order event created');
 
+    // 4. Emit Webhook (best-effort, não trava se falhar)
+    try {
+      await webhooksService.emit('order.created', { order, opportunity });
+    } catch (webhookError) {
+      console.warn('[createOrderFromOpportunity] Webhook failed (non-critical):', webhookError);
+    }
+
+    console.log('[createOrderFromOpportunity] Completed successfully');
     return order;
   },
 

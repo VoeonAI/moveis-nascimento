@@ -1,5 +1,4 @@
 import { supabase } from '@/core/supabaseClient';
-import { webhooksService } from './webhooksService';
 
 export interface WebhookEndpoint {
   id: string;
@@ -104,12 +103,13 @@ export const webhooksManagementService = {
     if (error) throw error;
   },
 
-  async testEndpoint(endpoint: WebhookEndpoint): Promise<{ success: boolean; status_code: number | null; error?: string }> {
+  async testEndpoint(endpointId: string): Promise<{ success: boolean; status_code: number | null; error?: string }> {
     try {
-      // Use edge function directly with specific endpointId
+      console.log('[testEndpoint] Invoking webhooks_dispatch with endpointId:', endpointId);
+      
       const { data, error } = await supabase.functions.invoke('webhooks_dispatch', {
         body: {
-          endpointId: endpoint.id,
+          endpointId,
           eventType: 'webhook.test',
           payload: { ping: true, at: new Date().toISOString() },
         },
@@ -161,17 +161,7 @@ export const webhooksManagementService = {
     try {
       const { data, error } = await supabase
         .from('webhook_logs')
-        .select(`
-          id,
-          endpoint_id,
-          event_type,
-          payload,
-          status_code,
-          success,
-          error,
-          created_at,
-          webhook_endpoints (name, url)
-        `)
+        .select('id, endpoint_id, event_type, success, status_code, error, payload, created_at')
         .order('created_at', { ascending: false })
         .limit(limit);
 
@@ -187,7 +177,7 @@ export const webhooksManagementService = {
     try {
       const { data, error } = await supabase
         .from('webhook_logs')
-        .select('*')
+        .select('id, endpoint_id, event_type, success, status_code, error, payload, created_at')
         .eq('endpoint_id', endpointId)
         .order('created_at', { ascending: false })
         .limit(limit);

@@ -3,7 +3,6 @@ import { useAuth } from '@/core/auth/AuthProvider';
 import { PermissionGate } from '@/core/guards/PermissionGate';
 import { Role } from '@/constants/domain';
 import { webhooksManagementService, WebhookEndpoint, WebhookLog, WEBHOOK_EVENTS, WEBHOOK_EVENT_LABELS } from '@/services/webhooksManagementService';
-import { supabase } from '@/core/supabaseClient';
 import { 
   Card, 
   CardContent, 
@@ -146,32 +145,25 @@ const Settings = () => {
   };
 
   const handleTest = async (endpoint: WebhookEndpoint) => {
-    console.log('[Webhook Test] clicked', endpoint.id);
-    console.log('[Webhook Test] supabaseUrl', (supabase as any)?.supabaseUrl ?? 'no supabaseUrl field');
-    
     setTestingEndpoint(endpoint.id);
 
-    // ALWAYS invoke the edge function - no early returns
-    const { data, error } = await supabase.functions.invoke('webhooks_dispatch', {
-      body: {
-        endpointId: endpoint.id,
-        eventType: 'webhook.test',
-        payload: { ping: true, at: new Date().toISOString() },
-      },
-    });
-
-    console.log('[Webhook Test] data', data);
-    console.log('[Webhook Test] error', error);
-
-    if (error) {
-      showError(error.message);
-    } else {
-      showSuccess('Teste enviado');
+    try {
+      const result = await webhooksManagementService.testEndpoint(endpoint.id);
+      
+      if (result.success) {
+        showSuccess(`Teste enviado com sucesso - Status: ${result.status_code}`);
+      } else {
+        showError(`Erro no teste: ${result.error}`);
+      }
+      
+      // Reload logs to show test
+      await loadData();
+    } catch (error: any) {
+      console.error('[Settings] Failed to test endpoint', error);
+      showError(error.message || 'Erro ao testar webhook');
+    } finally {
+      setTestingEndpoint(null);
     }
-
-    // Reload logs to show test
-    await loadData();
-    setTestingEndpoint(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -476,12 +468,6 @@ const Settings = () => {
                               </CollapsibleTrigger>
                             </div>
                           </div>
-                          
-                          {(log as any).webhook_endpoints && (
-                            <div className="text-sm text-gray-600">
-                              <span className="font-medium">Endpoint:</span> {(log as any).webhook_endpoints.name}
-                            </div>
-                          )}
                           
                           <CollapsibleContent>
                             <div className="space-y-3 pt-2 border-t">

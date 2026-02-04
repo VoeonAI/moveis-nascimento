@@ -3,6 +3,19 @@ import { Order, OrderEvent } from '@/types';
 import { OrderStage, ORDER_STAGES_FLOW } from '@/constants/domain';
 import { webhooksService } from './webhooksService';
 
+// Type alias for the complex return type
+type OrderWithProduct = Order & { 
+  opportunities?: { 
+    product_id: string; 
+    products?: { 
+      id: string; 
+      name: string 
+    } 
+  } 
+};
+
+type OrdersByStage = Record<OrderStage, OrderWithProduct[]>;
+
 export const ordersService = {
   async createOrderFromOpportunity(opportunityId: string, userId?: string): Promise<Order> {
     // 0. Check for existing order (Idempotency)
@@ -83,7 +96,7 @@ export const ordersService = {
     return order;
   },
 
-  async listOrdersByStage(): Promise<Record<OrderStage, (Order & { opportunities?: { product_id: string; products?: { id: string; name: string } })[]>> {
+  async listOrdersByStage(): Promise<OrdersByStage> {
     try {
       const { data, error } = await supabase
         .from('orders')
@@ -96,7 +109,7 @@ export const ordersService = {
       const grouped = ORDER_STAGES_FLOW.reduce((acc, stage) => {
         acc[stage] = [];
         return acc;
-      }, {} as Record<OrderStage, (Order & { opportunities?: { product_id: string; products?: { id: string; name: string } })[]>);
+      }, {} as OrdersByStage);
 
       // Group orders by stage
       (data || []).forEach((order) => {
@@ -111,7 +124,7 @@ export const ordersService = {
       return ORDER_STAGES_FLOW.reduce((acc, stage) => {
         acc[stage] = [];
         return acc;
-      }, {} as Record<OrderStage, (Order & { opportunities?: { product_id: string; products?: { id: string; name: string } })[]>);
+      }, {} as OrdersByStage);
     }
   },
 

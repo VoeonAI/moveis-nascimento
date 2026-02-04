@@ -1,3 +1,9 @@
+export enum Role {
+  MASTER = 'master',
+  GESTOR = 'gestor',
+  ESTOQUE = 'estoque',
+}
+
 export enum OpportunityStage {
   NEW_INTEREST = 'new_interest',
   TALKING_AI = 'talking_ai',

@@ -48,11 +48,11 @@ export const crmService = {
     }
   },
 
-  // NOVO: Função dedicada para buscar oportunidades de um lead
-  async listOpportunitiesByLead(leadId: string): Promise<Opportunity[]> {
+  // PATCH: Adicionar join com products
+  async listOpportunitiesByLead(leadId: string): Promise<(Opportunity & { products?: { id: string; name: string } })[]> {
     const { data, error } = await supabase
       .from('opportunities')
-      .select('id, lead_id, product_id, stage, created_at')
+      .select('id, lead_id, product_id, stage, created_at, products (id, name)')
       .eq('lead_id', leadId)
       .order('created_at', { ascending: false });
 
@@ -63,7 +63,7 @@ export const crmService = {
     return data ?? [];
   },
 
-  async getLeadDetail(leadId: string): Promise<{ lead: Lead; opportunities: Opportunity[]; timeline: TimelineEvent[] }> {
+  async getLeadDetail(leadId: string): Promise<{ lead: Lead; opportunities: (Opportunity & { products?: { id: string; name: string } })[]; timeline: TimelineEvent[] }> {
     // 1. Lead (Obrigatório)
     const { data: lead, error: leadError } = await supabase
       .from('leads')
@@ -77,7 +77,7 @@ export const crmService = {
     }
 
     // 2. Opportunities (Opcional - não trava se falhar)
-    let opportunities: Opportunity[] = [];
+    let opportunities: (Opportunity & { products?: { id: string; name: string } })[] = [];
     try {
       opportunities = await this.listOpportunitiesByLead(leadId);
     } catch (err) {
@@ -290,7 +290,6 @@ export const crmService = {
     }
   },
 
-  // PATCH: Normalizar data e atualizar last_activity_at
   async setFollowUp(leadId: string, needed: boolean, at?: Date | string): Promise<void> {
     let isoDate: string | null = null;
 
@@ -298,11 +297,9 @@ export const crmService = {
       if (at instanceof Date) {
         isoDate = at.toISOString();
       } else if (typeof at === 'string') {
-        // Se for formato YYYY-MM-DD, adiciona hora
         if (/^\d{4}-\d{2}-\d{2}$/.test(at)) {
           isoDate = `${at}T00:00:00.000Z`;
         } else {
-          // Tenta converter a string para Date
           const parsedDate = new Date(at);
           if (!isNaN(parsedDate.getTime())) {
             isoDate = parsedDate.toISOString();

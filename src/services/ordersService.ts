@@ -71,11 +71,12 @@ export const ordersService = {
     return order;
   },
 
-  async listOrdersByStage(): Promise<Record<OrderStage, Order[]>> {
+  // PATCH: Adicionar join com opportunities e products
+  async listOrdersByStage(): Promise<Record<OrderStage, (Order & { opportunities?: { product_id: string; products?: { id: string; name: string } } })[]>> {
     try {
       const { data, error } = await supabase
         .from('orders')
-        .select('*')
+        .select('*, opportunities (product_id, products (id, name))')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -84,7 +85,7 @@ export const ordersService = {
       const grouped = ORDER_STAGES_FLOW.reduce((acc, stage) => {
         acc[stage] = [];
         return acc;
-      }, {} as Record<OrderStage, Order[]>);
+      }, {} as Record<OrderStage, (Order & { opportunities?: { product_id: string; products?: { id: string; name: string } } })[]>);
 
       // Group orders by stage
       (data || []).forEach((order) => {
@@ -99,7 +100,7 @@ export const ordersService = {
       return ORDER_STAGES_FLOW.reduce((acc, stage) => {
         acc[stage] = [];
         return acc;
-      }, {} as Record<OrderStage, Order[]>);
+      }, {} as Record<OrderStage, (Order & { opportunities?: { product_id: string; products?: { id: string; name: string } } })[]>);
     }
   },
 
@@ -118,7 +119,7 @@ export const ordersService = {
 
     if (fetchError) throw fetchError;
 
-    const fromStage = currentOrder.current_stage; // Fixed: was .stage
+    const fromStage = currentOrder.current_stage;
 
     // 2. Update Order Stage
     const { data: updatedOrder, error: updateError } = await supabase

@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { showSuccess, showError } from '@/utils/toast';
 
 const Pipeline = () => {
-  const [ordersByStage, setOrdersByStage] = useState<Record<OrderStage, Order[]>>({} as Record<OrderStage, Order[]>);
+  const [ordersByStage, setOrdersByStage] = useState<Record<OrderStage, (Order & { opportunities?: { products?: { name: string } } })[]>>({} as Record<OrderStage, (Order & { opportunities?: { products?: { name: string } } })[]>);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [movingOrder, setMovingOrder] = useState<string | null>(null);
@@ -47,13 +47,6 @@ const Pipeline = () => {
 
     const nextStage = ORDER_STAGES_FLOW[currentIndex + 1];
     
-    // Role Rule: Estoque cannot cancel (implicitly handled as CANCELED is not in flow)
-    // If we were to add a cancel button, we would check:
-    // if (profile?.role === 'estoque' && nextStage === OrderStage.CANCELED) {
-    //   showError('Estoque não pode cancelar pedidos');
-    //   return;
-    // }
-
     setMovingOrder(order.id);
     
     try {
@@ -157,6 +150,16 @@ const Pipeline = () => {
                         <div className="text-sm">
                           <span className="text-gray-500">Cliente: </span>
                           <span className="font-medium">{order.customer_name}</span>
+                        </div>
+                      )}
+
+                      {/* PATCH: Exibir nome do produto se disponível */}
+                      {order.opportunities?.products?.name && (
+                        <div className="text-sm">
+                          <span className="text-gray-500">Produto: </span>
+                          <span className="font-medium truncate block" title={order.opportunities.products.name}>
+                            {order.opportunities.products.name}
+                          </span>
                         </div>
                       )}
 

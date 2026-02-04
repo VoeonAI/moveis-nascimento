@@ -4,6 +4,7 @@ import { crmService, Opportunity, TimelineEvent } from '@/services/crmService';
 import { ordersService } from '@/services/ordersService';
 import { Lead } from '@/types';
 import { OpportunityStage } from '@/constants/domain';
+import { OPPORTUNITY_STAGE_LABELS, ORDER_STAGE_LABELS, TIMELINE_EVENT_LABELS } from '@/constants/labels';
 import { useAuth } from '@/core/auth/AuthProvider';
 import { 
   Card, 
@@ -33,6 +34,7 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { FinalizeSaleModal, FinalizeSaleData } from '@/components/CRM/FinalizeSaleModal';
 import { 
   ArrowLeft, CheckCircle, Clock, User, Phone, MessageSquare, Package, 
   Calendar as CalendarIcon, RefreshCw, Plus, Bell, AlertCircle,
@@ -65,6 +67,10 @@ const CRM = () => {
   const [noteText, setNoteText] = useState('');
   const [followUpNeeded, setFollowUpNeeded] = useState(false);
   const [followUpDate, setFollowUpDate] = useState<Date | undefined>();
+
+  // Finalize Sale Modal
+  const [finalizeModalOpen, setFinalizeModalOpen] = useState(false);
+  const [finalizingOpportunity, setFinalizingOpportunity] = useState<Opportunity | null>(null);
 
   // Check if user is master
   const isMaster = profile?.role === 'master';
@@ -130,8 +136,6 @@ const CRM = () => {
     try {
       const details = await crmService.getLeadDetail(leadId);
       
-      console.log('[CRM Detail] opportunities', details.opportunities);
-      
       setLeadDetails(details);
       
       await crmService.markLeadAsSeen(leadId);
@@ -185,6 +189,16 @@ const CRM = () => {
   const handleStageChange = async (opportunityId: string, newStage: string) => {
     if (!user || !selectedLeadId) return;
     
+    // Check if changing to 'won'
+    if (newStage === OpportunityStage.WON) {
+      const opp = leadDetails?.opportunities.find(o => o.id === opportunityId);
+      if (opp) {
+        setFinalizingOpportunity(opp);
+        setFinalizeModalOpen(true);
+        return;
+      }
+    }
+    
     setUpdatingStage(opportunityId);
     try {
       await crmService.updateOpportunityStage(opportunityId, newStage as OpportunityStage, selectedLeadId);
@@ -195,6 +209,42 @@ const CRM = () => {
     } catch (error) {
       console.error('[CRM] Failed to update stage', error);
       showError('Erro ao atualizar estágio');
+    } finally {
+      setUpdatingStage(null);
+    }
+  };
+
+  const handleFinalizeSale = async (data: FinalizeSaleData) => {
+    if (!finalizingOpportunity || !user || !selectedLeadId) return;
+
+    setUpdatingStage(finalizingOpportunity.id);
+    
+    try {
+      // 1. Update opportunity stage to 'won'
+      console.log('[won] opportunityId', finalizingOpportunity.id);
+      await crmService.updateOpportunityStage(finalizingOpportunity.id, OpportunityStage.WON, selectedLeadId);
+      console.log('[won] Stage updated to won');
+
+      // 2. Ensure order exists and update with form data
+      console.log('[won] Ensuring order...');
+      const order = await ordersService.ensureOrderForOpportunity(finalizingOpportunity.id, user.id);
+      console.log('[won] Order ensured:', order?.id);
+
+      // 3. Update order with additional data
+      if (data.customer_name || data.customer_phone || data.delivery_address || data.order_number || data.notes) {
+        await ordersService.updateOrder(order.id, data);
+        console.log('[won] Order updated with form data');
+      }
+
+      // 4. Success - navigate to pipeline
+      showSuccess('Pedido criado com sucesso!');
+      setFinalizeModalOpen(false);
+      navigate('/app/pipeline');
+    } catch (error: any) {
+      console.error('[won] Failed:', error);
+      
+      const errorMessage = error?.message || error?.details || 'Erro ao criar pedido';
+      showError(errorMessage);
     } finally {
       setUpdatingStage(null);
     }
@@ -226,11 +276,8 @@ const CRM = () => {
     } catch (error: any) {
       console.error('[won] Failed:', error);
       
-      // Extract error message
       const errorMessage = error?.message || error?.details || 'Erro ao criar pedido';
       showError(errorMessage);
-      
-      // Do NOT navigate - let user see the error
     } finally {
       setUpdatingStage(null);
     }
@@ -350,7 +397,9 @@ const CRM = () => {
       case 'opportunity_created':
         return `Novo interesse em "${event.meta.product_name}"`;
       case 'opportunity_stage_changed':
-        return `Oportunidade movida de "${event.meta.from}" para "${event.meta.to}"`;
+        const fromLabel = OPPORTUNITY_STAGE_LABELS[event.meta.from] || event.meta.from;
+        const toLabel = OPPORTUNITY_STAGE_LABELS[event.meta.to] || event.meta.to;
+        return `Oportunidade movida de "${fromLabel}" para "${toLabel}"`;
       case 'followup_set':
         return event.meta.follow_up_at 
           ? `Follow-up agendado para ${format(new Date(event.meta.follow_up_at), 'dd/MM/yyyy')}`
@@ -491,7 +540,7 @@ const CRM = () => {
                 <CardContent className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Badge variant="outline" className="capitalize">
-                      {lead.status.replace(/_/g, ' ')}
+                      {OPPORTUNITY_STAGE_LABELS[lead.status as OpportunityStage] || lead.status.replace(/_/g, ' ')}
                     </Badge>
                     <span className="text-xs text-gray-500">
                       {format(new Date(lead.created_at), 'dd/MM')}
@@ -524,6 +573,20 @@ const CRM = () => {
   // Detail View
   return (
     <div className="p-8">
+      <FinalizeSaleModal
+        open={finalizeModalOpen}
+        onClose={() => {
+          setFinalizeModalOpen(false);
+          setFinalizingOpportunity(null);
+        }}
+        onConfirm={handleFinalizeSale}
+        leadData={{
+          name: leadDetails?.lead.name || '',
+          phone: leadDetails?.lead.phone || '',
+        }}
+        productName={finalizingOpportunity?.products?.name}
+      />
+
       <div className="flex items-center justify-between mb-6">
         <Button 
           variant="ghost" 
@@ -702,7 +765,6 @@ const CRM = () => {
                     <CardContent className="p-6">
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex-1 space-y-2">
-                          {/* PATCH: Exibir nome do produto com fallback */}
                           {opp.products?.name ? (
                             <div className="flex items-center gap-2">
                               <Package size={16} className="text-gray-500" />
@@ -725,7 +787,7 @@ const CRM = () => {
                           <div className="flex items-center gap-3">
                             <span className="text-sm font-medium">Estágio:</span>
                             <Badge className={getStageColor(opp.stage)}>
-                              {opp.stage.replace(/_/g, ' ')}
+                              {OPPORTUNITY_STAGE_LABELS[opp.stage as OpportunityStage] || opp.stage.replace(/_/g, ' ')}
                             </Badge>
                           </div>
                         </div>

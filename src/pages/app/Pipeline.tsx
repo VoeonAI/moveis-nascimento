@@ -2,12 +2,26 @@ import React, { useEffect, useState } from 'react';
 import { ordersService } from '@/services/ordersService';
 import { Order } from '@/types';
 import { OrderStage, ORDER_STAGES_FLOW } from '@/constants/domain';
+import { ORDER_STAGE_LABELS } from '@/constants/labels';
 import { useAuth } from '@/core/auth/AuthProvider';
-import { AlertCircle, RefreshCw, ArrowRight, Package, Calendar } from 'lucide-react';
+import { AlertCircle, RefreshCw, ArrowRight, Package, Calendar, MoreHorizontal } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
 import { showSuccess, showError } from '@/utils/toast';
 
 const Pipeline = () => {
@@ -36,27 +50,19 @@ const Pipeline = () => {
     fetchOrders();
   }, []);
 
-  const handleMoveStage = async (order: Order) => {
+  const handleMoveStage = async (order: Order, targetStage: OrderStage) => {
     if (!user) return;
-    
-    const currentIndex = ORDER_STAGES_FLOW.indexOf(order.current_stage);
-    if (currentIndex === -1 || currentIndex >= ORDER_STAGES_FLOW.length - 1) {
-      showError('Não é possível avançar deste estágio');
-      return;
-    }
-
-    const nextStage = ORDER_STAGES_FLOW[currentIndex + 1];
     
     setMovingOrder(order.id);
     
     try {
-      await ordersService.moveOrderStage(
+      await ordersService.updateOrderStage(
         order.id, 
-        nextStage, 
+        targetStage, 
         user.id, 
-        `Movido para ${nextStage}`
+        `Movido para ${ORDER_STAGE_LABELS[targetStage]}`
       );
-      showSuccess(`Pedido movido para ${nextStage.replace(/_/g, ' ')}`);
+      showSuccess(`Pedido movido para ${ORDER_STAGE_LABELS[targetStage]}`);
       await fetchOrders();
     } catch (error) {
       console.error('[Pipeline] Failed to move stage:', error);
@@ -116,8 +122,8 @@ const Pipeline = () => {
           <div key={stage} className="flex-shrink-0 w-80 bg-gray-50 rounded-lg border flex flex-col max-h-[calc(100vh-140px)]">
             {/* Stage Header */}
             <div className={`p-4 border-b rounded-t-lg ${getStageColor(stage)}`}>
-              <h2 className="font-semibold text-center capitalize">
-                {stage.replace(/_/g, ' ')}
+              <h2 className="font-semibold text-center">
+                {ORDER_STAGE_LABELS[stage]}
               </h2>
               <div className="text-center text-sm mt-1 opacity-75">
                 {ordersByStage[stage]?.length || 0} pedidos
@@ -146,14 +152,14 @@ const Pipeline = () => {
                       </div>
 
                       {/* Customer Info */}
-                      {order.customer_name && (
-                        <div className="text-sm">
-                          <span className="text-gray-500">Cliente: </span>
-                          <span className="font-medium">{order.customer_name}</span>
-                        </div>
-                      )}
+                      <div className="text-sm">
+                        <span className="text-gray-500">Cliente: </span>
+                        <span className="font-medium">
+                          {order.customer_name || 'Cliente não informado'}
+                        </span>
+                      </div>
 
-                      {/* PATCH: Exibir nome do produto se disponível */}
+                      {/* Product Name */}
                       {order.opportunities?.products?.name && (
                         <div className="text-sm">
                           <span className="text-gray-500">Produto: </span>
@@ -176,24 +182,55 @@ const Pipeline = () => {
                         </div>
                       )}
 
-                      {/* Action Button */}
+                      {/* Action Buttons */}
                       {stage !== OrderStage.DELIVERED && stage !== OrderStage.CANCELED && (
-                        <Button
-                          onClick={() => handleMoveStage(order)}
-                          disabled={movingOrder === order.id}
-                          size="sm"
-                          className="w-full"
-                          variant="outline"
-                        >
-                          {movingOrder === order.id ? (
-                            'Movendo...'
-                          ) : (
-                            <>
-                              Avançar
-                              <ArrowRight size={14} className="ml-2" />
-                            </>
-                          )}
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => {
+                              const currentIndex = ORDER_STAGES_FLOW.indexOf(stage);
+                              if (currentIndex !== -1 && currentIndex < ORDER_STAGES_FLOW.length - 1) {
+                                handleMoveStage(order, ORDER_STAGES_FLOW[currentIndex + 1]);
+                              }
+                            }}
+                            disabled={movingOrder === order.id}
+                            size="sm"
+                            className="flex-1"
+                            variant="outline"
+                          >
+                            {movingOrder === order.id ? (
+                              'Movendo...'
+                            ) : (
+                              <>
+                                Avançar
+                                <ArrowRight size={14} className="ml-2" />
+                              </>
+                            )}
+                          </Button>
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={movingOrder === order.id}
+                              >
+                                <MoreHorizontal size={14} />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {ORDER_STAGES_FLOW.map((targetStage) => (
+                                targetStage !== stage && (
+                                  <DropdownMenuItem
+                                    key={targetStage}
+                                    onClick={() => handleMoveStage(order, targetStage)}
+                                  >
+                                    {ORDER_STAGE_LABELS[targetStage]}
+                                  </DropdownMenuItem>
+                                )
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       )}
                     </CardContent>
                   </Card>

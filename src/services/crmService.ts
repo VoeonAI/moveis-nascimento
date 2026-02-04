@@ -31,9 +31,6 @@ export interface TimelineEvent {
 export const crmService = {
   async listLeads(includeArchived: boolean = false): Promise<Lead[]> {
     try {
-      // PATCH: Query simplificada para compatibilidade com schema atual
-      // Evita filtrar por colunas que podem não existir (archived, last_activity_at)
-      // Usa created_at para ordenação
       const { data, error } = await supabase
         .from('leads')
         .select('*')
@@ -51,8 +48,22 @@ export const crmService = {
     }
   },
 
-  // NOVO: getLeadDetail com isolamento de erros
-  async getLeadDetail(leadId: string): Promise<{ lead: Lead; opportunities: OpportunityWithProduct[]; timeline: TimelineEvent[] }> {
+  // NOVO: Função dedicada para buscar oportunidades de um lead
+  async listOpportunitiesByLead(leadId: string): Promise<Opportunity[]> {
+    const { data, error } = await supabase
+      .from('opportunities')
+      .select('id, lead_id, product_id, stage, created_at')
+      .eq('lead_id', leadId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[crmService.listOpportunitiesByLead]', error.message);
+      throw error;
+    }
+    return data ?? [];
+  },
+
+  async getLeadDetail(leadId: string): Promise<{ lead: Lead; opportunities: Opportunity[]; timeline: TimelineEvent[] }> {
     // 1. Lead (Obrigatório)
     const { data: lead, error: leadError } = await supabase
       .from('leads')
@@ -62,32 +73,15 @@ export const crmService = {
 
     if (leadError) {
       console.error('[crmService.getLeadDetail] Lead fetch error:', leadError.message);
-      throw leadError; // Se lead falha, falha fatal
+      throw leadError;
     }
 
     // 2. Opportunities (Opcional - não trava se falhar)
-    let opportunities: OpportunityWithProduct[] = [];
+    let opportunities: Opportunity[] = [];
     try {
-      const { data: opps, error: oppError } = await supabase
-        .from('opportunities')
-        .select(`
-          *,
-          products (name)
-        `)
-        .eq('lead_id', leadId)
-        .eq('archived', false)
-        .order('created_at', { ascending: false });
-
-      if (oppError) {
-        console.error('[crmService.getLeadDetail] Opportunities fetch error:', oppError.message);
-      } else if (opps) {
-        opportunities = opps.map((opp: any) => ({
-          ...opp,
-          product_name: opp.products?.name,
-        }));
-      }
+      opportunities = await this.listOpportunitiesByLead(leadId);
     } catch (err) {
-      console.error('[crmService.getLeadDetail] Opportunities unexpected error:', err);
+      console.error('[crmService.getLeadDetail] Opportunities fetch error:', err);
     }
 
     // 3. Timeline (Opcional - não trava se falhar)
@@ -112,7 +106,7 @@ export const crmService = {
   },
 
   async getLeadWithOpportunities(leadId: string): Promise<{ lead: Lead; opportunities: OpportunityWithProduct[] }> {
-    // Mantido para compatibilidade, mas recomenda-se usar getLeadDetail
+    // Mantido para compatibilidade
     try {
       const { data: lead, error: leadError } = await supabase
         .from('leads')
@@ -164,7 +158,6 @@ export const crmService = {
   },
 
   async deleteLead(leadId: string): Promise<void> {
-    // Check for existing opportunities
     const { data: opportunities } = await supabase
       .from('opportunities')
       .select('id')
@@ -175,7 +168,6 @@ export const crmService = {
       throw new Error('Não é possível excluir lead com oportunidades ativas. Arquive primeiro.');
     }
 
-    // Check for existing orders
     const { data: orders } = await supabase
       .from('orders')
       .select('id')
@@ -211,7 +203,6 @@ export const crmService = {
   },
 
   async deleteOpportunity(opportunityId: string): Promise<void> {
-    // Check for existing orders
     const { data: orders } = await supabase
       .from('orders')
       .select('id')

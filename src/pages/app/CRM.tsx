@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { crmService, OpportunityWithProduct, TimelineEvent } from '@/services/crmService';
+import { crmService, Opportunity, TimelineEvent } from '@/services/crmService';
 import { ordersService } from '@/services/ordersService';
 import { Lead } from '@/types';
 import { OpportunityStage } from '@/constants/domain';
@@ -50,7 +50,7 @@ const CRM = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
-  const [leadDetails, setLeadDetails] = useState<{ lead: Lead; opportunities: OpportunityWithProduct[]; timeline: TimelineEvent[] } | null>(null);
+  const [leadDetails, setLeadDetails] = useState<{ lead: Lead; opportunities: Opportunity[]; timeline: TimelineEvent[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [updatingStage, setUpdatingStage] = useState<string | null>(null);
   const [savingNote, setSavingNote] = useState(false);
@@ -128,8 +128,10 @@ const CRM = () => {
   const handleSelectLead = async (leadId: string) => {
     setSelectedLeadId(leadId);
     try {
-      // PATCH: Usar getLeadDetail para garantir que falhas em opportunities/timeline não travem a tela
       const details = await crmService.getLeadDetail(leadId);
+      
+      // PATCH: Logar oportunidades para debug
+      console.log('[CRM Detail] opportunities', details.opportunities);
       
       setLeadDetails(details);
       
@@ -144,7 +146,6 @@ const CRM = () => {
     } catch (err) {
       console.error('[CRM] Failed to load lead details', err);
       showError('Erro ao carregar detalhes do lead');
-      // Não limpa selectedLeadId para não deixar tela em branco se o lead existir mas algo falhou
     }
   };
 
@@ -683,10 +684,10 @@ const CRM = () => {
                     <CardContent className="p-6">
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex-1 space-y-2">
-                          {opp.product_name && (
+                          {opp.product_id && (
                             <div className="flex items-center gap-2">
                               <Package size={16} className="text-gray-500" />
-                              <span className="font-medium">{opp.product_name}</span>
+                              <span className="font-medium">Produto ID: {opp.product_id}</span>
                             </div>
                           )}
 
@@ -703,15 +704,6 @@ const CRM = () => {
                               {opp.stage.replace(/_/g, ' ')}
                             </Badge>
                           </div>
-
-                          {opp.estimated_value > 0 && (
-                            <div className="text-sm">
-                              <span className="text-gray-500">Valor estimado: </span>
-                              <span className="font-semibold text-green-600">
-                                R$ {opp.estimated_value.toFixed(2)}
-                              </span>
-                            </div>
-                          )}
                         </div>
 
                         <div className="flex flex-col gap-2 min-w-[200px]">

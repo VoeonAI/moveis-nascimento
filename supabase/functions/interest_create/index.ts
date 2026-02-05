@@ -23,6 +23,24 @@ function log(level: 'info' | 'error', requestId: string, message: string, data?:
   console.log(JSON.stringify(logEntry))
 }
 
+// Helper to emit webhooks (best-effort)
+async function emitWebhook(supabase: any, eventType: string, payload: any, channel: string) {
+  try {
+    const { error } = await supabase.functions.invoke('webhooks_dispatch', {
+      body: { eventType, payload, channel },
+    });
+
+    if (error) {
+      console.warn('[interest_create] Webhook emit failed:', eventType, error);
+    } else {
+      console.log('[interest_create] Webhook emitted:', eventType);
+    }
+  } catch (err) {
+    console.warn('[interest_create] Webhook emit error:', eventType, err);
+    // Never fail the main flow
+  }
+}
+
 serve(async (req) => {
   const requestId = generateRequestId()
   
@@ -134,6 +152,15 @@ serve(async (req) => {
       }
       lead = newLead
       log('info', requestId, 'Lead created', { lead_id: lead.id })
+
+      // Emit lead.created webhook (server-side)
+      await emitWebhook(supabase, 'lead.created', {
+        lead_id: lead.id,
+        name: lead.name,
+        phone: lead.phone,
+        channel: lead.channel,
+        source,
+      }, 'site')
     } else {
       log('info', requestId, 'Using existing lead', { lead_id: lead.id })
     }
@@ -194,6 +221,16 @@ serve(async (req) => {
         .eq('id', lead.id)
 
       log('info', requestId, 'Timeline and lead stats updated')
+
+      // Emit opportunity.created webhook (server-side)
+      await emitWebhook(supabase, 'opportunity.created', {
+        opportunity_id: opportunity.id,
+        lead_id: lead.id,
+        product_id: product.id,
+        product_name: product.name,
+        stage: opportunity.stage,
+        source,
+      }, 'site')
     } else {
       log('info', requestId, 'Using existing opportunity', { opportunity_id: opportunity.id })
     }

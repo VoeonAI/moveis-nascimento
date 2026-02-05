@@ -227,7 +227,7 @@ export const crmService = {
   ): Promise<Opportunity> {
     const { data: currentOpp } = await supabase
       .from('opportunities')
-      .select('stage')
+      .select('stage, product_id')
       .eq('id', opportunityId)
       .single();
 
@@ -251,6 +251,15 @@ export const crmService = {
     });
 
     await this._updateLeadActivity(leadId);
+
+    // Emit opportunity.stage_changed webhook (best-effort)
+    webhooksService.emit('opportunity.stage_changed', {
+      opportunity_id: opportunityId,
+      lead_id,
+      product_id: currentOpp.product_id,
+      from_stage: fromStage,
+      to_stage: newStage,
+    }, 'crm').catch(err => console.error('[updateOpportunityStage] Webhook failed:', err));
 
     return data;
   },
@@ -365,12 +374,12 @@ export const crmService = {
     webhooksService.emit('lead.created', {
       lead,
       opportunity,
-    }).catch(err => console.error('[createLeadFromInterest] Webhook failed:', err));
+    }, 'site').catch(err => console.error('[createLeadFromInterest] Webhook failed:', err));
 
     webhooksService.emit('opportunity.created', {
       opportunity,
       lead,
-    }).catch(err => console.error('[createLeadFromInterest] Webhook failed:', err));
+    }, 'site').catch(err => console.error('[createLeadFromInterest] Webhook failed:', err));
 
     return lead;
   },

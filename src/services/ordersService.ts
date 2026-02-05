@@ -104,10 +104,16 @@ export const ordersService = {
 
     // 5. Emit webhook (best-effort)
     webhooksService.emit('order.created', {
-      order,
-      opportunity,
-      lead,
-    }).catch(err => console.error('[ensureOrderForOpportunity] Webhook failed:', err));
+      order_id: order.id,
+      opportunity_id: opportunityId,
+      lead_id: lead.id,
+      product_id: opportunity.product_id,
+      customer_name: order.customer_name,
+      customer_phone: order.customer_phone,
+      internal_order_code: order.internal_order_code,
+      delivery_address: order.delivery_address,
+      notes: order.notes,
+    }, 'crm').catch(err => console.error('[ensureOrderForOpportunity] Webhook failed:', err));
 
     return order;
   },
@@ -194,10 +200,11 @@ export const ordersService = {
 
     // 4. Emit Webhook (best-effort, não trava se falhar)
     webhooksService.emit('order.created', {
-      order,
-      opportunity,
-      lead,
-    }).catch(err => console.error('[createOrderFromOpportunity] Webhook failed:', err));
+      order_id: order.id,
+      opportunity_id: opportunityId,
+      lead_id: lead.id,
+      product_id: opportunity.product_id,
+    }, 'crm').catch(err => console.error('[createOrderFromOpportunity] Webhook failed:', err));
 
     console.log('[createOrderFromOpportunity] Completed successfully');
     return order;
@@ -260,9 +267,10 @@ export const ordersService = {
 
     // 4. Emit Webhook (best-effort)
     webhooksService.emit('order.stage_changed', {
-      order: updatedOrder,
-      event: { order_id: orderId, from_stage: fromStage, to_stage: toStage },
-    }).catch(err => console.error('[updateOrderStage] Webhook failed:', err));
+      order_id: orderId,
+      from_stage: fromStage,
+      to_stage: toStage,
+    }, 'pipeline').catch(err => console.error('[updateOrderStage] Webhook failed:', err));
 
     return updatedOrder;
   },
@@ -382,9 +390,10 @@ export const ordersService = {
 
     // 4. Emit Webhook (best-effort)
     webhooksService.emit('order.stage_changed', {
-      order: updatedOrder,
-      event: { order_id: orderId, from_stage: fromStage, to_stage: toStage },
-    }).catch(err => console.error('[moveOrderStage] Webhook failed:', err));
+      order_id: orderId,
+      from_stage: fromStage,
+      to_stage: toStage,
+    }, 'pipeline').catch(err => console.error('[moveOrderStage] Webhook failed:', err));
 
     return updatedOrder;
   },

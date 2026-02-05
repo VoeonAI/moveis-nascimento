@@ -103,8 +103,11 @@ export const ordersService = {
     }
 
     // 5. Emit webhook (best-effort)
-    webhooksService.emit('order.created', { order, opportunity })
-      .catch(err => console.error('[ensureOrderForOpportunity] Webhook failed:', err));
+    webhooksService.emit('order.created', {
+      order,
+      opportunity,
+      lead,
+    }).catch(err => console.error('[ensureOrderForOpportunity] Webhook failed:', err));
 
     return order;
   },
@@ -190,8 +193,11 @@ export const ordersService = {
     console.log('[createOrderFromOpportunity] Order event created (or failed gracefully)');
 
     // 4. Emit Webhook (best-effort, não trava se falhar)
-    webhooksService.emit('order.created', { order, opportunity })
-      .catch(err => console.error('[createOrderFromOpportunity] Webhook failed:', err));
+    webhooksService.emit('order.created', {
+      order,
+      opportunity,
+      lead,
+    }).catch(err => console.error('[createOrderFromOpportunity] Webhook failed:', err));
 
     console.log('[createOrderFromOpportunity] Completed successfully');
     return order;

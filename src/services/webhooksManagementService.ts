@@ -22,10 +22,10 @@ export interface WebhookLog {
 }
 
 export const WEBHOOK_EVENTS = {
-  LEAD_CREATED: 'lead.created_from_interest',
+  LEAD_CREATED: 'lead.created',
+  OPPORTUNITY_CREATED: 'opportunity.created',
   ORDER_CREATED: 'order.created',
   ORDER_STAGE_CHANGED: 'order.stage_changed',
-  OPPORTUNITY_CREATED: 'opportunity.created_from_interest',
   WEBHOOK_TEST: 'webhook.test',
 } as const;
 

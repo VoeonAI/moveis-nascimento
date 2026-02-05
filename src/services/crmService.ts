@@ -362,14 +362,14 @@ export const crmService = {
     if (oppError) throw oppError;
 
     // Emit webhooks (best-effort)
-    webhooksService.emit('lead.created_from_interest', {
+    webhooksService.emit('lead.created', {
       lead,
       opportunity,
     }).catch(err => console.error('[createLeadFromInterest] Webhook failed:', err));
 
-    webhooksService.emit('opportunity.created_from_interest', {
-      lead,
+    webhooksService.emit('opportunity.created', {
       opportunity,
+      lead,
     }).catch(err => console.error('[createLeadFromInterest] Webhook failed:', err));
 
     return lead;

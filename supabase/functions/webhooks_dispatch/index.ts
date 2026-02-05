@@ -1,6 +1,23 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
+// Utility function to build versioned webhook envelope
+function buildWebhookEnvelope(eventType: string, data: any, meta?: any) {
+  return {
+    version: "1.0",
+    event_type: eventType,
+    event_id: crypto.randomUUID(),
+    occurred_at: new Date().toISOString(),
+    source: {
+      app: "moveis-nascimento",
+      env: Deno.env.get('ENVIRONMENT') || 'production',
+      channel: 'web',
+    },
+    data,
+    meta,
+  };
+}
+
 serve(async (req) => {
   // Dynamic CORS headers
   const origin = req.headers.get('origin') ?? '*'
@@ -139,11 +156,18 @@ serve(async (req) => {
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s timeout
 
+        // Build versioned envelope
+        const envelope = buildWebhookEnvelope(eventType, payload, {
+          endpoint_id: endpoint.id,
+          endpoint_name: endpoint.name,
+        })
+
         try {
           console.log('[webhooks_dispatch] Fetching endpoint:', {
             id: endpoint.id,
             name: endpoint.name,
             url: endpoint.url,
+            event_id: envelope.event_id,
           })
 
           const headers: Record<string, string> = {
@@ -158,11 +182,7 @@ serve(async (req) => {
             method: 'POST',
             headers,
             signal: controller.signal,
-            body: JSON.stringify({
-              event: eventType,
-              timestamp: new Date().toISOString(),
-              payload,
-            }),
+            body: JSON.stringify(envelope),
           })
 
           clearTimeout(timeoutId)
@@ -179,6 +199,7 @@ serve(async (req) => {
 
           console.log('[webhooks_dispatch] Fetch completed:', {
             endpointId: endpoint.id,
+            event_id: envelope.event_id,
             status: statusCode,
             success,
           })
@@ -191,26 +212,23 @@ serve(async (req) => {
           console.error(`[webhooks_dispatch] Failed to dispatch to ${endpoint.url}:`, error)
         }
 
-        // Build log payload
-        const logPayload = {
-          eventType,
-          sentAt: new Date().toISOString(),
-          request: {
-            endpoint: endpoint.name,
-            url: endpoint.url,
-          },
-          response: {
-            status: statusCode,
-            preview: responsePreview,
-          },
-        }
-
-        // Log attempt
+        // Log attempt with envelope
         try {
           await supabase.from('webhook_logs').insert({
             endpoint_id: endpoint.id,
             event_type: eventType,
-            payload: logPayload,
+            payload: {
+              envelope,
+              sentAt: new Date().toISOString(),
+              request: {
+                endpoint: endpoint.name,
+                url: endpoint.url,
+              },
+              response: {
+                status: statusCode,
+                preview: responsePreview,
+              },
+            },
             status_code: statusCode,
             success,
             error,
@@ -222,6 +240,7 @@ serve(async (req) => {
 
         return {
           endpoint_id: endpoint.id,
+          event_id: envelope.event_id,
           success,
           status_code: statusCode,
           error,

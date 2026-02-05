@@ -1,5 +1,15 @@
 import { supabase } from '@/core/supabaseClient';
 
+export const WEBHOOK_EVENTS = {
+  LEAD_CREATED: 'lead.created',
+  OPPORTUNITY_CREATED: 'opportunity.created',
+  ORDER_CREATED: 'order.created',
+  ORDER_STAGE_CHANGED: 'order.stage_changed',
+  WEBHOOK_TEST: 'webhook.test',
+} as const;
+
+export type WebhookEventType = typeof WEBHOOK_EVENTS[keyof typeof WEBHOOK_EVENTS];
+
 export const webhooksService = {
   async emit(eventType: string, payload: Record<string, any>, endpointId?: string) {
     try {

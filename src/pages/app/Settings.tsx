@@ -46,15 +46,15 @@ export default function Settings() {
   const searchUrl = functionsBaseUrl + "/agent_products_search";
   const productUrl = functionsBaseUrl + "/agent_product_by_id";
 
-  const curlCategoryExample = 'curl -X GET "' + searchUrl + '?category=guarda-roupa&limit=10" -H "Authorization: Bearer <AGENT_TOKEN>"';
-  const curlTextExample = 'curl -X GET "' + searchUrl + '?q=guarda%20roupa&limit=10" -H "Authorization: Bearer <AGENT_TOKEN>"';
-  const curlIdExample = 'curl -X GET "' + productUrl + '?id=uuid-do-produto" -H "Authorization: Bearer <AGENT_TOKEN>"';
+  const curlCategoryExample = 'curl -X GET "' + searchUrl + '?category=guarda-roupa&limit=10" -H "x-agent-token: <AGENT_TOKEN>"';
+  const curlTextExample = 'curl -X GET "' + searchUrl + '?q=guarda%20roupa&limit=10" -H "x-agent-token: <AGENT_TOKEN>"';
+  const curlIdExample = 'curl -X GET "' + productUrl + '?id=uuid-do-produto" -H "x-agent-token: <AGENT_TOKEN>"';
 
   const n8nConfig = {
     method: "GET",
     url: searchUrl,
     queryParameters: { category: "guarda-roupa", limit: 10 },
-    headers: { Authorization: "Bearer {{$env.AGENT_TOKEN}}" },
+    headers: { "x-agent-token": "{{$env.AGENT_TOKEN}}" },
   };
 
   const envelopeConfig = {

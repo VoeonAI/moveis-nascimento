@@ -72,6 +72,7 @@ const Settings = () => {
   // WhatsApp settings state
   const [storeWhatsApp, setStoreWhatsApp] = useState('');
   const [savingWhatsApp, setSavingWhatsApp] = useState(false);
+  const [whatsappSaved, setWhatsappSaved] = useState(false);
 
   // Filters
   const [filterEndpointId, setFilterEndpointId] = useState<string>('all');
@@ -107,6 +108,7 @@ const Settings = () => {
       setEndpoints(endpointsData);
       setLogs(logsData);
       setStoreWhatsApp(whatsapp ?? '');
+      setWhatsappSaved(!!whatsapp);
     } catch (error) {
       console.error('[Settings] Failed to load data', error);
       showError('Erro ao carregar configurações');
@@ -221,10 +223,12 @@ const Settings = () => {
     setSavingWhatsApp(true);
     try {
       await settingsService.setStoreWhatsApp(storeWhatsApp);
+      setWhatsappSaved(true);
       showSuccess('WhatsApp atualizado com sucesso');
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Settings] Failed to save WhatsApp', error);
-      showError('Erro ao salvar WhatsApp');
+      setWhatsappSaved(false);
+      showError(error.message || 'Erro ao salvar WhatsApp');
     } finally {
       setSavingWhatsApp(false);
     }
@@ -425,7 +429,10 @@ const Settings = () => {
                   <Input
                     id="store_whatsapp"
                     value={storeWhatsApp}
-                    onChange={(e) => setStoreWhatsApp(e.target.value.replace(/\D/g, ''))}
+                    onChange={(e) => {
+                      setStoreWhatsApp(e.target.value.replace(/\D/g, ''));
+                      setWhatsappSaved(false);
+                    }}
                     placeholder="5511999999999"
                     maxLength={15}
                     disabled={savingWhatsApp}
@@ -449,7 +456,7 @@ const Settings = () => {
                   )}
                 </Button>
 
-                {storeWhatsApp && (
+                {whatsappSaved && storeWhatsApp && (
                   <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                     <div className="flex items-center gap-2 text-green-800">
                       <CheckCircle size={20} />

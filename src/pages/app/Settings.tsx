@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 
-import { RefreshCw, Globe, Phone, Api, Clock, Copy, Save, Loader2 } from "lucide-react";
+import { RefreshCw, Globe, Phone, Code, Clock, Copy, Save, Loader2 } from "lucide-react";
 
 import {
   webhooksManagementService,
@@ -138,7 +138,7 @@ export default function Settings() {
         <TabsList>
           <TabsTrigger value="webhooks"><Globe size={16} className="mr-2" />Webhooks</TabsTrigger>
           {isMaster && <TabsTrigger value="whatsapp"><Phone size={16} className="mr-2" />WhatsApp</TabsTrigger>}
-          {isMaster && <TabsTrigger value="apis"><Api size={16} className="mr-2" />APIs</TabsTrigger>}
+          {isMaster && <TabsTrigger value="apis"><Code size={16} className="mr-2" />APIs</TabsTrigger>}
           {isMaster && <TabsTrigger value="logs"><Clock size={16} className="mr-2" />Logs</TabsTrigger>}
         </TabsList>
 

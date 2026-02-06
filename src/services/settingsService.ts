@@ -1,0 +1,50 @@
+import { supabase } from '@/core/supabaseClient';
+
+export const settingsService = {
+  async getSetting(key: string): Promise<string | null> {
+    try {
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', key)
+        .single();
+
+      if (error) {
+        console.error('[settingsService.getSetting]', error.message);
+        return null;
+      }
+
+      return data?.value ?? null;
+    } catch (error) {
+      console.error('[settingsService.getSetting]', error);
+      return null;
+    }
+  },
+
+  async setSetting(key: string, value: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('app_settings')
+        .upsert(
+          { key, value, updated_at: new Date().toISOString() },
+          { onConflict: 'key' }
+        );
+
+      if (error) {
+        console.error('[settingsService.setSetting]', error.message);
+        throw error;
+      }
+    } catch (error) {
+      console.error('[settingsService.setSetting]', error);
+      throw error;
+    }
+  },
+
+  async getStoreWhatsApp(): Promise<string | null> {
+    return this.getSetting('store_whatsapp_e164');
+  },
+
+  async setStoreWhatsApp(phoneNumber: string): Promise<void> {
+    return this.setSetting('store_whatsapp_e164', phoneNumber);
+  },
+};

@@ -3,6 +3,7 @@ import { useAuth } from '@/core/auth/AuthProvider';
 import { PermissionGate } from '@/core/guards/PermissionGate';
 import { Role } from '@/constants/domain';
 import { webhooksManagementService, WebhookEndpoint, WebhookLog, WEBHOOK_EVENTS, WEBHOOK_EVENT_LABELS } from '@/services/webhooksManagementService';
+import { settingsService } from '@/services/settingsService';
 import { 
   Card, 
   CardContent, 
@@ -48,7 +49,10 @@ import {
   ChevronRight,
   ChevronDown,
   Filter,
-  X
+  X,
+  Phone,
+  Save,
+  Loader2
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { format } from 'date-fns';
@@ -64,6 +68,10 @@ const Settings = () => {
   const [logs, setLogs] = useState<WebhookLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [testingEndpoint, setTestingEndpoint] = useState<string | null>(null);
+
+  // WhatsApp settings state
+  const [storeWhatsApp, setStoreWhatsApp] = useState('');
+  const [savingWhatsApp, setSavingWhatsApp] = useState(false);
 
   // Filters
   const [filterEndpointId, setFilterEndpointId] = useState<string>('all');
@@ -91,12 +99,14 @@ const Settings = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [endpointsData, logsData] = await Promise.all([
+      const [endpointsData, logsData, whatsapp] = await Promise.all([
         webhooksManagementService.listEndpoints(),
         isMaster ? webhooksManagementService.listLogs(100) : Promise.resolve([]),
+        isMaster ? settingsService.getStoreWhatsApp() : Promise.resolve(null),
       ]);
       setEndpoints(endpointsData);
       setLogs(logsData);
+      setStoreWhatsApp(whatsapp ?? '');
     } catch (error) {
       console.error('[Settings] Failed to load data', error);
       showError('Erro ao carregar configurações');
@@ -201,6 +211,25 @@ const Settings = () => {
     }
   };
 
+  const handleSaveWhatsApp = async () => {
+    // Validate format: 10-15 digits only
+    if (storeWhatsApp && !/^\d{10,15}$/.test(storeWhatsApp)) {
+      showError('Formato inválido. Use apenas números (10-15 dígitos). Ex: 5511999999999');
+      return;
+    }
+
+    setSavingWhatsApp(true);
+    try {
+      await settingsService.setStoreWhatsApp(storeWhatsApp);
+      showSuccess('WhatsApp atualizado com sucesso');
+    } catch (error) {
+      console.error('[Settings] Failed to save WhatsApp', error);
+      showError('Erro ao salvar WhatsApp');
+    } finally {
+      setSavingWhatsApp(false);
+    }
+  };
+
   const toggleEvent = (event: string) => {
     setFormData(prev => ({
       ...prev,
@@ -275,6 +304,12 @@ const Settings = () => {
             <Globe size={16} className="mr-2" />
             Webhooks
           </TabsTrigger>
+          {isMaster && (
+            <TabsTrigger value="whatsapp">
+              <Phone size={16} className="mr-2" />
+              WhatsApp
+            </TabsTrigger>
+          )}
           {isMaster && (
             <TabsTrigger value="logs">
               <Clock size={16} className="mr-2" />
@@ -374,6 +409,61 @@ const Settings = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {isMaster && (
+          <TabsContent value="whatsapp">
+            <Card>
+              <CardHeader>
+                <CardTitle>WhatsApp da Loja</CardTitle>
+                <CardDescription>
+                  Configure o número WhatsApp para receber mensagens de interesse
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="store_whatsapp">Número WhatsApp (E.164)</Label>
+                  <Input
+                    id="store_whatsapp"
+                    value={storeWhatsApp}
+                    onChange={(e) => setStoreWhatsApp(e.target.value.replace(/\D/g, ''))}
+                    placeholder="5511999999999"
+                    maxLength={15}
+                    disabled={savingWhatsApp}
+                  />
+                  <p className="text-sm text-gray-500">
+                    Ex: 5511999999999 (somente números, com DDI + DDD)
+                  </p>
+                </div>
+
+                <Button onClick={handleSaveWhatsApp} disabled={savingWhatsApp}>
+                  {savingWhatsApp ? (
+                    <>
+                      <Loader2 size={16} className="mr-2 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <Save size={16} className="mr-2" />
+                      Salvar
+                    </>
+                  )}
+                </Button>
+
+                {storeWhatsApp && (
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center gap-2 text-green-800">
+                      <CheckCircle size={20} />
+                      <span className="font-medium">Configurado</span>
+                    </div>
+                    <p className="text-sm text-green-700 mt-1">
+                      O número <span className="font-mono">{storeWhatsApp}</span> será usado para redirecionar mensagens de interesse.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         {isMaster && (
           <TabsContent value="logs">

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { productsService } from '@/services/productsService';
+import { settingsService } from '@/services/settingsService';
 import { supabase } from '@/core/supabaseClient';
 import { Product } from '@/types';
 import { showSuccess, showError } from '@/utils/toast';
@@ -9,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Copy, MessageCircle, AlertCircle } from 'lucide-react';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +18,9 @@ const ProductDetail = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
+
+  // WhatsApp configuration
+  const [storeWhatsApp, setStoreWhatsApp] = useState<string | null>(null);
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -28,8 +32,14 @@ const ProductDetail = () => {
 
   useEffect(() => {
     if (!id) return;
-    productsService.getProductById(id)
-      .then(setProduct)
+    Promise.all([
+      productsService.getProductById(id),
+      settingsService.getStoreWhatsApp(),
+    ])
+      .then(([productData, whatsapp]) => {
+        setProduct(productData);
+        setStoreWhatsApp(whatsapp);
+      })
       .catch(() => navigate('/'))
       .finally(() => setLoading(false));
   }, [id, navigate]);
@@ -41,6 +51,54 @@ const ProductDetail = () => {
   const handleModalClose = () => {
     setModalOpen(false);
     setFormData({ name: '', phone: '', message: '' });
+  };
+
+  const buildWhatsAppMessage = (): string => {
+    const lines: string[] = [];
+    
+    lines.push(`*Tenho interesse neste produto:*`);
+    lines.push(`📦 ${product?.name}`);
+    lines.push(`🔗 Link: ${window.location.href}`);
+    
+    if (formData.message) {
+      lines.push(`\n*Mensagem:*`);
+      lines.push(formData.message);
+    }
+    
+    lines.push(`\n*Meus dados:*`);
+    lines.push(`👤 Nome: ${formData.name}`);
+    if (formData.phone) {
+      lines.push(`📱 Telefone: ${formData.phone}`);
+    }
+    
+    return lines.join('\n');
+  };
+
+  const handleOpenWhatsApp = () => {
+    if (!storeWhatsApp) {
+      showError('WhatsApp da loja não configurado');
+      return;
+    }
+
+    const message = buildWhatsAppMessage();
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/${storeWhatsApp}?text=${encodedMessage}`;
+    
+    window.open(whatsappUrl, '_blank');
+    showSuccess('Abrindo WhatsApp...');
+    handleModalClose();
+  };
+
+  const handleCopyMessage = async () => {
+    const message = buildWhatsAppMessage();
+    
+    try {
+      await navigator.clipboard.writeText(message);
+      showSuccess('Mensagem copiada! Cole no WhatsApp da loja.');
+    } catch (error) {
+      console.error('[ProductDetail] Failed to copy message:', error);
+      showError('Erro ao copiar mensagem');
+    }
   };
 
   const handleInterestSubmit = async (e: React.FormEvent) => {
@@ -105,7 +163,7 @@ const ProductDetail = () => {
       }
 
       // Sucesso
-      showSuccess('Recebido! Vamos te chamar no WhatsApp.');
+      showSuccess('Interesse registrado com sucesso!');
       handleModalClose();
       
     } catch (error) {
@@ -154,11 +212,11 @@ const ProductDetail = () => {
 
       {/* Modal de Interesse */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Informar Interesse</DialogTitle>
             <DialogDescription>
-              Deixe seus dados e entraremos em contato pelo WhatsApp.
+              Deixe seus dados e entraremos em contato.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleInterestSubmit} className="space-y-4 mt-4">
@@ -217,6 +275,39 @@ const ProductDetail = () => {
               </Button>
             </div>
           </form>
+
+          {/* WhatsApp Actions */}
+          <div className="mt-6 pt-6 border-t">
+            {storeWhatsApp ? (
+              <Button
+                onClick={handleOpenWhatsApp}
+                className="w-full bg-green-600 hover:bg-green-700"
+                size="lg"
+              >
+                <MessageCircle size={20} className="mr-2" />
+                Abrir WhatsApp
+              </Button>
+            ) : (
+              <div className="space-y-3">
+                <Button
+                  onClick={handleCopyMessage}
+                  variant="outline"
+                  className="w-full"
+                  size="lg"
+                >
+                  <Copy size={20} className="mr-2" />
+                  Copiar Mensagem
+                </Button>
+                <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+                  <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+                  <p>
+                    O WhatsApp da loja ainda não foi configurado. Copie a mensagem e envie manualmente, 
+                    ou entre em contato com a loja por outro canal.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

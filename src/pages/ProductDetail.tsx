@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { productsService } from '@/services/productsService';
-import { settingsService } from '@/services/settingsService';
 import { supabase } from '@/core/supabaseClient';
 import { Product } from '@/types';
 import { showSuccess, showError } from '@/utils/toast';
@@ -19,7 +18,7 @@ const ProductDetail = () => {
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
 
-  // WhatsApp configuration
+  // WhatsApp configuration (loaded directly with anon context)
   const [storeWhatsApp, setStoreWhatsApp] = useState<string | null>(null);
 
   // Modal state
@@ -30,15 +29,41 @@ const ProductDetail = () => {
     message: '',
   });
 
+  // Load store WhatsApp directly (anon context)
+  const loadStoreWhatsApp = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'store_whatsapp_e164')
+        .maybeSingle();
+
+      if (error) {
+        console.warn('[ProductDetail] Failed to load store WhatsApp:', error.message);
+        setStoreWhatsApp(null);
+        return;
+      }
+
+      // Only consider configured if value exists and has digits
+      if (data?.value && /^\d{10,15}$/.test(data.value)) {
+        setStoreWhatsApp(data.value);
+      } else {
+        setStoreWhatsApp(null);
+      }
+    } catch (error) {
+      console.warn('[ProductDetail] Error loading store WhatsApp:', error);
+      setStoreWhatsApp(null);
+    }
+  };
+
   useEffect(() => {
     if (!id) return;
     Promise.all([
       productsService.getProductById(id),
-      settingsService.getStoreWhatsApp(),
+      loadStoreWhatsApp(),
     ])
-      .then(([productData, whatsapp]) => {
+      .then(([productData]) => {
         setProduct(productData);
-        setStoreWhatsApp(whatsapp);
       })
       .catch(() => navigate('/'))
       .finally(() => setLoading(false));
@@ -162,9 +187,9 @@ const ProductDetail = () => {
         return;
       }
 
-      // Sucesso
+      // Sucesso - mostrar modal com opções de WhatsApp
+      // O modal permanece aberto para permitir ação de WhatsApp
       showSuccess('Interesse registrado com sucesso!');
-      handleModalClose();
       
     } catch (error) {
       console.error('[ProductDetail] Unexpected error:', error);
@@ -276,38 +301,51 @@ const ProductDetail = () => {
             </div>
           </form>
 
-          {/* WhatsApp Actions */}
-          <div className="mt-6 pt-6 border-t">
-            {storeWhatsApp ? (
-              <Button
-                onClick={handleOpenWhatsApp}
-                className="w-full bg-green-600 hover:bg-green-700"
-                size="lg"
-              >
-                <MessageCircle size={20} className="mr-2" />
-                Abrir WhatsApp
-              </Button>
-            ) : (
-              <div className="space-y-3">
-                <Button
-                  onClick={handleCopyMessage}
-                  variant="outline"
-                  className="w-full"
-                  size="lg"
-                >
-                  <Copy size={20} className="mr-2" />
-                  Copiar Mensagem
-                </Button>
-                <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
-                  <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
-                  <p>
-                    O WhatsApp da loja ainda não foi configurado. Copie a mensagem e envie manualmente, 
-                    ou entre em contato com a loja por outro canal.
-                  </p>
+          {/* WhatsApp Actions - only show after successful submission */}
+          {!submitting && (
+            <div className="mt-6 pt-6 border-t">
+              {storeWhatsApp ? (
+                <div className="space-y-3">
+                  <Button
+                    onClick={handleOpenWhatsApp}
+                    className="w-full bg-green-600 hover:bg-green-700"
+                    size="lg"
+                  >
+                    <MessageCircle size={20} className="mr-2" />
+                    Abrir WhatsApp
+                  </Button>
+                  <Button
+                    onClick={handleCopyMessage}
+                    variant="outline"
+                    className="w-full"
+                    size="lg"
+                  >
+                    <Copy size={20} className="mr-2" />
+                    Copiar Mensagem
+                  </Button>
                 </div>
-              </div>
-            )}
-          </div>
+              ) : (
+                <div className="space-y-3">
+                  <Button
+                    onClick={handleCopyMessage}
+                    variant="outline"
+                    className="w-full"
+                    size="lg"
+                  >
+                    <Copy size={20} className="mr-2" />
+                    Copiar Mensagem
+                  </Button>
+                  <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+                    <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+                    <p>
+                      O WhatsApp da loja ainda não foi configurado. Copie a mensagem e envie manualmente, 
+                      ou entre em contato com a loja por outro canal.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

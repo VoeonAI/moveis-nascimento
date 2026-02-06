@@ -57,17 +57,22 @@ serve(async (req) => {
       .update({ last_used_at: new Date().toISOString() })
       .eq('id', tokenData.id)
 
-    // Parse query params
+    // Get product ID from URL
     const url = new URL(req.url)
-    const q = url.searchParams.get('q') || ''
-    const category = url.searchParams.get('category') || ''
-    const limit = Math.min(parseInt(url.searchParams.get('limit') || '10'), 50)
+    const productId = url.searchParams.get('id')
+
+    if (!productId) {
+      return new Response(
+        JSON.stringify({ error: 'Missing id parameter' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
     // Get public site URL from env
     const publicSiteUrl = Deno.env.get('PUBLIC_SITE_URL') || ''
 
-    // Build query
-    let query = supabase
+    // Fetch product
+    const { data: product, error } = await supabase
       .from('products')
       .select(`
         id,
@@ -75,68 +80,57 @@ serve(async (req) => {
         description,
         active,
         images,
+        metadata,
         product_categories (
-          categories (slug)
+          categories (id, name, slug)
         )
       `)
+      .eq('id', productId)
       .eq('active', true)
-      .limit(limit)
+      .single()
 
-    // Filter by category
-    if (category) {
-      query = query.contains('product_categories.categories.slug', category)
+    if (error) {
+      return new Response(
+        JSON.stringify({ error: 'Product not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    // Filter by search query
-    if (q) {
-      query = query.or(`name.ilike.%${q}%,description.ilike.%${q}%`)
+    if (!product) {
+      return new Response(
+        JSON.stringify({ error: 'Product not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
-
-    const { data: products, error } = await query
-
-    if (error) throw error
 
     // Transform response
-    const transformedProducts = (products || []).map(product => {
-      // Get first image if available
-      const image = product.images && product.images.length > 0 ? product.images[0] : null
-      
-      // Get category slug
-      const categorySlug = product.product_categories?.[0]?.categories?.slug || null
-      
-      // Truncate description to 200 chars
-      const shortDescription = product.description 
-        ? (product.description.length > 200 
-            ? product.description.substring(0, 200) + '...' 
-            : product.description)
-        : ''
+    const categories = product.product_categories?.map((pc: any) => ({
+      id: pc.categories.id,
+      name: pc.categories.name,
+      slug: pc.categories.slug,
+    })) || []
 
-      // Build public URL
-      const publicUrl = publicSiteUrl 
+    const transformedProduct = {
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      images: product.images || [],
+      categories,
+      public_url: publicSiteUrl 
         ? `${publicSiteUrl}/product/${product.id}`
-        : `/product/${product.id}`
-
-      return {
-        id: product.id,
-        name: product.name,
-        short_description: shortDescription,
-        category_slug: categorySlug,
-        image,
-        public_url: publicUrl,
-      }
-    })
+        : `/product/${product.id}`,
+    }
 
     return new Response(
       JSON.stringify({
         ok: true,
-        products: transformedProducts,
-        count: transformedProducts.length,
+        product: transformedProduct,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
-    console.error('[agent_products_search] Error:', error)
+    console.error('[agent_product_by_id] Error:', error)
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

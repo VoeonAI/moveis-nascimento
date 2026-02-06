@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 
-import { RefreshCw, Globe, Phone, Code, Clock, Copy, Save, Loader2 } from "lucide-react";
+import { RefreshCw, Globe, Phone, Code, Clock, Copy, Save, Loader2, Key } from "lucide-react";
 
 import {
   webhooksManagementService,
@@ -69,6 +69,15 @@ export default function Settings() {
 
   const n8nExample = JSON.stringify(n8nConfig, null, 2);
   const envelopeExample = JSON.stringify(envelopeConfig, null, 2);
+
+  // Find first active token
+  const activeToken = agentTokens.find(t => t.active);
+
+  // Mask token for display (show first 4 and last 4 chars)
+  const maskToken = (token: string) => {
+    if (!token || token.length < 8) return token;
+    return token.slice(0, 4) + "..." + token.slice(-4);
+  };
 
   async function loadData() {
     setLoading(true);
@@ -264,8 +273,27 @@ export default function Settings() {
 
                   <div>
                     <Label>Tokens do Agente</Label>
-                    <div className="mt-2 text-sm text-gray-600">
-                      {agentTokens.length === 0 ? "Nenhum token listado (ok por enquanto)." : agentTokens.length + " token(s) encontrado(s)."}
+                    <div className="mt-2">
+                      {activeToken ? (
+                        <div className="p-4 bg-gray-50 border rounded-lg space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Key size={16} className="text-gray-500" />
+                            <span className="font-medium">{activeToken.name}</span>
+                            <Badge variant="default" className="text-xs">Ativo</Badge>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-600">Token:</span>
+                            <code className="text-xs bg-gray-200 px-2 py-1 rounded font-mono">{maskToken(activeToken.token_hash)}</code>
+                            <Button variant="ghost" size="sm" onClick={() => copyToClipboard(activeToken.token_hash)}>
+                              <Copy size={14} />
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-600">
+                          {agentTokens.length === 0 ? "Nenhum token listado (ok por enquanto)." : "Nenhum token ativo encontrado."}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>

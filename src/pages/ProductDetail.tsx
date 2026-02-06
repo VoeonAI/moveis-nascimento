@@ -29,6 +29,9 @@ const ProductDetail = () => {
     message: '',
   });
 
+  // Public site URL for product links
+  const publicSiteUrl = import.meta.env.VITE_PUBLIC_SITE_URL;
+
   // Load store WhatsApp directly (anon context)
   const loadStoreWhatsApp = async () => {
     try {
@@ -81,20 +84,26 @@ const ProductDetail = () => {
   const buildWhatsAppMessage = (): string => {
     const lines: string[] = [];
     
-    lines.push(`*Tenho interesse neste produto:*`);
-    lines.push(`📦 ${product?.name}`);
-    lines.push(`🔗 Link: ${window.location.href}`);
+    lines.push(`Tenho interesse neste produto:`);
+    lines.push(`• Produto: ${product?.name}`);
+    lines.push(`• Produto ID: ${product?.id}`);
+    
+    // Add link if public site URL is configured
+    if (publicSiteUrl) {
+      lines.push(`• Link: ${publicSiteUrl}/product/${product?.id}`);
+    } else {
+      lines.push(`• Link: (indisponível no ambiente local)`);
+    }
     
     if (formData.message) {
-      lines.push(`\n*Mensagem:*`);
-      lines.push(formData.message);
+      lines.push(``);
+      lines.push(`Mensagem: ${formData.message}`);
     }
     
-    lines.push(`\n*Meus dados:*`);
-    lines.push(`👤 Nome: ${formData.name}`);
-    if (formData.phone) {
-      lines.push(`📱 Telefone: ${formData.phone}`);
-    }
+    lines.push(``);
+    lines.push(`Meus dados:`);
+    lines.push(`• Nome: ${formData.name}`);
+    lines.push(`• Telefone: ${formData.phone}`);
     
     return lines.join('\n');
   };
@@ -156,7 +165,7 @@ const ProductDetail = () => {
           phone: formData.phone,
           message: formData.message,
           source: 'site',
-          page_url: window.location.href,
+          page_url: publicSiteUrl ? `${publicSiteUrl}/product/${product?.id}` : window.location.href,
         },
       });
 

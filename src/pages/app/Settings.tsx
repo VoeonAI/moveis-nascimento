@@ -554,8 +554,8 @@ const Settings = () => {
                       <div className="p-4 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
                         <p className="font-medium mb-1">Nenhum token configurado</p>
                         <p className="text-xs">
-                          Tokens do agente devem ser criados diretamente no banco de dados (tabela <code>agent_tokens</code>).
-                          Certifique-se de incluir o escopo <code>products:read</code>.
+                          Tokens do agente devem ser criados diretamente no banco de dados (tabela agent_tokens).
+                          Certifique-se de incluir o escopo products:read.
                         </p>
                       </div>
                     ) : (
@@ -727,7 +727,7 @@ const Settings = () => {
                       </Button>
                     </div>
                     <p className="text-xs text-gray-500 mt-2">
-                      No n8n, use <code>{{$env.AGENT_TOKEN}}</code> para referenciar a variável de ambiente do token.
+                      No n8n, use {{$env.AGENT_TOKEN}} para referenciar a variável de ambiente do token.
                     </p>
                   </div>
                 </CardContent>
@@ -796,7 +796,7 @@ const Settings = () => {
                   <div>
                     <Label className="text-sm font-medium mb-2 block">Roteamento no n8n</Label>
                     <p className="text-sm text-gray-600 mb-2">
-                      Use o <code>event_type</code> para rotear workflows diferentes:
+                      Use o event_type para rotear workflows diferentes:
                     </p>
                     <div className="p-3 bg-gray-50 rounded text-xs space-y-1">
                       <div><code>lead.created</code> - Novo lead criado</div>

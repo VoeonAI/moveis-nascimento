@@ -1,7 +1,7 @@
 import { supabase } from '@/core/supabaseClient';
 import { Lead, Opportunity } from '@/types';
 import { OpportunityStage } from '@/constants/domain';
-import { webhooksService } from './webhooksService';
+import { webhooksService, WEBHOOK_EVENTS } from './webhooksService';
 
 export interface OpportunityWithProduct extends Opportunity {
   product_name?: string;
@@ -248,13 +248,17 @@ export const crmService = {
     await this._updateLeadActivity(leadId);
 
     try {
-      await webhooksService.emit('opportunity.stage_changed', {
-        opportunity_id: opportunityId,
-        lead_id: leadId,
-        product_id: currentOpp.product_id,
-        from_stage: fromStage,
-        to_stage: newStage,
-      }, 'crm');
+      await webhooksService.emit(
+        WEBHOOK_EVENTS.OPPORTUNITY_STAGE_CHANGED,
+        {
+          opportunity_id: opportunityId,
+          lead_id: leadId,
+          product_id: currentOpp.product_id,
+          from_stage: fromStage,
+          to_stage: newStage,
+        },
+        'crm'
+      );
     } catch (err) {
       console.warn('[updateOpportunityStage] Webhook failed:', err);
     }
@@ -369,19 +373,33 @@ export const crmService = {
     if (oppError) throw oppError;
 
     try {
-      await webhooksService.emit('lead.created', {
-        lead,
-        opportunity,
-      }, 'site');
+      await webhooksService.emit(
+        WEBHOOK_EVENTS.LEAD_CREATED,
+        {
+          lead_id: lead.id,
+          lead,
+          opportunity_id: opportunity.id,
+          opportunity,
+        },
+        'site'
+      );
     } catch (err) {
       console.warn('[createLeadFromInterest] Webhook failed:', err);
     }
 
     try {
-      await webhooksService.emit('opportunity.created', {
-        opportunity,
-        lead,
-      }, 'site');
+      await webhooksService.emit(
+        WEBHOOK_EVENTS.OPPORTUNITY_CREATED,
+        {
+          opportunity_id: opportunity.id,
+          lead_id: lead.id,
+          product_id: opportunity.product_id,
+          stage: opportunity.stage,
+          estimated_value: opportunity.estimated_value,
+          lead,
+        },
+        'site'
+      );
     } catch (err) {
       console.warn('[createLeadFromInterest] Webhook failed:', err);
     }

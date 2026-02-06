@@ -1,23 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
-// Utility function to build versioned webhook envelope
-function buildWebhookEnvelope(eventType: string, data: any, meta?: any) {
-  return {
-    version: "1.0",
-    event_type: eventType,
-    event_id: crypto.randomUUID(),
-    occurred_at: new Date().toISOString(),
-    source: {
-      app: "moveis-nascimento",
-      env: Deno.env.get('ENVIRONMENT') || 'production',
-      channel: 'web',
-    },
-    data,
-    meta,
-  };
-}
-
 serve(async (req) => {
   // Dynamic CORS headers
   const origin = req.headers.get('origin') ?? '*'
@@ -48,9 +31,8 @@ serve(async (req) => {
     try {
       body = await req.json()
       console.log('[webhooks_dispatch] Parsed body:', {
-        hasEventType: !!body?.eventType,
+        hasEnvelope: !!body?.envelope,
         hasEndpointId: !!body?.endpointId,
-        hasPayload: !!body?.payload,
       })
     } catch (parseError) {
       console.error('[webhooks_dispatch] Failed to parse request body', parseError)
@@ -80,15 +62,19 @@ serve(async (req) => {
       )
     }
 
-    const { eventType, payload, endpointId } = body
+    // Accept envelope from webhooksService
+    const envelope = body?.envelope
+    const endpointId = body?.endpointId
 
-    if (!eventType) {
-      console.error('[webhooks_dispatch] Missing eventType in body')
+    if (!envelope) {
+      console.error('[webhooks_dispatch] Missing envelope in body')
       return new Response(
-        JSON.stringify({ ok: false, error: 'eventType is required' }),
+        JSON.stringify({ ok: false, error: 'envelope is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    const { event_type, data, meta } = envelope
 
     // Create Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -105,8 +91,8 @@ serve(async (req) => {
       console.log('[webhooks_dispatch] Fetching specific endpoint:', endpointId)
       query = query.eq('id', endpointId)
     } else {
-      console.log('[webhooks_dispatch] Fetching endpoints for event:', eventType)
-      query = query.contains('events', [eventType])
+      console.log('[webhooks_dispatch] Fetching endpoints for event:', event_type)
+      query = query.contains('events', [event_type])
     }
 
     const { data: endpoints, error: endpointsError } = await query
@@ -120,14 +106,14 @@ serve(async (req) => {
     }
 
     if (!endpoints || endpoints.length === 0) {
-      console.log('[webhooks_dispatch] No active endpoints for event:', eventType)
+      console.log('[webhooks_dispatch] No active endpoints for event:', event_type)
       
       // Log that no endpoints were found
       try {
         await supabase.from('webhook_logs').insert({
           endpoint_id: null,
-          event_type: eventType,
-          payload: { note: 'no_endpoints' },
+          event_type,
+          payload: { note: 'no_endpoints', envelope },
           status_code: null,
           success: false,
           error: 'no_endpoints',
@@ -155,12 +141,6 @@ serve(async (req) => {
 
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s timeout
-
-        // Build versioned envelope
-        const envelope = buildWebhookEnvelope(eventType, payload, {
-          endpoint_id: endpoint.id,
-          endpoint_name: endpoint.name,
-        })
 
         try {
           console.log('[webhooks_dispatch] Fetching endpoint:', {
@@ -216,7 +196,7 @@ serve(async (req) => {
         try {
           await supabase.from('webhook_logs').insert({
             endpoint_id: endpoint.id,
-            event_type: eventType,
+            event_type,
             payload: {
               envelope,
               sentAt: new Date().toISOString(),

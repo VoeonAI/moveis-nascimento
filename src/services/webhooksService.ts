@@ -12,11 +12,40 @@ export const WEBHOOK_EVENTS = {
 export type WebhookEventType = typeof WEBHOOK_EVENTS[keyof typeof WEBHOOK_EVENTS];
 export type WebhookChannel = 'site' | 'crm' | 'pipeline' | 'api';
 
+function buildEnvelope(
+  eventType: string,
+  data: Record<string, any>,
+  channel: WebhookChannel,
+  meta?: Record<string, any>
+) {
+  return {
+    version: "1.0",
+    event_type: eventType,
+    event_id: crypto.randomUUID(),
+    occurred_at: new Date().toISOString(),
+    source: {
+      app: "moveis-nascimento",
+      env: import.meta.env.MODE,
+      channel,
+    },
+    data,
+    meta: meta ?? {},
+  };
+}
+
 export const webhooksService = {
-  async emit(eventType: string, payload: Record<string, any>, channel: WebhookChannel = 'api', endpointId?: string) {
+  async emit(
+    eventType: string,
+    data: Record<string, any>,
+    channel: WebhookChannel = 'api',
+    meta?: Record<string, any>,
+    endpointId?: string
+  ) {
     try {
-      const { data, error } = await supabase.functions.invoke('webhooks_dispatch', {
-        body: { eventType, payload, channel, endpointId },
+      const envelope = buildEnvelope(eventType, data, channel, meta);
+
+      const { data: responseData, error } = await supabase.functions.invoke('webhooks_dispatch', {
+        body: { envelope, endpointId },
       });
 
       if (error) {
@@ -24,12 +53,12 @@ export const webhooksService = {
         return;
       }
 
-      if (!data?.ok) {
-        console.warn('[webhooksService.emit] webhooks_dispatch returned error:', data.error);
+      if (!responseData?.ok) {
+        console.warn('[webhooksService.emit] webhooks_dispatch returned error:', responseData.error);
         return;
       }
 
-      console.log('[webhooksService.emit] Dispatched', eventType, 'to', data.results?.length || 0, 'endpoints', '(channel:', channel + ')');
+      console.log('[webhooksService.emit] Dispatched', eventType, 'to', responseData.results?.length || 0, 'endpoints', '(channel:', channel + ')');
     } catch (error) {
       console.warn('[webhooksService.emit] Unexpected error:', error);
       // Never fail the main flow - best-effort

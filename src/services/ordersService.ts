@@ -1,7 +1,7 @@
 import { supabase } from '@/core/supabaseClient';
 import { Order, OrderEvent } from '@/types';
 import { OrderStage, ORDER_STAGES_FLOW } from '@/constants/domain';
-import { webhooksService } from './webhooksService';
+import { webhooksService, WEBHOOK_EVENTS } from './webhooksService';
 
 // Type alias for complex return type including lead and product data
 type OrderWithDetails = Order & { 
@@ -103,17 +103,21 @@ export const ordersService = {
     }
 
     // 5. Emit webhook (best-effort)
-    webhooksService.emit('order.created', {
-      order_id: order.id,
-      opportunity_id: opportunityId,
-      lead_id: lead.id,
-      product_id: opportunity.product_id,
-      customer_name: order.customer_name,
-      customer_phone: order.customer_phone,
-      internal_order_code: order.internal_order_code,
-      delivery_address: order.delivery_address,
-      notes: order.notes,
-    }, 'crm').catch(err => console.error('[ensureOrderForOpportunity] Webhook failed:', err));
+    webhooksService.emit(
+      WEBHOOK_EVENTS.ORDER_CREATED,
+      {
+        order_id: order.id,
+        opportunity_id: opportunityId,
+        lead_id: lead.id,
+        product_id: opportunity.product_id,
+        customer_name: order.customer_name,
+        customer_phone: order.customer_phone,
+        internal_order_code: order.internal_order_code ?? null,
+        delivery_address: order.delivery_address ?? null,
+        notes: order.notes ?? null,
+      },
+      'crm'
+    ).catch(err => console.error('[ensureOrderForOpportunity] Webhook failed:', err));
 
     return order;
   },
@@ -199,12 +203,21 @@ export const ordersService = {
     console.log('[createOrderFromOpportunity] Order event created (or failed gracefully)');
 
     // 4. Emit Webhook (best-effort, não trava se falhar)
-    webhooksService.emit('order.created', {
-      order_id: order.id,
-      opportunity_id: opportunityId,
-      lead_id: lead.id,
-      product_id: opportunity.product_id,
-    }, 'crm').catch(err => console.error('[createOrderFromOpportunity] Webhook failed:', err));
+    webhooksService.emit(
+      WEBHOOK_EVENTS.ORDER_CREATED,
+      {
+        order_id: order.id,
+        opportunity_id: opportunityId,
+        lead_id: lead.id,
+        product_id: opportunity.product_id,
+        customer_name: order.customer_name ?? null,
+        customer_phone: order.customer_phone ?? null,
+        internal_order_code: order.internal_order_code ?? null,
+        delivery_address: order.delivery_address ?? null,
+        notes: order.notes ?? null,
+      },
+      'crm'
+    ).catch(err => console.error('[createOrderFromOpportunity] Webhook failed:', err));
 
     console.log('[createOrderFromOpportunity] Completed successfully');
     return order;
@@ -266,11 +279,15 @@ export const ordersService = {
     }
 
     // 4. Emit Webhook (best-effort)
-    webhooksService.emit('order.stage_changed', {
-      order_id: orderId,
-      from_stage: fromStage,
-      to_stage: toStage,
-    }, 'pipeline').catch(err => console.error('[updateOrderStage] Webhook failed:', err));
+    webhooksService.emit(
+      WEBHOOK_EVENTS.ORDER_STAGE_CHANGED,
+      {
+        order_id: orderId,
+        from_stage: fromStage,
+        to_stage: toStage,
+      },
+      'pipeline'
+    ).catch(err => console.error('[updateOrderStage] Webhook failed:', err));
 
     return updatedOrder;
   },
@@ -389,11 +406,15 @@ export const ordersService = {
     }
 
     // 4. Emit Webhook (best-effort)
-    webhooksService.emit('order.stage_changed', {
-      order_id: orderId,
-      from_stage: fromStage,
-      to_stage: toStage,
-    }, 'pipeline').catch(err => console.error('[moveOrderStage] Webhook failed:', err));
+    webhooksService.emit(
+      WEBHOOK_EVENTS.ORDER_STAGE_CHANGED,
+      {
+        order_id: orderId,
+        from_stage: fromStage,
+        to_stage: toStage,
+      },
+      'pipeline'
+    ).catch(err => console.error('[moveOrderStage] Webhook failed:', err));
 
     return updatedOrder;
   },

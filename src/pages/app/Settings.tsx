@@ -4,6 +4,7 @@ import { PermissionGate } from '@/core/guards/PermissionGate';
 import { Role } from '@/constants/domain';
 import { webhooksManagementService, WebhookEndpoint, WebhookLog, WEBHOOK_EVENTS, WEBHOOK_EVENT_LABELS } from '@/services/webhooksManagementService';
 import { settingsService } from '@/services/settingsService';
+import { agentTokensService, AgentToken } from '@/services/agentTokensService';
 import { 
   Card, 
   CardContent, 
@@ -52,7 +53,12 @@ import {
   X,
   Phone,
   Save,
-  Loader2
+  Loader2,
+  Copy,
+  Code,
+  Api,
+  Key,
+  FileText
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { format } from 'date-fns';
@@ -73,6 +79,9 @@ const Settings = () => {
   const [storeWhatsApp, setStoreWhatsApp] = useState('');
   const [savingWhatsApp, setSavingWhatsApp] = useState(false);
   const [whatsappSaved, setWhatsappSaved] = useState(false);
+
+  // Agent tokens state
+  const [agentTokens, setAgentTokens] = useState<AgentToken[]>([]);
 
   // Filters
   const [filterEndpointId, setFilterEndpointId] = useState<string>('all');
@@ -100,15 +109,17 @@ const Settings = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [endpointsData, logsData, whatsapp] = await Promise.all([
+      const [endpointsData, logsData, whatsapp, tokensData] = await Promise.all([
         webhooksManagementService.listEndpoints(),
         isMaster ? webhooksManagementService.listLogs(100) : Promise.resolve([]),
         isMaster ? settingsService.getStoreWhatsApp() : Promise.resolve(null),
+        isMaster ? agentTokensService.listTokens() : Promise.resolve([]),
       ]);
       setEndpoints(endpointsData);
       setLogs(logsData);
       setStoreWhatsApp(whatsapp ?? '');
       setWhatsappSaved(!!whatsapp);
+      setAgentTokens(tokensData);
     } catch (error) {
       console.error('[Settings] Failed to load data', error);
       showError('Erro ao carregar configurações');
@@ -287,13 +298,23 @@ const Settings = () => {
     }
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    showSuccess('Copiado para a área de transferência');
+  };
+
+  // Get Supabase project ref from URL or env
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+  const projectRef = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1] || '<project-ref>';
+  const functionsBaseUrl = `https://${projectRef}.supabase.co/functions/v1`;
+
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Configurações</h1>
           <p className="text-gray-600 text-sm mt-1">
-            Gerencie webhooks e integrações do sistema
+            Gerencie webhooks, integrações e APIs do sistema
           </p>
         </div>
         <Button onClick={loadData} variant="outline" size="sm">
@@ -312,6 +333,12 @@ const Settings = () => {
             <TabsTrigger value="whatsapp">
               <Phone size={16} className="mr-2" />
               WhatsApp
+            </TabsTrigger>
+          )}
+          {isMaster && (
+            <TabsTrigger value="apis">
+              <Api size={16} className="mr-2" />
+              APIs
             </TabsTrigger>
           )}
           {isMaster && (
@@ -469,6 +496,319 @@ const Settings = () => {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+        )}
+
+        {isMaster && (
+          <TabsContent value="apis">
+            <div className="space-y-6">
+              {/* Agent Catalog API */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Api size={20} />
+                    <CardTitle>Agent Catalog API</CardTitle>
+                  </div>
+                  <CardDescription>
+                    API para o agente buscar produtos do catálogo
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Base URL */}
+                  <div>
+                    <Label className="text-sm font-medium">Base URL</Label>
+                    <div className="mt-2 p-3 bg-gray-50 rounded-lg font-mono text-sm flex items-center justify-between">
+                      <code>{functionsBaseUrl}</code>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyToClipboard(functionsBaseUrl)}
+                      >
+                        <Copy size={14} />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Substitua <project-ref> pelo seu ID do projeto Supabase
+                    </p>
+                  </div>
+
+                  {/* Authentication */}
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">Autenticação</Label>
+                    <div className="p-3 bg-gray-50 rounded-lg text-sm space-y-2">
+                      <p className="font-medium">Headers:</p>
+                      <div className="space-y-1 font-mono text-xs">
+                        <div>Authorization: Bearer <AGENT_TOKEN></div>
+                        <div>Content-Type: application/json</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Agent Tokens */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Key size={16} />
+                      <Label className="text-sm font-medium">Tokens do Agente</Label>
+                    </div>
+                    {agentTokens.length === 0 ? (
+                      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+                        <p className="font-medium mb-1">Nenhum token configurado</p>
+                        <p className="text-xs">
+                          Tokens do agente devem ser criados diretamente no banco de dados (tabela <code>agent_tokens</code>).
+                          Certifique-se de incluir o escopo <code>products:read</code>.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {agentTokens.map((token) => (
+                          <div key={token.id} className="p-3 bg-gray-50 rounded-lg text-sm">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="font-medium">{token.name}</span>
+                              <Badge variant={token.active ? 'default' : 'secondary'}>
+                                {token.active ? 'Ativo' : 'Inativo'}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-xs text-gray-500">
+                              <span>Criado em {new Date(token.created_at).toLocaleDateString()}</span>
+                              {token.last_used_at && (
+                                <span>Último uso: {new Date(token.last_used_at).toLocaleDateString()}</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Endpoints */}
+                  <div>
+                    <Label className="text-sm font-medium mb-3 block">Endpoints Disponíveis</Label>
+                    <div className="space-y-4">
+                      {/* Search Endpoint */}
+                      <div className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-medium">Buscar Produtos</h4>
+                          <Badge variant="outline">GET</Badge>
+                        </div>
+                        <div className="mb-3">
+                          <Label className="text-xs">Endpoint</Label>
+                          <div className="mt-1 p-2 bg-gray-50 rounded font-mono text-xs flex items-center justify-between">
+                            <code>/agent_products_search</code>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => copyToClipboard('/agent_products_search')}
+                            >
+                              <Copy size={12} />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="mb-3">
+                          <Label className="text-xs">Query Parameters</Label>
+                          <div className="mt-1 p-2 bg-gray-50 rounded text-xs space-y-1">
+                            <div><code>q</code> (opcional) - Termo de busca (name/description)</div>
+                            <div><code>category</code> (opcional) - Slug da categoria</div>
+                            <div><code>limit</code> (opcional, padrão 10, máximo 50) - Quantidade de resultados</div>
+                          </div>
+                        </div>
+                        <div className="mb-3">
+                          <Label className="text-xs">Exemplo cURL (busca por categoria)</Label>
+                          <div className="mt-1 p-2 bg-gray-900 rounded text-xs text-green-400 font-mono relative group">
+                            <pre>curl -X GET "{functionsBaseUrl}/agent_products_search?category=guarda-roupa&limit=10" \</pre>
+                            <pre>  -H "Authorization: Bearer <AGENT_TOKEN>"</pre>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => copyToClipboard(`curl -X GET "${functionsBaseUrl}/agent_products_search?category=guarda-roupa&limit=10" -H "Authorization: Bearer <AGENT_TOKEN>"`)}
+                            >
+                              <Copy size={12} />
+                            </Button>
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Exemplo cURL (busca por texto)</Label>
+                          <div className="mt-1 p-2 bg-gray-900 rounded text-xs text-green-400 font-mono relative group">
+                            <pre>curl -X GET "{functionsBaseUrl}/agent_products_search?q=guarda%20roupa&limit=10" \</pre>
+                            <pre>  -H "Authorization: Bearer <AGENT_TOKEN>"</pre>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => copyToClipboard(`curl -X GET "${functionsBaseUrl}/agent_products_search?q=guarda%20roupa&limit=10" -H "Authorization: Bearer <AGENT_TOKEN>"`)}
+                            >
+                              <Copy size={12} />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Product by ID Endpoint */}
+                      <div className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-medium">Produto por ID</h4>
+                          <Badge variant="outline">GET</Badge>
+                        </div>
+                        <div className="mb-3">
+                          <Label className="text-xs">Endpoint</Label>
+                          <div className="mt-1 p-2 bg-gray-50 rounded font-mono text-xs flex items-center justify-between">
+                            <code>/agent_product_by_id</code>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => copyToClipboard('/agent_product_by_id')}
+                            >
+                              <Copy size={12} />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="mb-3">
+                          <Label className="text-xs">Query Parameters</Label>
+                          <div className="mt-1 p-2 bg-gray-50 rounded text-xs">
+                            <div><code>id</code> (obrigatório) - ID do produto</div>
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Exemplo cURL</Label>
+                          <div className="mt-1 p-2 bg-gray-900 rounded text-xs text-green-400 font-mono relative group">
+                            <pre>curl -X GET "{functionsBaseUrl}/agent_product_by_id?id=uuid-do-produto" \</pre>
+                            <pre>  -H "Authorization: Bearer <AGENT_TOKEN>"</pre>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => copyToClipboard(`curl -X GET "${functionsBaseUrl}/agent_product_by_id?id=uuid-do-produto" -H "Authorization: Bearer <AGENT_TOKEN>"`)}
+                            >
+                              <Copy size={12} />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* n8n Example */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <FileText size={16} />
+                      <Label className="text-sm font-medium">Exemplo n8n (HTTP Request Node)</Label>
+                    </div>
+                    <div className="p-3 bg-gray-900 rounded text-xs text-green-400 font-mono relative group overflow-x-auto">
+                      <pre>{`{
+  "method": "GET",
+  "url": "${functionsBaseUrl}/agent_products_search",
+  "queryParameters": {
+    "category": "guarda-roupa",
+    "limit": 10
+  },
+  "headers": {
+    "Authorization": "Bearer {{$env.AGENT_TOKEN}}"
+  }
+}`}</pre>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => copyToClipboard(JSON.stringify({
+                          method: "GET",
+                          url: `${functionsBaseUrl}/agent_products_search`,
+                          queryParameters: {
+                            category: "guarda-roupa",
+                            limit: 10
+                          },
+                          headers: {
+                            Authorization: "Bearer {{$env.AGENT_TOKEN}}"
+                          }
+                        }, null, 2))}
+                      >
+                        <Copy size={12} />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      No n8n, use <code>{{$env.AGENT_TOKEN}}</code> para referenciar a variável de ambiente do token.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Webhooks Documentation */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Globe size={20} />
+                    <CardTitle>Webhooks</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Como o sistema dispara eventos para o n8n
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">Como funciona</Label>
+                    <p className="text-sm text-gray-600">
+                      O sistema envia eventos para os webhooks configurados. Configure um webhook no n8n com a URL de produção e use o evento para rotear o workflow.
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">Payload Envelope v1</Label>
+                    <div className="p-3 bg-gray-900 rounded text-xs text-green-400 font-mono relative group overflow-x-auto">
+                      <pre>{`{
+  "version": "1.0",
+  "event_type": "lead.created",
+  "event_id": "uuid",
+  "occurred_at": "2024-01-01T00:00:00Z",
+  "source": {
+    "app": "moveis-nascimento",
+    "env": "production",
+    "channel": "site"
+  },
+  "data": {
+    // Dados específicos do evento
+  },
+  "meta": {}
+}`}</pre>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => copyToClipboard(JSON.stringify({
+                          version: "1.0",
+                          event_type: "lead.created",
+                          event_id: "uuid",
+                          occurred_at: "2024-01-01T00:00:00Z",
+                          source: {
+                            app: "moveis-nascimento",
+                            env: "production",
+                            channel: "site"
+                          },
+                          data: {},
+                          meta: {}
+                        }, null, 2))}
+                      >
+                        <Copy size={12} />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">Roteamento no n8n</Label>
+                    <p className="text-sm text-gray-600 mb-2">
+                      Use o <code>event_type</code> para rotear workflows diferentes:
+                    </p>
+                    <div className="p-3 bg-gray-50 rounded text-xs space-y-1">
+                      <div><code>lead.created</code> - Novo lead criado</div>
+                      <div><code>opportunity.created</code> - Nova oportunidade criada</div>
+                      <div><code>opportunity.stage_changed</code> - Estágio da oportunidade alterado</div>
+                      <div><code>order.created</code> - Pedido criado</div>
+                      <div><code>order.stage_changed</code> - Estágio do pedido alterado</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         )}
 

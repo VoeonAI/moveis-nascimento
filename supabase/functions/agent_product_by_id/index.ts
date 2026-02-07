@@ -51,6 +51,9 @@ serve(async (req) => {
       )
     }
 
+    // Check for private scope
+    const hasPrivateScope = tokenData.scopes.includes('products:read_private')
+
     // Update last_used_at
     await supabase
       .from('agent_tokens')
@@ -71,7 +74,7 @@ serve(async (req) => {
     // Get public site URL from env
     const publicSiteUrl = Deno.env.get('PUBLIC_SITE_URL') || ''
 
-    // Fetch product
+    // Fetch product with metadata
     const { data: product, error } = await supabase
       .from('products')
       .select(`
@@ -110,7 +113,10 @@ serve(async (req) => {
       slug: pc.categories.slug,
     })) || []
 
-    const transformedProduct = {
+    const metadata = product.metadata || {}
+
+    // Build response with public fields
+    const transformedProduct: any = {
       id: product.id,
       name: product.name,
       description: product.description,
@@ -119,6 +125,24 @@ serve(async (req) => {
       public_url: publicSiteUrl 
         ? `${publicSiteUrl}/product/${product.id}`
         : `/product/${product.id}`,
+      raw: {
+        metadata: metadata,
+      },
+    }
+
+    // Add private data if scope allows
+    if (hasPrivateScope) {
+      transformedProduct.private = {
+        internal_code: metadata.internal_code || metadata.sku || null,
+        price: metadata.price || metadata.pricing?.price || null,
+        currency: metadata.currency || "BRL",
+        payment_terms: metadata.payment_terms || metadata.pricing?.terms || null,
+        notes: metadata.notes || null,
+        dimensions: metadata.dimensions || null,
+        stock_status: metadata.stock_status || metadata.stock || "sob_consulta",
+      }
+    } else {
+      transformedProduct.private = null
     }
 
     return new Response(

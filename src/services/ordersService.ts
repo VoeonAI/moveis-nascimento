@@ -55,9 +55,8 @@ export const ordersService = {
       .insert({
         opportunity_id: opportunityId,
         lead_id: leadId,
-        current_stage: OrderStage.ORDER_CREATED,
         customer_name: data.customer_name,
-        customer_phone: data.customer_phone,
+        current_stage: OrderStage.ORDER_CREATED,
         delivery_address: data.delivery_address,
         internal_code: data.internal_code,
         notes: data.notes,
@@ -99,7 +98,6 @@ export const ordersService = {
         opportunity_id: opportunityId,
         lead_id: leadId,
         customer_name: order.customer_name,
-        customer_phone: order.customer_phone,
         internal_code: order.internal_code,
         delivery_address: order.delivery_address,
         notes: order.notes,
@@ -156,10 +154,10 @@ export const ordersService = {
       .from('orders')
       .insert({
         opportunity_id: opportunityId,
+        lead_id: lead.id,
         current_stage: OrderStage.ORDER_CREATED,
         customer_name: lead.name,
         customer_phone: lead.phone,
-        total_value: opportunity.estimated_value || 0,
       })
       .select()
       .single();
@@ -200,7 +198,7 @@ export const ordersService = {
         product_id: opportunity.product_id,
         customer_name: order.customer_name,
         customer_phone: order.customer_phone,
-        internal_order_code: order.internal_order_code ?? null,
+        internal_code: order.internal_code ?? null,
         delivery_address: order.delivery_address ?? null,
         notes: order.notes ?? null,
       },
@@ -257,6 +255,7 @@ export const ordersService = {
       .from('orders')
       .insert({
         opportunity_id: opportunityId,
+        lead_id: lead.id,
         current_stage: OrderStage.ORDER_CREATED,
       })
       .select()
@@ -300,7 +299,7 @@ export const ordersService = {
         product_id: opportunity.product_id,
         customer_name: order.customer_name ?? null,
         customer_phone: order.customer_phone ?? null,
-        internal_order_code: order.internal_order_code ?? null,
+        internal_code: order.internal_code ?? null,
         delivery_address: order.delivery_address ?? null,
         notes: order.notes ?? null,
       },

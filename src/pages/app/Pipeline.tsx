@@ -4,7 +4,7 @@ import { Order } from '@/types';
 import { OrderStage, ORDER_STAGES_FLOW } from '@/constants/domain';
 import { ORDER_STAGE_LABELS } from '@/constants/labels';
 import { useAuth } from '@/core/auth/AuthProvider';
-import { AlertCircle, RefreshCw, ArrowRight, Package, Calendar, MoreHorizontal } from 'lucide-react';
+import { AlertCircle, RefreshCw, ArrowRight, Package, Calendar, MoreHorizontal, MapPin, Hash } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -149,7 +149,7 @@ const Pipeline = () => {
                         {/* Order Header */}
                         <div className="flex justify-between items-start">
                           <div className="flex items-center gap-2">
-                            <Package size={16} className="text-gray-500" />
+                            <Hash size={16} className="text-gray-500" />
                             <span className="font-bold text-sm">#{order.id.slice(0, 8)}</span>
                           </div>
                           <Badge variant="secondary" className="text-xs">
@@ -162,6 +162,22 @@ const Pipeline = () => {
                           <span className="text-gray-500">Cliente: </span>
                           <span className="font-medium">{displayName}</span>
                         </div>
+
+                        {/* Internal Code */}
+                        {order.internal_code && (
+                          <div className="text-sm">
+                            <span className="text-gray-500">Código: </span>
+                            <span className="font-mono text-xs">{order.internal_code}</span>
+                          </div>
+                        )}
+
+                        {/* Delivery Address */}
+                        {order.delivery_address && (
+                          <div className="text-sm">
+                            <span className="text-gray-500">Entrega: </span>
+                            <span className="text-xs line-clamp-1">{order.delivery_address}</span>
+                          </div>
+                        )}
 
                         {/* Product Name */}
                         {order.opportunities?.products?.name && (

@@ -34,7 +34,7 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { FinalizeSaleModal, FinalizeSaleData } from '@/components/CRM/FinalizeSaleModal';
+import { CompleteSaleDialog, CompleteSaleData } from '@/components/CRM/CompleteSaleDialog';
 import { 
   ArrowLeft, CheckCircle, Clock, User, Phone, MessageSquare, Package, 
   Calendar as CalendarIcon, RefreshCw, Plus, Bell, AlertCircle,
@@ -68,8 +68,8 @@ const CRM = () => {
   const [followUpNeeded, setFollowUpNeeded] = useState(false);
   const [followUpDate, setFollowUpDate] = useState<Date | undefined>();
 
-  // Finalize Sale Modal
-  const [finalizeModalOpen, setFinalizeModalOpen] = useState(false);
+  // Complete Sale Modal
+  const [completeSaleModalOpen, setCompleteSaleModalOpen] = useState(false);
   const [finalizingOpportunity, setFinalizingOpportunity] = useState<Opportunity | null>(null);
 
   // Check if user is master
@@ -189,12 +189,12 @@ const CRM = () => {
   const handleStageChange = async (opportunityId: string, newStage: string) => {
     if (!user || !selectedLeadId) return;
     
-    // Check if changing to 'won'
+    // Check if changing to 'won' - open modal instead of direct update
     if (newStage === OpportunityStage.WON) {
       const opp = leadDetails?.opportunities.find(o => o.id === opportunityId);
       if (opp) {
         setFinalizingOpportunity(opp);
-        setFinalizeModalOpen(true);
+        setCompleteSaleModalOpen(true);
         return;
       }
     }
@@ -214,68 +214,36 @@ const CRM = () => {
     }
   };
 
-  const handleFinalizeSale = async (data: FinalizeSaleData) => {
+  const handleCompleteSale = async (data: CompleteSaleData) => {
     if (!finalizingOpportunity || !user || !selectedLeadId) return;
 
     setUpdatingStage(finalizingOpportunity.id);
     
     try {
-      // 1. Update opportunity stage to 'won'
-      console.log('[won] opportunityId', finalizingOpportunity.id);
+      // 1. Create Order with required fields
+      const order = await ordersService.createOrderFromSale(
+        finalizingOpportunity.id,
+        selectedLeadId,
+        {
+          delivery_address: data.delivery_address,
+          internal_code: data.internal_code,
+          notes: data.notes,
+          customer_name: leadDetails?.lead.name || '',
+          customer_phone: leadDetails?.lead.phone || '',
+        },
+        user.id
+      );
+
+      // 2. Update opportunity stage to WON (explicitly to ensure consistency)
       await crmService.updateOpportunityStage(finalizingOpportunity.id, OpportunityStage.WON, selectedLeadId);
-      console.log('[won] Stage updated to won');
-
-      // 2. Ensure order exists and update with form data
-      console.log('[won] Ensuring order...');
-      const order = await ordersService.ensureOrderForOpportunity(finalizingOpportunity.id, user.id);
-      console.log('[won] Order ensured:', order?.id);
-
-      // 3. Update order with additional data
-      if (data.customer_name || data.customer_phone || data.delivery_address || data.order_number || data.notes) {
-        await ordersService.updateOrder(order.id, data);
-        console.log('[won] Order updated with form data');
-      }
-
-      // 4. Success - navigate to pipeline
-      showSuccess('Pedido criado com sucesso!');
-      setFinalizeModalOpen(false);
-      navigate('/app/pipeline');
-    } catch (error: any) {
-      console.error('[won] Failed:', error);
-      
-      const errorMessage = error?.message || error?.details || 'Erro ao criar pedido';
-      showError(errorMessage);
-    } finally {
-      setUpdatingStage(null);
-    }
-  };
-
-  const handleMarkAsWon = async (opportunity: Opportunity) => {
-    if (!user || !selectedLeadId) return;
-
-    if (!confirm('Deseja marcar esta oportunidade como ganha e criar o pedido?')) {
-      return;
-    }
-
-    setUpdatingStage(opportunity.id);
-    
-    try {
-      // 1. Update opportunity stage to 'won'
-      console.log('[won] opportunityId', opportunity.id);
-      await crmService.updateOpportunityStage(opportunity.id, OpportunityStage.WON, selectedLeadId);
-      console.log('[won] Stage updated to won');
-
-      // 2. Create order
-      console.log('[won] Creating order...');
-      const order = await ordersService.createOrderFromOpportunity(opportunity.id, user.id);
-      console.log('[won] Order created:', order?.id);
 
       // 3. Success - navigate to pipeline
       showSuccess('Pedido criado com sucesso!');
+      setCompleteSaleModalOpen(false);
+      setFinalizingOpportunity(null);
       navigate('/app/pipeline');
     } catch (error: any) {
-      console.error('[won] Failed:', error);
-      
+      console.error('[CRM] Failed to complete sale:', error);
       const errorMessage = error?.message || error?.details || 'Erro ao criar pedido';
       showError(errorMessage);
     } finally {
@@ -573,18 +541,14 @@ const CRM = () => {
   // Detail View
   return (
     <div className="p-8">
-      <FinalizeSaleModal
-        open={finalizeModalOpen}
+      <CompleteSaleDialog
+        open={completeSaleModalOpen}
         onClose={() => {
-          setFinalizeModalOpen(false);
+          setCompleteSaleModalOpen(false);
           setFinalizingOpportunity(null);
         }}
-        onConfirm={handleFinalizeSale}
-        leadData={{
-          name: leadDetails?.lead.name || '',
-          phone: leadDetails?.lead.phone || '',
-        }}
-        productName={finalizingOpportunity?.products?.name}
+        onConfirm={handleCompleteSale}
+        initialCustomerName={leadDetails?.lead.name || ''}
       />
 
       <div className="flex items-center justify-between mb-6">
@@ -810,18 +774,6 @@ const CRM = () => {
                               <SelectItem value={OpportunityStage.LOST}>Perdido</SelectItem>
                             </SelectContent>
                           </Select>
-
-                          {opp.stage !== OpportunityStage.WON && opp.stage !== OpportunityStage.LOST && (
-                            <Button
-                              onClick={() => handleMarkAsWon(opp)}
-                              disabled={updatingStage === opp.id}
-                              className="w-full"
-                              size="sm"
-                            >
-                              <CheckCircle size={16} className="mr-2" />
-                              {updatingStage === opp.id ? 'Processando...' : 'Venda Concluída'}
-                            </Button>
-                          )}
 
                           <div className="flex gap-2">
                             <Button

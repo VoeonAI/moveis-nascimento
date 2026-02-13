@@ -22,6 +22,94 @@ type OrderWithDetails = Order & {
 type OrdersByStage = Record<OrderStage, OrderWithDetails[]>;
 
 export const ordersService = {
+  async createOrderFromSale(
+    opportunityId: string,
+    leadId: string,
+    data: {
+      delivery_address: string;
+      internal_code: string;
+      notes?: string;
+      customer_name: string;
+      customer_phone?: string;
+    },
+    userId?: string
+  ): Promise<Order> {
+    console.log('[createOrderFromSale] Starting', { opportunityId, leadId });
+
+    // 0. Check for existing order (Idempotency)
+    const { data: existingOrder } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('opportunity_id', opportunityId)
+      .maybeSingle();
+
+    if (existingOrder) {
+      console.log('[createOrderFromSale] Order already exists, returning existing:', existingOrder.id);
+      return existingOrder;
+    }
+
+    // 1. Create Order with required fields
+    console.log('[createOrderFromSale] Creating order...');
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .insert({
+        opportunity_id: opportunityId,
+        lead_id: leadId,
+        current_stage: OrderStage.ORDER_CREATED,
+        customer_name: data.customer_name,
+        customer_phone: data.customer_phone,
+        delivery_address: data.delivery_address,
+        internal_code: data.internal_code,
+        notes: data.notes,
+      })
+      .select()
+      .single();
+
+    if (orderError) {
+      console.error('[createOrderFromSale]', orderError.message, orderError.details);
+      throw orderError;
+    }
+
+    console.log('[createOrderFromSale] Order created:', order.id);
+
+    // 2. Create initial Order Event (best-effort)
+    try {
+      const { error: eventError } = await supabase
+        .from('order_events')
+        .insert({
+          order_id: order.id,
+          from_stage: null,
+          to_stage: OrderStage.ORDER_CREATED,
+          note: 'Pedido criado via venda finalizada',
+          created_by: userId,
+        });
+
+      if (eventError) {
+        console.error('[createOrderFromSale] Failed to create order event (non-critical):', eventError.message, eventError.details);
+      }
+    } catch (eventError) {
+      console.error('[createOrderFromSale] Failed to create order event (non-critical):', eventError);
+    }
+
+    // 3. Emit Webhook (best-effort)
+    webhooksService.emit(
+      WEBHOOK_EVENTS.ORDER_CREATED,
+      {
+        order_id: order.id,
+        opportunity_id: opportunityId,
+        lead_id: leadId,
+        customer_name: order.customer_name,
+        customer_phone: order.customer_phone,
+        internal_code: order.internal_code,
+        delivery_address: order.delivery_address,
+        notes: order.notes,
+      },
+      'crm'
+    ).catch(err => console.error('[createOrderFromSale] Webhook failed:', err));
+
+    return order;
+  },
+
   async ensureOrderForOpportunity(opportunityId: string, userId?: string): Promise<Order> {
     console.log('[ensureOrderForOpportunity] Checking for existing order', { opportunityId });
 

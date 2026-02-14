@@ -215,6 +215,46 @@ export const crmService = {
     if (error) throw error;
   },
 
+  async opportunityHasLinkedOrder(opportunityId: string): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('opportunity_id', opportunityId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('[crmService.opportunityHasLinkedOrder]', error.message);
+        return false;
+      }
+
+      return !!data;
+    } catch (error) {
+      console.error('[crmService.opportunityHasLinkedOrder]', error);
+      return false;
+    }
+  },
+
+  async leadHasLinkedOrders(leadId: string): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('lead_id', leadId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('[crmService.leadHasLinkedOrders]', error.message);
+        return false;
+      }
+
+      return !!data;
+    } catch (error) {
+      console.error('[crmService.leadHasLinkedOrders]', error);
+      return false;
+    }
+  },
+
   async updateOpportunityStage(
     opportunityId: string,
     newStage: OpportunityStage,

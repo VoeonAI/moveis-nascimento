@@ -38,7 +38,7 @@ import { CompleteSaleDialog, CompleteSaleData } from '@/components/CRM/CompleteS
 import { 
   ArrowLeft, CheckCircle, Clock, User, Phone, MessageSquare, Package, 
   Calendar as CalendarIcon, RefreshCw, Plus, Bell, AlertCircle,
-  Archive, ArchiveRestore, Trash2, MoreHorizontal, X
+  Archive, ArchiveRestore, Trash2, MoreHorizontal, X, Info
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -57,6 +57,10 @@ const CRM = () => {
   const [updatingStage, setUpdatingStage] = useState<string | null>(null);
   const [savingNote, setSavingNote] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Track which opportunities/leads have linked orders
+  const [opportunitiesWithOrders, setOpportunitiesWithOrders] = useState<Set<string>>(new Set());
+  const [leadsWithOrders, setLeadsWithOrders] = useState<Set<string>>(new Set());
 
   // Filters
   const [filter, setFilter] = useState<FilterType>('all');
@@ -116,6 +120,19 @@ const CRM = () => {
     try {
       const data = await crmService.listLeads(showArchived);
       setLeads(data);
+
+      // Check which leads have linked orders
+      const leadIds = data.map(l => l.id);
+      const orderCheckPromises = leadIds.map(leadId => 
+        crmService.leadHasLinkedOrders(leadId).then(hasOrder => ({ leadId, hasOrder }))
+      );
+      
+      const results = await Promise.all(orderCheckPromises);
+      const leadsWithOrdersSet = new Set<string>();
+      results.forEach(({ leadId, hasOrder }) => {
+        if (hasOrder) leadsWithOrdersSet.add(leadId);
+      });
+      setLeadsWithOrders(leadsWithOrdersSet);
     } catch (err: any) {
       console.error('[CRM] Failed to load leads', err);
       const errorMessage = err?.message || err?.details || 'Erro desconhecido ao carregar leads';
@@ -146,6 +163,19 @@ const CRM = () => {
 
       setFollowUpNeeded(details.lead.follow_up_needed || false);
       setFollowUpDate(details.lead.follow_up_at ? new Date(details.lead.follow_up_at) : undefined);
+
+      // Check which opportunities have linked orders
+      const oppIds = details.opportunities.map(o => o.id);
+      const oppOrderCheckPromises = oppIds.map(oppId => 
+        crmService.opportunityHasLinkedOrder(oppId).then(hasOrder => ({ oppId, hasOrder }))
+      );
+      
+      const oppResults = await Promise.all(oppOrderCheckPromises);
+      const oppsWithOrdersSet = new Set<string>();
+      oppResults.forEach(({ oppId, hasOrder }) => {
+        if (hasOrder) oppsWithOrdersSet.add(oppId);
+      });
+      setOpportunitiesWithOrders(oppsWithOrdersSet);
     } catch (err) {
       console.error('[CRM] Failed to load lead details', err);
       showError('Erro ao carregar detalhes do lead');
@@ -582,7 +612,7 @@ const CRM = () => {
                   Arquivar Lead
                 </DropdownMenuItem>
               )}
-              {isMaster && (
+              {isMaster && !leadsWithOrders.has(leadDetails.lead.id) && (
                 <DropdownMenuItem 
                   onClick={() => handleDeleteLead(leadDetails.lead.id)}
                   className="text-red-600"
@@ -590,6 +620,14 @@ const CRM = () => {
                   <Trash2 size={16} className="mr-2" />
                   Excluir Permanentemente
                 </DropdownMenuItem>
+              )}
+              {isMaster && leadsWithOrders.has(leadDetails.lead.id) && (
+                <div className="px-2 py-1.5 text-sm text-gray-500 flex items-start gap-2">
+                  <Info size={14} className="mt-0.5 flex-shrink-0" />
+                  <span className="text-xs">
+                    Lead possui pedidos vinculados. Apenas arquivamento disponível.
+                  </span>
+                </div>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -785,7 +823,7 @@ const CRM = () => {
                               <Archive size={14} className="mr-1" />
                               {opp.archived ? 'Restaurar' : 'Arquivar'}
                             </Button>
-                            {isMaster && (
+                            {isMaster && !opportunitiesWithOrders.has(opp.id) && (
                               <Button
                                 onClick={() => handleDeleteOpportunity(opp.id)}
                                 variant="ghost"
@@ -794,6 +832,12 @@ const CRM = () => {
                               >
                                 <Trash2 size={14} />
                               </Button>
+                            )}
+                            {isMaster && opportunitiesWithOrders.has(opp.id) && (
+                              <div className="flex items-center gap-1 text-xs text-gray-500 px-2 py-1 bg-gray-100 rounded">
+                                <Info size={12} />
+                                <span>Possui pedido</span>
+                              </div>
                             )}
                           </div>
                         </div>

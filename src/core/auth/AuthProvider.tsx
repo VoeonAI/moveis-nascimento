@@ -10,6 +10,7 @@ interface AuthContextType {
   loading: boolean;
   profileLoading: boolean;
   error: string | null;
+  profileError: { code?: string; message?: string; details?: any } | null;
   signOut: () => Promise<void>;
 }
 
@@ -27,11 +28,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [profileError, setProfileError] = useState<{ code?: string; message?: string; details?: any } | null>(null);
   const mountedRef = useRef(true);
   const inFlightRef = useRef(false); // Prevenir reentrância
 
   const fetchProfile = async (userId: string) => {
     setProfileLoading(true);
+    setProfileError(null);
+    
     try {
       // Promise.race com timeout de 2.5s
       const { data, error } = await Promise.race([
@@ -43,17 +47,97 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         timeout(2500)
       ]) as any;
 
+      // Log diagnóstico detalhado
+      console.log('[AuthProvider] profile_fetch_attempt', {
+        userId,
+        status: error ? 'error' : (data ? 'success' : 'not_found'),
+        errorCode: error?.code,
+        errorMessage: error?.message,
+        errorDetails: error?.details,
+        hasData: !!data,
+      });
+
       if (error) {
-        console.error('[AuthProvider] profile_fetch_failed', error.message);
+        console.error('[AuthProvider] profile_fetch_error', {
+          userId,
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+        });
+
+        // Categorizar erro
+        let errorCategory: string;
+        const statusCode = error.code || (typeof error.status === 'number' ? error.status : null);
+
+        if (statusCode === 401 || statusCode === 403) {
+          errorCategory = 'RLS blocked / no permission';
+        } else if (statusCode === 400 || statusCode === 422) {
+          errorCategory = 'invalid query / column does not exist';
+        } else if (error.message?.includes('timeout')) {
+          errorCategory = 'request timeout';
+        } else {
+          errorCategory = 'unknown error';
+        }
+
+        setProfileError({
+          code: error.code,
+          message: error.message,
+          details: {
+            category: errorCategory,
+            userId,
+            statusCode,
+          },
+        });
+        
         if (mountedRef.current) setProfile(null);
       } else if (mountedRef.current) {
-        setProfile(data);
+        if (data) {
+          setProfile(data);
+          setProfileError(null);
+        } else {
+          // data null sem error => perfil não existe
+          console.warn('[AuthProvider] profile_not_found', { userId });
+          setProfileError({
+            code: 'PGRST116',
+            message: 'Profile not found',
+            details: {
+              category: 'profile does not exist',
+              userId,
+            },
+          });
+          setProfile(null);
+        }
       }
     } catch (err: any) {
       if (err?.message === 'timeout') {
-        console.error('[AuthProvider] profile_fetch_failed', 'timeout');
+        console.error('[AuthProvider] profile_fetch_error', {
+          userId,
+          code: 'TIMEOUT',
+          message: 'Request timeout',
+        });
+        setProfileError({
+          code: 'TIMEOUT',
+          message: 'Request timeout',
+          details: {
+            category: 'request timeout',
+            userId,
+          },
+        });
       } else {
-        console.error('[AuthProvider] profile_fetch_failed', err?.message);
+        console.error('[AuthProvider] profile_fetch_error', {
+          userId,
+          code: err?.code,
+          message: err?.message,
+        });
+        setProfileError({
+          code: err?.code || 'UNKNOWN',
+          message: err?.message || 'Unknown error',
+          details: {
+            category: 'unknown error',
+            userId,
+          },
+        });
       }
       if (mountedRef.current) setProfile(null);
     } finally {
@@ -114,6 +198,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             fetchProfile(session.user.id);
           } else {
             setProfile(null);
+            setProfileError(null);
           }
         }
       }
@@ -130,7 +215,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, profileLoading, error, signOut }}>
+    <AuthContext.Provider value={{ user, session, profile, loading, profileLoading, error, profileError, signOut }}>
       {children}
     </AuthContext.Provider>
   );

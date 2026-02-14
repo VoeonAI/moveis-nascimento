@@ -7,10 +7,12 @@ export interface UserProfile extends Profile {
 }
 
 export const usersService = {
-  async listAllUsers(): Promise<UserProfile[]> {
+  async listProfiles(): Promise<UserProfile[]> {
     try {
       // Note: We can only access profiles from public schema
-      // Auth users are not directly accessible via client
+      // We cannot access auth.users.email directly from client
+      // So we rely on the profiles table structure.
+      // Assuming profiles table might not have email, we handle it.
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -19,8 +21,52 @@ export const usersService = {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('[usersService.listAllUsers]', error);
+      console.error('[usersService.listProfiles]', error);
       return [];
+    }
+  },
+
+  async createUser(data: {
+    email: string;
+    password: string;
+    role: Role;
+    must_change_password?: boolean;
+  }): Promise<{ user_id: string; email: string }> {
+    const { data: responseData, error } = await supabase.functions.invoke('admin_create_user', {
+      body: data,
+    });
+
+    if (error) {
+      console.error('[usersService.createUser]', error);
+      throw new Error(error.message || 'Failed to create user');
+    }
+
+    if (!responseData?.ok) {
+      console.error('[usersService.createUser]', responseData.error);
+      throw new Error(responseData.error || 'Failed to create user');
+    }
+
+    return {
+      user_id: responseData.user_id,
+      email: responseData.email,
+    };
+  },
+
+  async updateProfileFlags(
+    userId: string,
+    updates: Partial<{ is_active: boolean; must_change_password: boolean }>
+  ): Promise<void> {
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userId);
+
+    if (error) {
+      console.error('[usersService.updateProfileFlags]', error);
+      throw error;
     }
   },
 

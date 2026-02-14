@@ -28,7 +28,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Shield, User as UserIcon, Check, X, RefreshCw } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { 
+  Shield, User as UserIcon, Check, X, RefreshCw, Plus, Eye, EyeOff, AlertTriangle 
+} from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 
 const Users = () => {
@@ -48,6 +54,17 @@ const Users = () => {
     newRole: Role;
   }>({ open: false, userId: '', userName: '', newRole: Role.GESTOR });
 
+  // Create User Modal State
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createFormData, setCreateFormData] = useState({
+    email: '',
+    password: '',
+    role: Role.GESTOR,
+    must_change_password: true,
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [creatingUser, setCreatingUser] = useState(false);
+
   useEffect(() => {
     loadUsers();
   }, []);
@@ -55,7 +72,7 @@ const Users = () => {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const data = await usersService.listAllUsers();
+      const data = await usersService.listProfiles();
       setUsers(data);
     } catch (error) {
       console.error('[Users] Failed to load users', error);
@@ -116,6 +133,75 @@ const Users = () => {
     executeRoleChange(confirmDialog.userId, confirmDialog.newRole);
   };
 
+  const handleToggleActive = async (userId: string, isActive: boolean) => {
+    if (!confirm(`Tem certeza que deseja ${isActive ? 'ativar' : 'desativar'} este usuário?`)) {
+      return;
+    }
+
+    try {
+      await usersService.updateProfileFlags(userId, { is_active: isActive });
+      showSuccess(`Usuário ${isActive ? 'ativado' : 'desativado'} com sucesso`);
+      await loadUsers();
+    } catch (error: any) {
+      console.error('[Users] Failed to toggle active status', error);
+      showError(error.message || 'Erro ao atualizar status');
+    }
+  };
+
+  const handleForcePasswordChange = async (userId: string) => {
+    if (!confirm('Tem certeza que deseja forçar este usuário a alterar a senha no próximo login?')) {
+      return;
+    }
+
+    try {
+      await usersService.updateProfileFlags(userId, { must_change_password: true });
+      showSuccess('Usuário precisará alterar a senha no próximo login');
+      await loadUsers();
+    } catch (error: any) {
+      console.error('[Users] Failed to force password change', error);
+      showError(error.message || 'Erro ao forçar troca de senha');
+    }
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!createFormData.email.trim() || !createFormData.password.trim()) {
+      showError('Email e senha são obrigatórios');
+      return;
+    }
+
+    if (createFormData.password.length < 6) {
+      showError('A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+
+    setCreatingUser(true);
+    try {
+      await usersService.createUser({
+        email: createFormData.email,
+        password: createFormData.password,
+        role: createFormData.role,
+        must_change_password: createFormData.must_change_password,
+      });
+
+      showSuccess('Usuário criado com sucesso');
+      setCreateModalOpen(false);
+      setCreateFormData({
+        email: '',
+        password: '',
+        role: Role.GESTOR,
+        must_change_password: true,
+      });
+      await loadUsers();
+    } catch (error: any) {
+      console.error('[Users] Failed to create user', error);
+      showError(error.message || 'Erro ao criar usuário');
+    } finally {
+      setCreatingUser(false);
+    }
+  };
+
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case Role.MASTER: return 'bg-purple-100 text-purple-800';
@@ -162,10 +248,16 @@ const Users = () => {
             Gerencie as permissões e roles dos usuários do sistema
           </p>
         </div>
-        <Button onClick={loadUsers} variant="outline" size="sm">
-          <RefreshCw size={16} className="mr-2" />
-          Atualizar
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={loadUsers} variant="outline" size="sm">
+            <RefreshCw size={16} className="mr-2" />
+            Atualizar
+          </Button>
+          <Button onClick={() => setCreateModalOpen(true)}>
+            <Plus size={16} className="mr-2" />
+            Novo Usuário
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -213,66 +305,105 @@ const Users = () => {
                       </div>
                     </div>
 
-                    {/* Current Role */}
-                    <Badge className={getRoleBadgeColor(user.role)}>
-                      {getRoleLabel(user.role)}
-                    </Badge>
+                    {/* Status Badges */}
+                    <div className="flex gap-2">
+                      <Badge className={getRoleBadgeColor(user.role)}>
+                        {getRoleLabel(user.role)}
+                      </Badge>
+                      {user.is_active === false && (
+                        <Badge variant="destructive" className="text-xs">
+                          Inativo
+                        </Badge>
+                      )}
+                      {user.must_change_password && (
+                        <Badge variant="outline" className="text-xs border-orange-300 text-orange-700">
+                          Trocar Senha
+                        </Badge>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Role Selector */}
-                  {!isCurrentUser(user.id) && (
-                    <div className="flex items-center gap-2 ml-4">
-                      <Select
-                        value={pendingRoleChanges[user.id] ?? user.role}
-                        onValueChange={(value) => handleRoleChange(user.id, value as Role)}
-                        disabled={updatingUserId === user.id}
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={Role.GESTOR}>Gestor</SelectItem>
-                          <SelectItem value={Role.ESTOQUE}>Estoque</SelectItem>
-                          <SelectItem value={Role.MASTER}>Master</SelectItem>
-                        </SelectContent>
-                      </Select>
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 ml-4">
+                    {!isCurrentUser(user.id) && (
+                      <>
+                        {/* Role Selector */}
+                        <Select
+                          value={pendingRoleChanges[user.id] ?? user.role}
+                          onValueChange={(value) => handleRoleChange(user.id, value as Role)}
+                          disabled={updatingUserId === user.id}
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={Role.GESTOR}>Gestor</SelectItem>
+                            <SelectItem value={Role.ESTOQUE}>Estoque</SelectItem>
+                            <SelectItem value={Role.MASTER}>Master</SelectItem>
+                          </SelectContent>
+                        </Select>
 
-                      {pendingRoleChanges[user.id] && pendingRoleChanges[user.id] !== user.role && (
+                        {pendingRoleChanges[user.id] && pendingRoleChanges[user.id] !== user.role && (
+                          <Button
+                            onClick={() => handleSaveRole(user.id)}
+                            disabled={updatingUserId === user.id}
+                            size="sm"
+                            variant="default"
+                          >
+                            {updatingUserId === user.id ? (
+                              'Salvando...'
+                            ) : (
+                              <>
+                                <Check size={14} className="mr-1" />
+                                Salvar
+                              </>
+                            )}
+                          </Button>
+                        )}
+
+                        {pendingRoleChanges[user.id] && pendingRoleChanges[user.id] !== user.role && (
+                          <Button
+                            onClick={() => handleRoleChange(user.id, user.role)}
+                            disabled={updatingUserId === user.id}
+                            size="sm"
+                            variant="ghost"
+                          >
+                            <X size={14} />
+                          </Button>
+                        )}
+
+                        {/* Toggle Active */}
                         <Button
-                          onClick={() => handleSaveRole(user.id)}
+                          onClick={() => handleToggleActive(user.id, user.is_active !== false)}
                           disabled={updatingUserId === user.id}
                           size="sm"
-                          variant="default"
+                          variant={user.is_active === false ? "default" : "outline"}
+                          title={user.is_active === false ? "Ativar usuário" : "Desativar usuário"}
                         >
-                          {updatingUserId === user.id ? (
-                            'Salvando...'
-                          ) : (
-                            <>
-                              <Check size={14} className="mr-1" />
-                              Salvar
-                            </>
-                          )}
+                          {user.is_active === false ? "Ativar" : "Desativar"}
                         </Button>
-                      )}
 
-                      {pendingRoleChanges[user.id] && pendingRoleChanges[user.id] !== user.role && (
-                        <Button
-                          onClick={() => handleRoleChange(user.id, user.role)}
-                          disabled={updatingUserId === user.id}
-                          size="sm"
-                          variant="ghost"
-                        >
-                          <X size={14} />
-                        </Button>
-                      )}
-                    </div>
-                  )}
+                        {/* Force Password Change */}
+                        {!user.must_change_password && (
+                          <Button
+                            onClick={() => handleForcePasswordChange(user.id)}
+                            disabled={updatingUserId === user.id}
+                            size="sm"
+                            variant="ghost"
+                            title="Forçar troca de senha"
+                          >
+                           <AlertTriangle size={14} />
+                          </Button>
+                        )}
+                      </>
+                    )}
 
-                  {isCurrentUser(user.id) && (
-                    <div className="ml-4 text-sm text-gray-400 italic">
-                      Não é possível alterar seu próprio role
-                    </div>
-                  )}
+                    {isCurrentUser(user.id) && (
+                      <div className="ml-4 text-sm text-gray-400 italic">
+                        Não é possível alterar seus próprios dados
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -301,6 +432,108 @@ const Users = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Create User Modal */}
+      <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Novo Usuário</DialogTitle>
+            <DialogDescription>
+              Crie um novo usuário para acessar o sistema.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={handleCreateUser} className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="create_email">Email *</Label>
+              <Input
+                id="create_email"
+                type="email"
+                placeholder="usuario@exemplo.com"
+                value={createFormData.email}
+                onChange={(e) => setCreateFormData({ ...createFormData, email: e.target.value })}
+                disabled={creatingUser}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="create_password">Senha *</Label>
+              <div className="relative">
+                <Input
+                  id="create_password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Mínimo 6 caracteres"
+                  value={createFormData.password}
+                  onChange={(e) => setCreateFormData({ ...createFormData, password: e.target.value })}
+                  disabled={creatingUser}
+                  required
+                  minLength={6}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="create_role">Role *</Label>
+              <Select
+                value={createFormData.role}
+                onValueChange={(value) => setCreateFormData({ ...createFormData, role: value as Role })}
+                disabled={creatingUser}
+              >
+                <SelectTrigger id="create_role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={Role.GESTOR}>Gestor</SelectItem>
+                  <SelectItem value={Role.ESTOQUE}>Estoque</SelectItem>
+                  <SelectItem value={Role.MASTER}>Master</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="must_change_password"
+                checked={createFormData.must_change_password}
+                onCheckedChange={(checked) => setCreateFormData({ ...createFormData, must_change_password: checked })}
+                disabled={creatingUser}
+              />
+              <Label htmlFor="must_change_password" className="cursor-pointer">
+                Exigir troca de senha no primeiro acesso
+              </Label>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCreateModalOpen(false)}
+                disabled={creatingUser}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={creatingUser}>
+                {creatingUser ? (
+                  <>
+                    <RefreshCw size={16} className="mr-2 animate-spin" />
+                    Criando...
+                  </>
+                ) : (
+                  'Criar Usuário'
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

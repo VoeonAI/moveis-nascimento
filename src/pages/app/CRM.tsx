@@ -681,8 +681,8 @@ const CRM = () => {
                   </span>
                 </div>
               )}
-              {/* Show Hard Delete option for Master users on archived leads */}
-              {isMaster && leadDetails.lead.archived && (
+              {/* Show Hard Delete option for Master users (no archived restriction) */}
+              {isMaster && (
                 <DropdownMenuItem 
                   onClick={handleHardDeleteLead}
                   className="text-red-600 font-semibold"

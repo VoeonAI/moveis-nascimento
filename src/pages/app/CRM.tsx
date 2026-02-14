@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { crmService, Opportunity, TimelineEvent } from '@/services/crmService';
 import { ordersService } from '@/services/ordersService';
+import { adminService } from '@/services/adminService';
 import { Lead } from '@/types';
 import { OpportunityStage } from '@/constants/domain';
 import { OPPORTUNITY_STAGE_LABELS, ORDER_STAGE_LABELS, TIMELINE_EVENT_LABELS } from '@/constants/labels';
@@ -35,6 +36,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CompleteSaleDialog, CompleteSaleData } from '@/components/CRM/CompleteSaleDialog';
+import { HardDeleteConfirmDialog } from '@/components/HardDeleteConfirmDialog';
 import { 
   ArrowLeft, CheckCircle, Clock, User, Phone, MessageSquare, Package, 
   Calendar as CalendarIcon, RefreshCw, Plus, Bell, AlertCircle,
@@ -75,6 +77,10 @@ const CRM = () => {
   // Complete Sale Modal
   const [completeSaleModalOpen, setCompleteSaleModalOpen] = useState(false);
   const [finalizingOpportunity, setFinalizingOpportunity] = useState<Opportunity | null>(null);
+
+  // Hard Delete Modal
+  const [hardDeleteDialogOpen, setHardDeleteDialogOpen] = useState(false);
+  const [deletingEntity, setDeletingEntity] = useState<{ type: 'lead' | 'order', id: string, name: string } | null>(null);
 
   // Check if user is master
   const isMaster = profile?.role === 'master';
@@ -213,6 +219,42 @@ const CRM = () => {
     } catch (error: any) {
       console.error('[CRM] Failed to delete lead', error);
       showError(error.message || 'Erro ao excluir lead');
+    }
+  };
+
+  const handleHardDeleteLead = () => {
+    if (!leadDetails) return;
+    setDeletingEntity({ type: 'lead', id: leadDetails.lead.id, name: leadDetails.lead.name });
+    setHardDeleteDialogOpen(true);
+  };
+
+  const handleConfirmHardDelete = async () => {
+    if (!deletingEntity) return;
+
+    try {
+      if (deletingEntity.type === 'lead') {
+        await adminService.hardDeleteLead(deletingEntity.id);
+        showSuccess('Lead excluído definitivamente com sucesso');
+      } else if (deletingEntity.type === 'order') {
+        await adminService.hardDeleteOrder(deletingEntity.id);
+        showSuccess('Pedido excluído definitivamente com sucesso');
+      }
+      
+      setHardDeleteDialogOpen(false);
+      setDeletingEntity(null);
+      
+      // If we deleted the current lead, go back to list
+      if (deletingEntity.type === 'lead' && selectedLeadId === deletingEntity.id) {
+        setSelectedLeadId(null);
+        setLeadDetails(null);
+      }
+      
+      // Reload data
+      await loadLeads();
+    } catch (error: any) {
+      console.error('[CRM] Failed to hard delete', error);
+      const errorMessage = error?.message || 'Erro ao excluir';
+      showError(errorMessage);
     }
   };
 
@@ -581,6 +623,14 @@ const CRM = () => {
         initialCustomerName={leadDetails?.lead.name || ''}
       />
 
+      <HardDeleteConfirmDialog
+        open={hardDeleteDialogOpen}
+        onClose={() => setHardDeleteDialogOpen(false)}
+        onConfirm={handleConfirmHardDelete}
+        entityType={deletingEntity?.type === 'lead' ? 'Lead' : 'Pedido'}
+        entityName={deletingEntity?.name}
+      />
+
       <div className="flex items-center justify-between mb-6">
         <Button 
           variant="ghost" 
@@ -630,6 +680,16 @@ const CRM = () => {
                     Lead arquivado possui pedidos vinculados. Não é possível excluir.
                   </span>
                 </div>
+              )}
+              {/* Show Hard Delete option for Master users on archived leads */}
+              {isMaster && leadDetails.lead.archived && (
+                <DropdownMenuItem 
+                  onClick={handleHardDeleteLead}
+                  className="text-red-600 font-semibold"
+                >
+                  <Trash2 size={16} className="mr-2" />
+                  Excluir Definitivamente (Hard Delete)
+                </DropdownMenuItem>
               )}
             </DropdownMenuContent>
           </DropdownMenu>

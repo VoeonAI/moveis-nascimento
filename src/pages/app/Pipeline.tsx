@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { ordersService } from '@/services/ordersService';
+import { adminService } from '@/services/adminService';
 import { Order } from '@/types';
 import { OrderStage, ORDER_STAGES_FLOW } from '@/constants/domain';
 import { ORDER_STAGE_LABELS } from '@/constants/labels';
 import { useAuth } from '@/core/auth/AuthProvider';
-import { AlertCircle, RefreshCw, ArrowRight, Package, Calendar, MoreHorizontal, MapPin, Hash } from 'lucide-react';
+import { AlertCircle, RefreshCw, ArrowRight, Package, Calendar, MoreHorizontal, MapPin, Hash, Trash2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,6 +24,7 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { showSuccess, showError } from '@/utils/toast';
+import { HardDeleteConfirmDialog } from '@/components/HardDeleteConfirmDialog';
 
 const Pipeline = () => {
   const [ordersByStage, setOrdersByStage] = useState<Record<OrderStage, any>>({} as Record<OrderStage, any>);
@@ -30,6 +32,11 @@ const Pipeline = () => {
   const [error, setError] = useState<string | null>(null);
   const [movingOrder, setMovingOrder] = useState<string | null>(null);
   const { user, profile } = useAuth();
+  const isMaster = profile?.role === 'master';
+
+  // Hard Delete Modal
+  const [hardDeleteDialogOpen, setHardDeleteDialogOpen] = useState(false);
+  const [deletingEntity, setDeletingEntity] = useState<{ type: 'lead' | 'order', id: string, name: string } | null>(null);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -71,6 +78,36 @@ const Pipeline = () => {
       showError(errorMessage);
     } finally {
       setMovingOrder(null);
+    }
+  };
+
+  const handleHardDeleteOrder = (order: any) => {
+    if (!isMaster) return;
+    setDeletingEntity({ type: 'order', id: order.id, name: `Pedido #${order.id.slice(0, 8)}` });
+    setHardDeleteDialogOpen(true);
+  };
+
+  const handleConfirmHardDelete = async () => {
+    if (!deletingEntity) return;
+
+    try {
+      if (deletingEntity.type === 'lead') {
+        await adminService.hardDeleteLead(deletingEntity.id);
+        showSuccess('Lead excluído definitivamente com sucesso');
+      } else if (deletingEntity.type === 'order') {
+        await adminService.hardDeleteOrder(deletingEntity.id);
+        showSuccess('Pedido excluído definitivamente com sucesso');
+      }
+      
+      setHardDeleteDialogOpen(false);
+      setDeletingEntity(null);
+      
+      // Reload data
+      await fetchOrders();
+    } catch (error: any) {
+      console.error('[Pipeline] Failed to hard delete', error);
+      const errorMessage = error?.message || 'Erro ao excluir';
+      showError(errorMessage);
     }
   };
 
@@ -203,8 +240,8 @@ const Pipeline = () => {
                         )}
 
                         {/* Action Buttons */}
-                        {stage !== OrderStage.DELIVERED && stage !== OrderStage.CANCELED && (
-                          <div className="flex gap-2">
+                        <div className="flex gap-2 items-center justify-between">
+                          {stage !== OrderStage.DELIVERED && stage !== OrderStage.CANCELED && (
                             <Button
                               onClick={() => {
                                 const currentIndex = ORDER_STAGES_FLOW.indexOf(stage);
@@ -226,32 +263,41 @@ const Pipeline = () => {
                                 </>
                               )}
                             </Button>
+                          )}
 
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  disabled={movingOrder === order.id}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={movingOrder === order.id}
+                              >
+                                <MoreHorizontal size={14} />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {ORDER_STAGES_FLOW.map((targetStage) => (
+                                targetStage !== stage && (
+                                  <DropdownMenuItem
+                                    key={targetStage}
+                                    onClick={() => handleMoveStage(order, targetStage)}
+                                  >
+                                    {ORDER_STAGE_LABELS[targetStage]}
+                                  </DropdownMenuItem>
+                                )
+                              ))}
+                              {isMaster && (
+                                <DropdownMenuItem 
+                                  onClick={() => handleHardDeleteOrder(order)}
+                                  className="text-red-600 font-semibold"
                                 >
-                                  <MoreHorizontal size={14} />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                {ORDER_STAGES_FLOW.map((targetStage) => (
-                                  targetStage !== stage && (
-                                    <DropdownMenuItem
-                                      key={targetStage}
-                                      onClick={() => handleMoveStage(order, targetStage)}
-                                    >
-                                      {ORDER_STAGE_LABELS[targetStage]}
-                                    </DropdownMenuItem>
-                                  )
-                                ))}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        )}
+                                  <Trash2 size={14} className="mr-2" />
+                                  Excluir Definitivamente
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </CardContent>
                     </Card>
                   );
@@ -261,6 +307,14 @@ const Pipeline = () => {
           </div>
         ))}
       </div>
+      
+      <HardDeleteConfirmDialog
+        open={hardDeleteDialogOpen}
+        onClose={() => setHardDeleteDialogOpen(false)}
+        onConfirm={handleConfirmHardDelete}
+        entityType={deletingEntity?.type === 'lead' ? 'Lead' : 'Pedido'}
+        entityName={deletingEntity?.name}
+      />
     </div>
   );
 };

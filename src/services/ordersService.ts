@@ -1,6 +1,7 @@
 import { supabase } from '@/core/supabaseClient';
 import { Order, OrderEvent } from '@/types';
 import { OrderStage, ORDER_STAGES_FLOW } from '@/constants/domain';
+import { ORDER_STAGE_LABELS } from '@/constants/labels';
 import { webhooksService, WEBHOOK_EVENTS } from './webhooksService';
 
 // Type alias for complex return type including lead and product data
@@ -365,13 +366,15 @@ export const ordersService = {
       console.error('[updateOrderStage] Failed to create order event (non-critical):', eventError);
     }
 
-    // 4. Emit Webhook (best-effort)
+    // 4. Emit Webhook (best-effort) with PT-BR labels
     webhooksService.emit(
       WEBHOOK_EVENTS.ORDER_STAGE_CHANGED,
       {
         order_id: orderId,
         from_stage: fromStage,
         to_stage: toStage,
+        from_stage_label_pt: ORDER_STAGE_LABELS[fromStage] || fromStage,
+        to_stage_label_pt: ORDER_STAGE_LABELS[toStage] || toStage,
       },
       'pipeline'
     ).catch(err => console.error('[updateOrderStage] Webhook failed:', err));
@@ -492,13 +495,15 @@ export const ordersService = {
       console.error('[moveOrderStage] Failed to create order event (non-critical):', eventError);
     }
 
-    // 4. Emit Webhook (best-effort)
+    // 4. Emit Webhook (best-effort) with PT-BR labels
     webhooksService.emit(
       WEBHOOK_EVENTS.ORDER_STAGE_CHANGED,
       {
         order_id: orderId,
         from_stage: fromStage,
         to_stage: toStage,
+        from_stage_label_pt: ORDER_STAGE_LABELS[fromStage] || fromStage,
+        to_stage_label_pt: ORDER_STAGE_LABELS[toStage] || toStage,
       },
       'pipeline'
     ).catch(err => console.error('[moveOrderStage] Webhook failed:', err));

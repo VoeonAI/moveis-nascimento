@@ -196,9 +196,18 @@ const ProductDetail = () => {
         return;
       }
 
-      // Sucesso - mostrar modal com opções de WhatsApp
-      // O modal permanece aberto para permitir ação de WhatsApp
+      // Sucesso
       showSuccess('Interesse registrado com sucesso!');
+
+      // Se o WhatsApp estiver configurado, abrir automaticamente e fechar modal
+      if (storeWhatsApp) {
+        const message = buildWhatsAppMessage();
+        const encodedMessage = encodeURIComponent(message);
+        const whatsappUrl = `https://wa.me/${storeWhatsApp}?text=${encodedMessage}`;
+        window.open(whatsappUrl, '_blank');
+        handleModalClose();
+      } 
+      // Se não estiver configurado, o modal permanece aberto para permitir "Copiar Mensagem"
       
     } catch (error) {
       console.error('[ProductDetail] Unexpected error:', error);
@@ -310,7 +319,7 @@ const ProductDetail = () => {
             </div>
           </form>
 
-          {/* WhatsApp Actions - only show after successful submission */}
+          {/* WhatsApp Actions - show after submission if no auto-open, or manual trigger */}
           {!submitting && (
             <div className="mt-6 pt-6 border-t">
               {storeWhatsApp ? (

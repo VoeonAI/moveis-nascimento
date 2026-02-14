@@ -612,7 +612,8 @@ const CRM = () => {
                   Arquivar Lead
                 </DropdownMenuItem>
               )}
-              {isMaster && !leadsWithOrders.has(leadDetails.lead.id) && (
+              {/* Show delete option only if lead is archived */}
+              {isMaster && leadDetails.lead.archived && !leadsWithOrders.has(leadDetails.lead.id) && (
                 <DropdownMenuItem 
                   onClick={() => handleDeleteLead(leadDetails.lead.id)}
                   className="text-red-600"
@@ -621,11 +622,12 @@ const CRM = () => {
                   Excluir Permanentemente
                 </DropdownMenuItem>
               )}
-              {isMaster && leadsWithOrders.has(leadDetails.lead.id) && (
+              {/* Show warning if archived lead has orders */}
+              {isMaster && leadDetails.lead.archived && leadsWithOrders.has(leadDetails.lead.id) && (
                 <div className="px-2 py-1.5 text-sm text-gray-500 flex items-start gap-2">
                   <Info size={14} className="mt-0.5 flex-shrink-0" />
                   <span className="text-xs">
-                    Lead possui pedidos vinculados. Apenas arquivamento disponível.
+                    Lead arquivado possui pedidos vinculados. Não é possível excluir.
                   </span>
                 </div>
               )}

@@ -31,10 +31,19 @@ export interface TimelineEvent {
 export const crmService = {
   async listLeads(includeArchived: boolean = false): Promise<Lead[]> {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('leads')
         .select('*')
         .order('created_at', { ascending: false });
+
+      // Filter by archived status
+      if (!includeArchived) {
+        query = query.eq('archived', false);
+      } else {
+        query = query.eq('archived', true);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('[crmService.listLeads] Supabase error:', error.message, error.details);

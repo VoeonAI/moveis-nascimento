@@ -22,6 +22,67 @@ type OrderWithDetails = Order & {
 
 type OrdersByStage = Record<OrderStage, OrderWithDetails[]>;
 
+// Helper to fetch enriched order context for webhooks
+async function getOrderWebhookContext(orderId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select(`
+        id,
+        opportunity_id,
+        lead_id,
+        current_stage,
+        customer_name,
+        customer_phone,
+        internal_code,
+        delivery_address,
+        notes,
+        opportunities:opportunity_id (
+          id,
+          lead_id,
+          product_id,
+          leads:lead_id ( id, name, phone ),
+          products:product_id ( id, name )
+        )
+      `)
+      .eq('id', orderId)
+      .single();
+
+    if (error) {
+      console.error('[getOrderWebhookContext] Error fetching order context:', error);
+      return null;
+    }
+
+    const order = data as OrderWithDetails;
+    const opp = order.opportunities;
+
+    // Fallback for customer details if missing in orders table
+    const customerName = order.customer_name || opp?.leads?.name || null;
+    const customerPhone = order.customer_phone || opp?.leads?.phone || null;
+    const productName = opp?.products?.name || null;
+
+    return {
+      order: {
+        id: order.id,
+        current_stage: order.current_stage,
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        internal_code: order.internal_code,
+        delivery_address: order.delivery_address,
+        notes: order.notes,
+      },
+      opportunity_id: order.opportunity_id,
+      lead_id: order.lead_id,
+      opportunity: opp ? { id: opp.id } : null,
+      lead: opp?.leads ? { id: opp.leads.id } : null,
+      product: opp?.products ? { id: opp.products.id, title: opp.products.name } : null,
+    };
+  } catch (error) {
+    console.error('[getOrderWebhookContext] Unexpected error:', error);
+    return null;
+  }
+}
+
 export const ordersService = {
   async createOrderFromSale(
     opportunityId: string,
@@ -91,18 +152,21 @@ export const ordersService = {
       console.error('[createOrderFromSale] Failed to create order event (non-critical):', eventError);
     }
 
-    // 3. Emit Webhook (best-effort)
+    // 3. Emit Webhook with enriched payload (best-effort)
+    const context = await getOrderWebhookContext(order.id);
+    const payload = context || {
+      order_id: order.id,
+      opportunity_id,
+      lead_id,
+      customer_name: order.customer_name,
+      internal_code: order.internal_code,
+      delivery_address: order.delivery_address,
+      notes: order.notes,
+    };
+
     webhooksService.emit(
       WEBHOOK_EVENTS.ORDER_CREATED,
-      {
-        order_id: order.id,
-        opportunity_id: opportunityId,
-        lead_id: leadId,
-        customer_name: order.customer_name,
-        internal_code: order.internal_code,
-        delivery_address: order.delivery_address,
-        notes: order.notes,
-      },
+      payload,
       'crm'
     ).catch(err => console.error('[createOrderFromSale] Webhook failed:', err));
 
@@ -189,20 +253,23 @@ export const ordersService = {
       console.error('[ensureOrderForOpportunity] Failed to create order event (non-critical):', eventError);
     }
 
-    // 5. Emit webhook (best-effort)
+    // 5. Emit webhook with enriched payload (best-effort)
+    const context = await getOrderWebhookContext(order.id);
+    const payload = context || {
+      order_id: order.id,
+      opportunity_id: opportunityId,
+      lead_id: lead.id,
+      product_id: opportunity.product_id,
+      customer_name: order.customer_name,
+      customer_phone: order.customer_phone,
+      internal_code: order.internal_code ?? null,
+      delivery_address: order.delivery_address ?? null,
+      notes: order.notes ?? null,
+    };
+
     webhooksService.emit(
       WEBHOOK_EVENTS.ORDER_CREATED,
-      {
-        order_id: order.id,
-        opportunity_id: opportunityId,
-        lead_id: lead.id,
-        product_id: opportunity.product_id,
-        customer_name: order.customer_name,
-        customer_phone: order.customer_phone,
-        internal_code: order.internal_code ?? null,
-        delivery_address: order.delivery_address ?? null,
-        notes: order.notes ?? null,
-      },
+      payload,
       'crm'
     ).catch(err => console.error('[ensureOrderForOpportunity] Webhook failed:', err));
 
@@ -290,20 +357,23 @@ export const ordersService = {
 
     console.log('[createOrderFromOpportunity] Order event created (or failed gracefully)');
 
-    // 4. Emit Webhook (best-effort, não trava se falhar)
+    // 4. Emit Webhook with enriched payload (best-effort)
+    const context = await getOrderWebhookContext(order.id);
+    const payload = context || {
+      order_id: order.id,
+      opportunity_id: opportunityId,
+      lead_id: lead.id,
+      product_id: opportunity.product_id,
+      customer_name: order.customer_name ?? null,
+      customer_phone: order.customer_phone ?? null,
+      internal_code: order.internal_code ?? null,
+      delivery_address: order.delivery_address ?? null,
+      notes: order.notes ?? null,
+    };
+
     webhooksService.emit(
       WEBHOOK_EVENTS.ORDER_CREATED,
-      {
-        order_id: order.id,
-        opportunity_id: opportunityId,
-        lead_id: lead.id,
-        product_id: opportunity.product_id,
-        customer_name: order.customer_name ?? null,
-        customer_phone: order.customer_phone ?? null,
-        internal_code: order.internal_code ?? null,
-        delivery_address: order.delivery_address ?? null,
-        notes: order.notes ?? null,
-      },
+      payload,
       'crm'
     ).catch(err => console.error('[createOrderFromOpportunity] Webhook failed:', err));
 
@@ -366,16 +436,26 @@ export const ordersService = {
       console.error('[updateOrderStage] Failed to create order event (non-critical):', eventError);
     }
 
-    // 4. Emit Webhook (best-effort) with PT-BR labels
+    // 4. Emit Webhook with enriched payload (best-effort)
+    const context = await getOrderWebhookContext(orderId);
+    
+    const payload = context ? {
+      ...context,
+      from_stage: fromStage,
+      to_stage: toStage,
+      from_stage_label_pt: ORDER_STAGE_LABELS[fromStage] || fromStage,
+      to_stage_label_pt: ORDER_STAGE_LABELS[toStage] || toStage,
+    } : {
+      order_id: orderId,
+      from_stage: fromStage,
+      to_stage: toStage,
+      from_stage_label_pt: ORDER_STAGE_LABELS[fromStage] || fromStage,
+      to_stage_label_pt: ORDER_STAGE_LABELS[toStage] || toStage,
+    };
+
     webhooksService.emit(
       WEBHOOK_EVENTS.ORDER_STAGE_CHANGED,
-      {
-        order_id: orderId,
-        from_stage: fromStage,
-        to_stage: toStage,
-        from_stage_label_pt: ORDER_STAGE_LABELS[fromStage] || fromStage,
-        to_stage_label_pt: ORDER_STAGE_LABELS[toStage] || toStage,
-      },
+      payload,
       'pipeline'
     ).catch(err => console.error('[updateOrderStage] Webhook failed:', err));
 
@@ -495,16 +575,26 @@ export const ordersService = {
       console.error('[moveOrderStage] Failed to create order event (non-critical):', eventError);
     }
 
-    // 4. Emit Webhook (best-effort) with PT-BR labels
+    // 4. Emit Webhook with enriched payload (best-effort)
+    const context = await getOrderWebhookContext(orderId);
+    
+    const payload = context ? {
+      ...context,
+      from_stage: fromStage,
+      to_stage: toStage,
+      from_stage_label_pt: ORDER_STAGE_LABELS[fromStage] || fromStage,
+      to_stage_label_pt: ORDER_STAGE_LABELS[toStage] || toStage,
+    } : {
+      order_id: orderId,
+      from_stage: fromStage,
+      to_stage: toStage,
+      from_stage_label_pt: ORDER_STAGE_LABELS[fromStage] || fromStage,
+      to_stage_label_pt: ORDER_STAGE_LABELS[toStage] || toStage,
+    };
+
     webhooksService.emit(
       WEBHOOK_EVENTS.ORDER_STAGE_CHANGED,
-      {
-        order_id: orderId,
-        from_stage: fromStage,
-        to_stage: toStage,
-        from_stage_label_pt: ORDER_STAGE_LABELS[fromStage] || fromStage,
-        to_stage_label_pt: ORDER_STAGE_LABELS[toStage] || toStage,
-      },
+      payload,
       'pipeline'
     ).catch(err => console.error('[moveOrderStage] Webhook failed:', err));
 

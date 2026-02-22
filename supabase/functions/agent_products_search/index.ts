@@ -66,6 +66,36 @@ serve(async (req) => {
     // Get public site URL from env
     const publicSiteUrl = Deno.env.get('PUBLIC_SITE_URL') || ''
 
+    // Build category filter
+    let categorySlugs: string[] = []
+    
+    if (category) {
+      // Check if category is a root category (parent_id is null)
+      const { data: categoryData } = await supabase
+        .from('categories')
+        .select('id, slug, parent_id')
+        .eq('slug', category)
+        .single()
+      
+      if (categoryData) {
+        if (!categoryData.parent_id) {
+          // Root category: include all subcategories
+          const { data: subCategories } = await supabase
+            .from('categories')
+            .select('slug')
+            .eq('parent_id', categoryData.id)
+          
+          categorySlugs = [categoryData.slug]
+          if (subCategories) {
+            categorySlugs = categorySlugs.concat(subCategories.map((sc: any) => sc.slug))
+          }
+        } else {
+          // Subcategory: use only this category
+          categorySlugs = [categoryData.slug]
+        }
+      }
+    }
+
     // Build query
     let query = supabase
       .from('products')
@@ -76,15 +106,15 @@ serve(async (req) => {
         active,
         images,
         product_categories (
-          categories (slug)
+          categories (id, name, slug)
         )
       `)
       .eq('active', true)
       .limit(limit)
 
-    // Filter by category
-    if (category) {
-      query = query.contains('product_categories.categories.slug', category)
+    // Filter by category (using contains for array of slugs)
+    if (categorySlugs.length > 0) {
+      query = query.contains('product_categories.categories.slug', categorySlugs)
     }
 
     // Filter by search query
@@ -101,8 +131,8 @@ serve(async (req) => {
       // Get first image if available
       const image = product.images && product.images.length > 0 ? product.images[0] : null
       
-      // Get category slug
-      const categorySlug = product.product_categories?.[0]?.categories?.slug || null
+      // Get category info (first category)
+      const categoryInfo = product.product_categories?.[0]?.categories || null
       
       // Truncate description to 200 chars
       const shortDescription = product.description 
@@ -120,7 +150,8 @@ serve(async (req) => {
         id: product.id,
         name: product.name,
         short_description: shortDescription,
-        category_slug: categorySlug,
+        category_slug: categoryInfo?.slug || null,
+        category_name: categoryInfo?.name || null,
         image,
         public_url: publicUrl,
       }

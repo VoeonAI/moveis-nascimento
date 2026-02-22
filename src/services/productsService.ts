@@ -92,18 +92,40 @@ export const productsService = {
     }
   },
 
-  async listAllProducts(): Promise<Product[]> {
+  async listAllProducts(filter?: ProductsFilter): Promise<Product[]> {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('products')
-        .select('*')
+        .select(`
+          *,
+          product_categories (
+            categories (*)
+          )
+        `)
         .order('created_at', { ascending: false });
+
+      // Filter by category slug
+      if (filter?.categorySlug) {
+        query = query.contains('product_categories.categories.slug', filter.categorySlug);
+      }
+
+      // Filter by search query
+      if (filter?.q) {
+        query = query.or(`name.ilike.%${filter.q}%,description.ilike.%${filter.q}%`);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('[productsService.listAllProducts]', error.message);
         return [];
       }
-      return data || [];
+
+      // Transform data to include categories array
+      return (data || []).map(product => ({
+        ...product,
+        categories: product.product_categories?.map((pc: any) => pc.categories) || [],
+      }));
     } catch (error) {
       console.error('[productsService.listAllProducts]', error);
       return [];

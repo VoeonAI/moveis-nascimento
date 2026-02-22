@@ -17,6 +17,7 @@ const Catalog = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   // Create/Edit Modal State
   const [modalOpen, setModalOpen] = useState(false);
@@ -38,17 +39,27 @@ const Catalog = () => {
   const [newAttrValue, setNewAttrValue] = useState('');
 
   useEffect(() => {
-    Promise.all([
-      productsService.listAllProducts(),
-      categoriesService.listCategories(),
-    ])
-      .then(([productsData, categoriesData]) => {
-        setProducts(productsData);
-        setCategories(categoriesData);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+    loadData();
+  }, [selectedCategory]);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [productsData, categoriesData] = await Promise.all([
+        productsService.listAllProducts(
+          selectedCategory !== 'all' ? { categorySlug: selectedCategory } : undefined
+        ),
+        categoriesService.listCategories(),
+      ]);
+      setProducts(productsData);
+      setCategories(categoriesData);
+    } catch (error) {
+      console.error('[Catalog] Load error:', error);
+      showError('Erro ao carregar dados');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const formatPrice = (product: Product): string => {
     const price = product.price ?? product.metadata?.price ?? null;
@@ -153,19 +164,14 @@ const Catalog = () => {
 
       // Handle category association
       if (formData.category_id) {
-        const productId = editingProduct?.id || (await productsService.listAllProducts())[0]?.id; // Simple fetch for ID
-        // Note: In a real scenario, we should get the ID from the response
+        const productId = editingProduct?.id || (await productsService.listAllProducts())[0]?.id;
         if (productId) {
           await categoriesService.setProductCategories(productId, [formData.category_id]);
         }
       }
 
       setModalOpen(false);
-      // Reload
-      const [updatedProducts] = await Promise.all([
-        productsService.listAllProducts(),
-      ]);
-      setProducts(updatedProducts);
+      await loadData();
     } catch (error: any) {
       console.error('[Catalog] Save error:', error);
       showError(error.message || 'Erro ao salvar produto');
@@ -176,28 +182,59 @@ const Catalog = () => {
 
   if (loading) return <div className="p-8">Carregando catálogo...</div>;
 
+  // Build category hierarchy for filter dropdown
+  const rootCategories = categories.filter(cat => !cat.parent_id);
+  const subCategories = categories.filter(cat => cat.parent_id);
+  const getCategoryLabel = (cat: Category) => {
+    if (cat.parent_id) {
+      const parent = categories.find(c => c.id === cat.parent_id);
+      return parent ? `${parent.name} > ${cat.name}` : cat.name;
+    }
+    return cat.name;
+  };
+
   return (
     <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Catálogo</h1>
-        <Button onClick={handleOpenCreateModal}>
-          <Plus size={16} className="mr-2" />
-          Novo Produto
-        </Button>
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Catálogo</h1>
+          <p className="text-gray-600 text-sm mt-1">
+            Gerencie produtos e categorias
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={loadData} variant="outline" size="sm">
+            Atualizar
+          </Button>
+          <Button onClick={handleOpenCreateModal}>
+            <Plus size={16} className="mr-2" />
+            Novo Produto
+          </Button>
+        </div>
       </div>
 
-      {/* Categories Summary */}
+      {/* Category Filter */}
       <div className="mb-6">
-        <h2 className="text-lg font-semibold mb-3">Categorias</h2>
-        <div className="flex flex-wrap gap-2">
-          {categories.map((cat) => (
-            <Badge key={cat.id} variant="secondary">
-              {cat.name} ({cat.slug})
-            </Badge>
-          ))}
-          {categories.length === 0 && (
-            <p className="text-sm text-gray-500">Nenhuma categoria criada</p>
-          )}
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">Filtrar por categoria:</span>
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="w-64">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              {rootCategories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.slug}>
+                  {cat.name}
+                </SelectItem>
+              ))}
+              {subCategories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.slug}>
+                  {getCategoryLabel(cat)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -241,7 +278,7 @@ const Catalog = () => {
 
       {products.length === 0 && (
         <div className="text-center py-12 text-gray-500">
-          Nenhum produto cadastrado
+          Nenhum produto encontrado
         </div>
       )}
 

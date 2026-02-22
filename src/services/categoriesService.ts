@@ -4,6 +4,9 @@ export interface Category {
   id: string;
   name: string;
   slug: string;
+  parent_id: string | null;
+  active: boolean;
+  sort_order: number;
   created_at: string;
 }
 
@@ -13,7 +16,7 @@ export const categoriesService = {
       const { data, error } = await supabase
         .from('categories')
         .select('*')
-        .order('name', { ascending: true });
+        .order('sort_order', { ascending: true });
 
       if (error) {
         console.error('[categoriesService.listCategories]', error.message);
@@ -22,6 +25,44 @@ export const categoriesService = {
       return data || [];
     } catch (error) {
       console.error('[categoriesService.listCategories]', error);
+      return [];
+    }
+  },
+
+  async listActiveCategories(): Promise<Category[]> {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('active', true)
+        .order('sort_order', { ascending: true });
+
+      if (error) {
+        console.error('[categoriesService.listActiveCategories]', error.message);
+        return [];
+      }
+      return data || [];
+    } catch (error) {
+      console.error('[categoriesService.listActiveCategories]', error);
+      return [];
+    }
+  },
+
+  async getCategoryTree(): Promise<Category[]> {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('active', true)
+        .order('sort_order', { ascending: true });
+
+      if (error) throw error;
+
+      const categories = data || [];
+      // Simple flat list for now, UI can handle hierarchy
+      return categories;
+    } catch (error) {
+      console.error('[categoriesService.getCategoryTree]', error);
       return [];
     }
   },

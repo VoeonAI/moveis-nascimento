@@ -31,7 +31,8 @@ const Index = () => {
       setProducts(productsData);
       // Filter to show only root categories (parent_id is null)
       setCategories(categoriesData.filter((cat: any) => !cat.parent_id));
-    } catch () {
+    } catch (error) {
+      console.error('[Index] Load error:', error);
       setProducts([]);
     } finally {
       setLoading(false);

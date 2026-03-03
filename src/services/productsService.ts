@@ -26,7 +26,7 @@ export const productsService = {
       let query = supabase
         .from('products')
         .select(`
-          *,
+          id, name, description, images, metadata, active,
           product_categories (
             categories (*)
           )
@@ -67,7 +67,7 @@ export const productsService = {
       const { data, error } = await supabase
         .from('products')
         .select(`
-          *,
+          id, name, description, images, metadata, active,
           product_categories (
             categories (*)
           )
@@ -97,7 +97,7 @@ export const productsService = {
       let query = supabase
         .from('products')
         .select(`
-          *,
+          id, name, description, images, metadata, active,
           product_categories (
             categories (*)
           )

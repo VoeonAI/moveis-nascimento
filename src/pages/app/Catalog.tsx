@@ -13,9 +13,16 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { showSuccess, showError } from '@/utils/toast';
 
+interface CategoryOption {
+  id: string;
+  name: string;
+  label: string;
+}
+
 const Catalog = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
@@ -53,6 +60,22 @@ const Catalog = () => {
       ]);
       setProducts(productsData);
       setCategories(categoriesData);
+      
+      // Build category options: only subcategories grouped by parent
+      const parents = categoriesData.filter(cat => !cat.parent_id);
+      const children = categoriesData.filter(cat => cat.parent_id);
+      
+      const options: CategoryOption[] = children.map(child => {
+        const parent = parents.find(p => p.id === child.parent_id);
+        const label = parent ? `${parent.name} > ${child.name}` : child.name;
+        return {
+          id: child.id,
+          name: child.name,
+          label,
+        };
+      });
+      
+      setCategoryOptions(options);
     } catch (error) {
       console.error('[Catalog] Load error:', error);
       showError('Erro ao carregar dados');
@@ -328,21 +351,27 @@ const Catalog = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="category">Categoria</Label>
+              <Label htmlFor="category">Categoria do Produto</Label>
               <Select
                 value={formData.category_id}
                 onValueChange={(value) => setFormData({ ...formData, category_id: value })}
                 disabled={saving}
               >
                 <SelectTrigger id="category">
-                  <SelectValue placeholder="Selecione uma categoria" />
+                  <SelectValue placeholder="Selecione uma subcategoria" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.parent_id ? `↳ ${cat.name}` : cat.name}
+                  {categoryOptions.length === 0 ? (
+                    <SelectItem value="" disabled>
+                      Nenhuma subcategoria disponível
                     </SelectItem>
-                  ))}
+                  ) : (
+                    categoryOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.label}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>

@@ -362,9 +362,9 @@ const Catalog = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {categoryOptions.length === 0 ? (
-                    <SelectItem value="" disabled>
+                    <div className="px-2 py-1.5 text-sm text-gray-500">
                       Nenhuma subcategoria disponível
-                    </SelectItem>
+                    </div>
                   ) : (
                     categoryOptions.map((option) => (
                       <SelectItem key={option.id} value={option.id}>

@@ -6,6 +6,7 @@ import { Product } from '@/types';
 import { useAuth } from '@/core/auth/AuthProvider';
 import { Package } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getProductImageUrl } from '@/services/productImagesService';
 
 const Index = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -108,32 +109,48 @@ const Index = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {products.map((product) => (
-              <div key={product.id} className="border rounded-lg p-4 bg-white shadow-sm">
-                <h2 className="text-xl font-semibold mb-2">{product.name}</h2>
-                <p className="text-gray-600 mb-4 h-20 overflow-hidden">{product.description}</p>
-                {product.categories && product.categories.length > 0 && (
-                  <div className="mb-4 flex flex-wrap gap-1">
-                    {product.categories.map((cat) => (
-                      <span key={cat.id} className="text-xs bg-gray-100 px-2 py-1 rounded">
-                        {cat.name}
-                      </span>
-                    ))}
+            {products.map((product) => {
+              const coverPath = Array.isArray(product.images) ? product.images[0] : null;
+              const coverUrl = coverPath ? getProductImageUrl(coverPath) : '';
+              
+              return (
+                <div key={product.id} className="border rounded-lg p-4 bg-white shadow-sm">
+                  {coverUrl ? (
+                    <img
+                      src={coverUrl}
+                      alt={product.name}
+                      className="w-full h-48 object-cover rounded-md mb-3"
+                    />
+                  ) : (
+                    <div className="w-full h-48 bg-gray-200 rounded-md mb-3 flex items-center justify-center text-gray-500">
+                      Imagem do Produto
+                    </div>
+                  )}
+                  <h2 className="text-xl font-semibold mb-2">{product.name}</h2>
+                  <p className="text-gray-600 mb-4 h-20 overflow-hidden">{product.description}</p>
+                  {product.categories && product.categories.length > 0 && (
+                    <div className="mb-4 flex flex-wrap gap-1">
+                      {product.categories.map((cat) => (
+                        <span key={cat.id} className="text-xs bg-gray-100 px-2 py-1 rounded">
+                          {cat.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-bold text-green-600">
+                      {getPrice(product)}
+                    </span>
+                    <Link 
+                      to={`/product/${product.id}`}
+                      className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                    >
+                      Ver Detalhes
+                    </Link>
                   </div>
-                )}
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-bold text-green-600">
-                    {getPrice(product)}
-                  </span>
-                  <Link 
-                    to={`/product/${product.id}`}
-                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                  >
-                    Ver Detalhes
-                  </Link>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

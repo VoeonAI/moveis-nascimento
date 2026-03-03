@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Loader2, Copy, MessageCircle, AlertCircle } from 'lucide-react';
+import { getProductImageUrl } from '@/services/productImagesService';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -231,13 +232,27 @@ const ProductDetail = () => {
   if (loading) return <div className="p-8 text-center">Carregando...</div>;
   if (!product) return <div className="p-8 text-center">Produto não encontrado.</div>;
 
+  // Get cover image
+  const coverPath = Array.isArray(product.images) ? product.images[0] : null;
+  const coverUrl = coverPath ? getProductImageUrl(coverPath) : '';
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-2xl mx-auto bg-white rounded-lg shadow p-8">
         <h1 className="text-3xl font-bold mb-4">{product.name}</h1>
-        <div className="w-full h-64 bg-gray-200 rounded mb-6 flex items-center justify-center text-gray-500">
-          Imagem do Produto
-        </div>
+        
+        {coverUrl ? (
+          <img
+            src={coverUrl}
+            alt={product.name}
+            className="w-full h-64 object-cover rounded mb-6"
+          />
+        ) : (
+          <div className="w-full h-64 bg-gray-200 rounded mb-6 flex items-center justify-center text-gray-500">
+            Imagem do Produto
+          </div>
+        )}
+        
         <p className="text-gray-700 mb-6 leading-relaxed">{product.description}</p>
         
         <div className="flex items-center justify-between border-t pt-6">

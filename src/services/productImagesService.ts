@@ -19,6 +19,13 @@ export function getProductImageUrl(path: string): string {
   return data.publicUrl;
 }
 
+export function getPublicUrl(pathOrUrl: string): string {
+  if (!pathOrUrl) return "";
+  if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://")) return pathOrUrl;
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(pathOrUrl);
+  return data.publicUrl;
+}
+
 export async function uploadProductImages(productId: string, files: File[]) {
   const uploadedPaths: string[] = [];
 
@@ -43,5 +50,6 @@ export async function uploadProductImages(productId: string, files: File[]) {
 
 export const productImagesService = {
   getProductImageUrl,
+  getPublicUrl,
   uploadProductImages,
 };

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { productsService, Product } from '@/services/productsService';
 import { categoriesService, Category } from '@/services/categoriesService';
+import { productImagesService } from '@/services/productImagesService';
+import { supabase } from '@/core/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';

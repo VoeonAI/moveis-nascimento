@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Loader2, Copy, MessageCircle, AlertCircle } from 'lucide-react';
-import { getProductImageUrl } from '@/services/productImagesService';
+import { productImagesService } from '@/services/productImagesService';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -234,7 +234,12 @@ const ProductDetail = () => {
 
   // Get cover image
   const coverPath = Array.isArray(product.images) ? product.images[0] : null;
-  const coverUrl = coverPath ? getProductImageUrl(coverPath) : '';
+  const coverUrl = coverPath ? productImagesService.getPublicUrl(coverPath) : '';
+
+  // Get gallery images (excluding cover)
+  const galleryImages = Array.isArray(product.images) && product.images.length > 1
+    ? product.images.slice(1).map((img) => productImagesService.getPublicUrl(img))
+    : [];
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -250,6 +255,20 @@ const ProductDetail = () => {
         ) : (
           <div className="w-full h-64 bg-gray-200 rounded mb-6 flex items-center justify-center text-gray-500">
             Imagem do Produto
+          </div>
+        )}
+        
+        {/* Simple Gallery */}
+        {galleryImages.length > 0 && (
+          <div className="mb-6 flex gap-2 flex-wrap">
+            {galleryImages.map((url, i) => (
+              <img
+                key={i}
+                src={url}
+                alt={`${product.name} ${i + 2}`}
+                className="h-16 w-16 rounded object-cover border"
+              />
+            ))}
           </div>
         )}
         

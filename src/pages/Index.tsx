@@ -6,7 +6,7 @@ import { Product } from '@/types';
 import { useAuth } from '@/core/auth/AuthProvider';
 import { Package } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getProductImageUrl } from '@/services/productImagesService';
+import { productImagesService } from '@/services/productImagesService';
 
 const Index = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -111,7 +111,7 @@ const Index = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {products.map((product) => {
               const coverPath = Array.isArray(product.images) ? product.images[0] : null;
-              const coverUrl = coverPath ? getProductImageUrl(coverPath) : '';
+              const coverUrl = coverPath ? productImagesService.getPublicUrl(coverPath) : '';
               
               return (
                 <div key={product.id} className="border rounded-lg p-4 bg-white shadow-sm">

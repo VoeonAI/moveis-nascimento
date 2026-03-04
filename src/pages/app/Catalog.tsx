@@ -293,40 +293,56 @@ const Catalog = () => {
 
       {/* Products List */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {products.map((product) => (
-          <Card key={product.id}>
-            <CardHeader>
-              <CardTitle className="text-lg">{product.name}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                {product.description}
-              </p>
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-green-600">
-                  {formatPrice(product)}
-                </span>
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="icon" onClick={() => handleOpenEditModal(product)}>
-                    <Edit size={16} />
-                  </Button>
-                  <Button variant="ghost" size="icon">
-                    <Trash2 size={16} />
-                  </Button>
+        {products.map((product) => {
+          const coverPath = Array.isArray(product.images) ? product.images[0] : null;
+          const coverUrl = coverPath ? productImagesService.getPublicUrl(coverPath) : '';
+          
+          return (
+            <Card key={product.id}>
+              <CardHeader>
+                <CardTitle className="text-lg">{product.name}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {coverUrl ? (
+                  <img
+                    src={coverUrl}
+                    alt={product.name}
+                    className="w-full h-32 object-cover rounded mb-3"
+                  />
+                ) : (
+                  <div className="w-full h-32 bg-gray-200 rounded mb-3 flex items-center justify-center text-gray-500 text-sm">
+                    Sem imagem
+                  </div>
+                )}
+                <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                  {product.description}
+                </p>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-green-600">
+                    {formatPrice(product)}
+                  </span>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => handleOpenEditModal(product)}>
+                      <Edit size={16} />
+                    </Button>
+                    <Button variant="ghost" size="icon">
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-              {product.categories && product.categories.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-1">
-                  {product.categories.map((cat) => (
-                    <Badge key={cat.id} variant="outline" className="text-xs">
-                      {cat.name}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+                {product.categories && product.categories.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1">
+                    {product.categories.map((cat) => (
+                      <Badge key={cat.id} variant="outline" className="text-xs">
+                        {cat.name}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {products.length === 0 && (

@@ -4,7 +4,18 @@ const BUCKET = 'product-images';
 
 export function getProductImageUrl(path: string): string {
   if (!path) return '';
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+  
+  // If already a full URL, return as-is
+  if (typeof path === 'string' && path.startsWith('http')) {
+    return path;
+  }
+  
+  // Remove bucket prefix if present (path should be relative to bucket)
+  const normalizedPath = path.startsWith(`${BUCKET}/`)
+    ? path.replace(`${BUCKET}/`, '')
+    : path;
+  
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(normalizedPath);
   return data.publicUrl;
 }
 

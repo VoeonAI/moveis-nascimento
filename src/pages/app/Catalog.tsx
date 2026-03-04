@@ -32,6 +32,7 @@ const Catalog = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [saving, setSaving] = useState(false);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -97,6 +98,7 @@ const Catalog = () => {
 
   const handleOpenCreateModal = () => {
     setEditingProduct(null);
+    setImageFiles([]);
     setFormData({
       name: '',
       description: '',
@@ -114,6 +116,7 @@ const Catalog = () => {
 
   const handleOpenEditModal = (product: Product) => {
     setEditingProduct(product);
+    setImageFiles([]);
     setFormData({
       name: product.name,
       description: product.description || '',

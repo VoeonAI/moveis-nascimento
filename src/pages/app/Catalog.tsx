@@ -171,33 +171,58 @@ const Catalog = () => {
 
     setSaving(true);
     try {
-      const productData: any = {
-        name: formData.name,
-        description: formData.description,
-        active: formData.active,
-        metadata: {
-          ...formData.metadata,
-          price: formData.price ? Number(formData.price) : null,
-        },
-        images: [],
-      };
+      let productId: string;
+      let existingImages: string[] = [];
 
       if (editingProduct) {
-        await productsService.updateProduct(editingProduct.id, productData);
-        showSuccess('Produto atualizado com sucesso');
+        // Update existing product
+        const updated = await productsService.updateProduct(editingProduct.id, {
+          name: formData.name,
+          description: formData.description,
+          active: formData.active,
+          metadata: {
+            ...formData.metadata,
+            price: formData.price ? Number(formData.price) : null,
+          },
+        });
+        productId = updated.id;
+        existingImages = updated.images || [];
       } else {
-        await productsService.createProduct(productData);
-        showSuccess('Produto criado com sucesso');
+        // Create new product
+        const created = await productsService.createProduct({
+          name: formData.name,
+          description: formData.description,
+          active: formData.active,
+          metadata: {
+            ...formData.metadata,
+            price: formData.price ? Number(formData.price) : null,
+          },
+          images: [],
+        });
+        productId = created.id;
+      }
+
+      // Handle image uploads
+      let uploadedPaths: string[] = [];
+      if (imageFiles.length > 0) {
+        uploadedPaths = await productImagesService.uploadProductImages(productId, imageFiles);
+      }
+
+      // Update product with all images (existing + new)
+      if (uploadedPaths.length > 0) {
+        const allImages = [...existingImages, ...uploadedPaths];
+        await productsService.updateProduct(productId, {
+          images: allImages,
+        });
       }
 
       // Handle category association
       if (formData.category_id) {
-        const productId = editingProduct?.id || (await productsService.listAllProducts())[0]?.id;
-        if (productId) {
-          await categoriesService.setProductCategories(productId, [formData.category_id]);
-        }
+        await categoriesService.setProductCategories(productId, [formData.category_id]);
       }
 
+      showSuccess(editingProduct ? 'Produto atualizado com sucesso' : 'Produto criado com sucesso');
+      setImageFiles([]);
       setModalOpen(false);
       await loadData();
     } catch (error: any) {
@@ -439,17 +464,20 @@ const Catalog = () => {
 
             {/* Image Upload Section */}
             <div className="space-y-2 pt-4 border-t">
-              <label className="text-sm font-medium">Fotos do Produto</label>
-
-              <input
+              <Label>Fotos do Produto</Label>
+              <Input
                 type="file"
                 accept="image/*"
                 multiple
+                disabled={saving}
                 onChange={(e) => {
                   const files = Array.from(e.target.files || []);
                   setImageFiles(files);
                 }}
               />
+              <p className="text-xs text-gray-500">
+                Você pode selecionar várias imagens.
+              </p>
 
               {imageFiles.length > 0 && (
                 <div className="flex gap-2 flex-wrap mt-2">

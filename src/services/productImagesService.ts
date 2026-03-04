@@ -40,3 +40,8 @@ export async function uploadProductImages(productId: string, files: File[]) {
 
   return uploadedPaths;
 }
+
+export const productImagesService = {
+  getProductImageUrl,
+  uploadProductImages,
+};

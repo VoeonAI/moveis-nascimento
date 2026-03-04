@@ -437,6 +437,34 @@ const Catalog = () => {
               </div>
             </div>
 
+            {/* Image Upload Section */}
+            <div className="space-y-2 pt-4 border-t">
+              <label className="text-sm font-medium">Fotos do Produto</label>
+
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
+                  setImageFiles(files);
+                }}
+              />
+
+              {imageFiles.length > 0 && (
+                <div className="flex gap-2 flex-wrap mt-2">
+                  {imageFiles.map((file, idx) => (
+                    <img
+                      key={idx}
+                      src={URL.createObjectURL(file)}
+                      alt="preview"
+                      className="w-20 h-20 object-cover rounded"
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="flex gap-2 justify-end pt-4">
               <Button
                 type="button"

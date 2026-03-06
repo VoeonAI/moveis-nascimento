@@ -22,7 +22,13 @@ export function getProductImageUrl(path: string): string {
 export function getPublicUrl(pathOrUrl: string): string {
   if (!pathOrUrl) return "";
   if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://")) return pathOrUrl;
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(pathOrUrl);
+  
+  // Normalizar path legado: remover prefixo "product-images/" se presente
+  const normalizedPath = pathOrUrl.startsWith("product-images/")
+    ? pathOrUrl.replace(/^product-images\//, "")
+    : pathOrUrl;
+  
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(normalizedPath);
   return data.publicUrl;
 }
 
@@ -31,7 +37,6 @@ export async function uploadProductImages(productId: string, files: File[]) {
 
   for (const file of files) {
     const safeName = file.name.replace(/\s+/g, '-');
-    // FIXED: Removed 'product-images/' prefix - bucket is already specified in .from(BUCKET)
     const storagePath = `${Date.now()}-${safeName}`;
 
     const { error } = await supabase.storage

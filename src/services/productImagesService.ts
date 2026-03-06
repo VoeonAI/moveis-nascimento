@@ -31,7 +31,8 @@ export async function uploadProductImages(productId: string, files: File[]) {
 
   for (const file of files) {
     const safeName = file.name.replace(/\s+/g, '-');
-    const storagePath = `product-images/${Date.now()}-${safeName}`;
+    // FIXED: Removed 'product-images/' prefix - bucket is already specified in .from(BUCKET)
+    const storagePath = `${Date.now()}-${safeName}`;
 
     const { error } = await supabase.storage
       .from(BUCKET)

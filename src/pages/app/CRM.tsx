@@ -116,21 +116,38 @@ const CRM = () => {
     }
   }, [newLeadModalOpen]);
 
+  // Helper: Check if lead is considered "New" based on business rule
+  const isNewLead = (lead: Lead) => {
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    
+    return (
+      lead.status === 'new_interest' &&
+      new Date(lead.created_at) >= threeDaysAgo &&
+      !lead.follow_up_needed
+    );
+  };
+
   // Apply filters and sorting
   useEffect(() => {
     let filtered = [...leads];
 
     // Filter by type
     if (filter === 'new') {
-      filtered = filtered.filter(l => (l.unread_interest_count || 0) > 0);
+      filtered = filtered.filter(isNewLead);
     } else if (filter === 'followup') {
       filtered = filtered.filter(l => l.follow_up_needed);
     } else if (filter === 'status' && statusFilter !== 'all') {
       filtered = filtered.filter(l => l.status === statusFilter);
     }
 
-    // Sort: 1) unread desc, 2) follow_up_needed desc, 3) created_at desc (fallback)
+    // Sort: 1) new leads first, 2) unread desc, 3) follow_up_needed desc, 4) created_at desc (fallback)
     filtered.sort((a, b) => {
+      // New leads first
+      const aIsNew = isNewLead(a);
+      const bIsNew = isNewLead(b);
+      if (aIsNew !== bIsNew) return aIsNew ? -1 : 1;
+
       const aUnread = a.unread_interest_count || 0;
       const bUnread = b.unread_interest_count || 0;
       if (aUnread !== bUnread) return bUnread - aUnread;
@@ -519,7 +536,7 @@ const CRM = () => {
 
   return (
     <div className="p-8">
-      {/* Modals globais - fora das condicionais */}
+      {/* Modais globais - fora das condicionais */}
       <CompleteSaleDialog
         open={completeSaleModalOpen}
         onClose={() => {
@@ -681,7 +698,7 @@ const CRM = () => {
             <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)}>
               <TabsList>
                 <TabsTrigger value="all">Todos ({leads.length})</TabsTrigger>
-                <TabsTrigger value="new">Novos ({leads.filter(l => (l.unread_interest_count || 0) > 0).length})</TabsTrigger>
+                <TabsTrigger value="new">Novos ({leads.filter(isNewLead).length})</TabsTrigger>
                 <TabsTrigger value="followup">Follow-up ({leads.filter(l => l.follow_up_needed).length})</TabsTrigger>
                 <TabsTrigger value="status">Por Status</TabsTrigger>
               </TabsList>
@@ -754,6 +771,12 @@ const CRM = () => {
                           <Badge className="bg-blue-600 text-white">
                             <Bell size={12} className="mr-1" />
                             Novo ({lead.unread_interest_count})
+                          </Badge>
+                        )}
+                        {isNewLead(lead) && (
+                          <Badge className="bg-green-600 text-white">
+                            <CheckCircle size={12} className="mr-1" />
+                            Novo
                           </Badge>
                         )}
                         {lead.archived && (

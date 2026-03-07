@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { productsService } from '@/services/productsService';
 import { supabase } from '@/core/supabaseClient';
 import { Product } from '@/types';
+import { useAuth } from '@/core/auth/AuthProvider';
+import { Role } from '@/constants/domain';
 import { showSuccess, showError } from '@/utils/toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -18,6 +20,10 @@ const ProductDetail = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
+  const { profile } = useAuth();
+
+  // Main image state for gallery
+  const [mainImage, setMainImage] = useState<string | null>(null);
 
   // WhatsApp configuration (loaded directly with anon context)
   const [storeWhatsApp, setStoreWhatsApp] = useState<string | null>(null);
@@ -32,6 +38,9 @@ const ProductDetail = () => {
 
   // Public site URL for product links
   const publicSiteUrl = import.meta.env.VITE_PUBLIC_SITE_URL;
+
+  // Check if user can see price
+  const canSeePrice = profile?.role && [Role.MASTER, Role.GESTOR, Role.ESTOQUE].includes(profile.role);
 
   // Load store WhatsApp directly (anon context)
   const loadStoreWhatsApp = async () => {
@@ -68,6 +77,8 @@ const ProductDetail = () => {
     ])
       .then(([productData]) => {
         setProduct(productData);
+        // Set main image to first image
+        setMainImage(Array.isArray(productData.images) && productData.images.length > 0 ? productData.images[0] : null);
       })
       .catch(() => navigate('/'))
       .finally(() => setLoading(false));
@@ -232,13 +243,15 @@ const ProductDetail = () => {
   if (loading) return <div className="p-8 text-center">Carregando...</div>;
   if (!product) return <div className="p-8 text-center">Produto não encontrado.</div>;
 
-  // Get cover image
-  const coverPath = Array.isArray(product.images) ? product.images[0] : null;
-  const coverUrl = coverPath ? productImagesService.getPublicUrl(coverPath) : '';
+  // Get main image URL
+  const mainImageUrl = mainImage ? productImagesService.getPublicUrl(mainImage) : '';
 
-  // Get gallery images (excluding cover)
+  // Get gallery images (excluding main)
   const galleryImages = Array.isArray(product.images) && product.images.length > 1
-    ? product.images.slice(1).map((img) => productImagesService.getPublicUrl(img))
+    ? product.images.filter((img) => img !== mainImage).map((img) => ({
+        path: img,
+        url: productImagesService.getPublicUrl(img),
+      }))
     : [];
 
   return (
@@ -246,9 +259,9 @@ const ProductDetail = () => {
       <div className="max-w-2xl mx-auto bg-white rounded-lg shadow p-8">
         <h1 className="text-3xl font-bold mb-4">{product.name}</h1>
         
-        {coverUrl ? (
+        {mainImageUrl ? (
           <img
-            src={coverUrl}
+            src={mainImageUrl}
             alt={product.name}
             className="w-full h-64 object-cover rounded mb-6"
           />
@@ -258,16 +271,23 @@ const ProductDetail = () => {
           </div>
         )}
         
-        {/* Simple Gallery */}
+        {/* Gallery Thumbnails */}
         {galleryImages.length > 0 && (
           <div className="mb-6 flex gap-2 flex-wrap">
-            {galleryImages.map((url, i) => (
-              <img
-                key={i}
-                src={url}
-                alt={`${product.name} ${i + 2}`}
-                className="h-16 w-16 rounded object-cover border"
-              />
+            {galleryImages.map(({ path, url }, idx) => (
+              <button
+                key={idx}
+                onClick={() => setMainImage(path)}
+                className={`relative rounded overflow-hidden border-2 transition-colors ${
+                  mainImage === path ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <img
+                  src={url}
+                  alt={`${product.name} ${idx + 1}`}
+                  className="w-16 h-16 object-cover"
+                />
+              </button>
             ))}
           </div>
         )}
@@ -276,7 +296,7 @@ const ProductDetail = () => {
         
         <div className="flex items-center justify-between border-t pt-6">
           <span className="text-3xl font-bold text-green-600">
-            {getPrice(product)}
+            {canSeePrice ? getPrice(product) : 'Preço sob consulta'}
           </span>
           <button 
             onClick={handleInterestClick}

@@ -65,8 +65,22 @@ export async function uploadProductImages(productId: string, files: File[]) {
   return uploadedPaths;
 }
 
+export async function removeImage(path: string): Promise<void> {
+  if (!path) return;
+
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .remove([path]);
+
+  if (error) {
+    console.error('[productImagesService.removeImage]', error);
+    // Don't throw - allow deletion to proceed even if storage cleanup fails
+  }
+}
+
 export const productImagesService = {
   getProductImageUrl,
   getPublicUrl,
   uploadProductImages,
+  removeImage,
 };

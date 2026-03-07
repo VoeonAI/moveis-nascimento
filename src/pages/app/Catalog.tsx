@@ -6,13 +6,14 @@ import { supabase } from '@/core/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Save, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { showSuccess, showError } from '@/utils/toast';
 
 interface CategoryOption {
@@ -47,6 +48,14 @@ const Catalog = () => {
   // Attributes State
   const [newAttrKey, setNewAttrKey] = useState('');
   const [newAttrValue, setNewAttrValue] = useState('');
+
+  // Delete confirmation
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // Image management state
+  const [currentImages, setCurrentImages] = useState<string[]>([]);
 
   useEffect(() => {
     loadData();
@@ -99,6 +108,7 @@ const Catalog = () => {
   const handleOpenCreateModal = () => {
     setEditingProduct(null);
     setImageFiles([]);
+    setCurrentImages([]);
     setFormData({
       name: '',
       description: '',
@@ -117,6 +127,7 @@ const Catalog = () => {
   const handleOpenEditModal = (product: Product) => {
     setEditingProduct(product);
     setImageFiles([]);
+    setCurrentImages(Array.isArray(product.images) ? [...product.images] : []);
     setFormData({
       name: product.name,
       description: product.description || '',
@@ -130,6 +141,29 @@ const Catalog = () => {
     setNewAttrKey('');
     setNewAttrValue('');
     setModalOpen(true);
+  };
+
+  const handleSetMainImage = async (index: number) => {
+    const newImages = [...currentImages];
+    const [mainImage] = newImages.splice(index, 1);
+    newImages.unshift(mainImage);
+    setCurrentImages(newImages);
+  };
+
+  const handleDeleteImage = async (index: number) => {
+    const imageToDelete = currentImages[index];
+    
+    // Remove from array
+    const newImages = currentImages.filter((_, i) => i !== index);
+    setCurrentImages(newImages);
+
+    // Try to delete from storage (best-effort)
+    try {
+      await productImagesService.removeImage(imageToDelete);
+    } catch (error) {
+      console.error('[Catalog] Failed to delete image from storage:', error);
+      // Continue anyway - don't block the operation
+    }
   };
 
   const handleAddAttribute = () => {
@@ -172,7 +206,6 @@ const Catalog = () => {
     setSaving(true);
     try {
       let productId: string;
-      let existingImages: string[] = [];
 
       if (editingProduct) {
         // Update existing product
@@ -180,13 +213,13 @@ const Catalog = () => {
           name: formData.name,
           description: formData.description,
           active: formData.active,
+          images: currentImages,
           metadata: {
             ...formData.metadata,
             price: formData.price ? Number(formData.price) : null,
           },
         });
         productId = updated.id;
-        existingImages = updated.images || [];
       } else {
         // Create new product
         const created = await productsService.createProduct({
@@ -208,13 +241,11 @@ const Catalog = () => {
         uploadedPaths = await productImagesService.uploadProductImages(productId, imageFiles);
       }
 
-      // Update product with all images (existing + new)
-      if (uploadedPaths.length > 0) {
-        const allImages = [...existingImages, ...uploadedPaths];
-        await productsService.updateProduct(productId, {
-          images: allImages,
-        });
-      }
+      // Update product with all images (current + new)
+      const allImages = [...currentImages, ...uploadedPaths];
+      await productsService.updateProduct(productId, {
+        images: allImages,
+      });
 
       // Handle category association
       if (formData.category_id) {
@@ -223,6 +254,7 @@ const Catalog = () => {
 
       showSuccess(editingProduct ? 'Produto atualizado com sucesso' : 'Produto criado com sucesso');
       setImageFiles([]);
+      setCurrentImages([]);
       setModalOpen(false);
       await loadData();
     } catch (error: any) {
@@ -230,6 +262,29 @@ const Catalog = () => {
       showError(error.message || 'Erro ao salvar produto');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteClick = (product: Product) => {
+    setProductToDelete(product);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!productToDelete) return;
+
+    setDeleting(true);
+    try {
+      await productsService.deleteProduct(productToDelete.id);
+      showSuccess('Produto excluído com sucesso');
+      setDeleteDialogOpen(false);
+      setProductToDelete(null);
+      await loadData();
+    } catch (error: any) {
+      console.error('[Catalog] Delete error:', error);
+      showError(error.message || 'Erro ao excluir produto');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -325,7 +380,7 @@ const Catalog = () => {
                     <Button variant="ghost" size="icon" onClick={() => handleOpenEditModal(product)}>
                       <Edit size={16} />
                     </Button>
-                    <Button variant="ghost" size="icon">
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(product)}>
                       <Trash2 size={16} />
                     </Button>
                   </div>
@@ -434,6 +489,60 @@ const Catalog = () => {
               </Label>
             </div>
 
+            {/* Current Images Management */}
+            {editingProduct && currentImages.length > 0 && (
+              <div className="space-y-2 pt-4 border-t">
+                <Label>Fotos Atuais</Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {currentImages.map((path, index) => {
+                    const url = productImagesService.getPublicUrl(path);
+                    const isMain = index === 0;
+                    
+                    return (
+                      <div key={index} className={`relative group rounded overflow-hidden border-2 ${isMain ? 'border-blue-500' : 'border-gray-200'}`}>
+                        <img
+                          src={url}
+                          alt={`Foto ${index + 1}`}
+                          className="w-full h-20 object-cover"
+                        />
+                        
+                        {/* Overlay with actions */}
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1 items-center justify-center p-1">
+                          {!isMain && (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="w-full text-xs h-7"
+                              onClick={() => handleSetMainImage(index)}
+                              disabled={saving}
+                            >
+                              <Star size={12} className="mr-1" />
+                              Principal
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="w-full text-xs h-7"
+                            onClick={() => handleDeleteImage(index)}
+                            disabled={saving}
+                          >
+                            <Trash2 size={12} />
+                          </Button>
+                        </div>
+
+                        {isMain && (
+                          <div className="absolute top-1 left-1 bg-blue-500 text-white p-1 rounded-full">
+                            <Star size={10} fill="white" />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Attributes Section */}
             <div className="space-y-3 pt-4 border-t">
               <Label>Atributos (Metadata)</Label>
@@ -480,7 +589,7 @@ const Catalog = () => {
 
             {/* Image Upload Section */}
             <div className="space-y-2 pt-4 border-t">
-              <Label>Fotos do Produto</Label>
+              <Label>Novas Fotos</Label>
               <Input
                 type="file"
                 accept="image/*"
@@ -535,6 +644,29 @@ const Catalog = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Produto</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o produto <strong>"{productToDelete?.name}"</strong>?
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? 'Excluindo...' : 'Excluir'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

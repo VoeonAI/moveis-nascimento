@@ -4,6 +4,7 @@ import { productsService } from '@/services/productsService';
 import { categoriesService } from '@/services/categoriesService';
 import { Product } from '@/types';
 import { useAuth } from '@/core/auth/AuthProvider';
+import { Role } from '@/constants/domain';
 import { Package } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { productImagesService } from '@/services/productImagesService';
@@ -14,6 +15,9 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const { profile } = useAuth();
+
+  // Check if user can see price
+  const canSeePrice = profile?.role && [Role.MASTER, Role.GESTOR, Role.ESTOQUE].includes(profile.role);
 
   useEffect(() => {
     loadData();
@@ -139,7 +143,7 @@ const Index = () => {
                   )}
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-bold text-green-600">
-                      {getPrice(product)}
+                      {canSeePrice ? getPrice(product) : 'Preço sob consulta'}
                     </span>
                     <Link 
                       to={`/product/${product.id}`}

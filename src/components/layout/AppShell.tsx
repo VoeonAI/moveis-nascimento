@@ -12,7 +12,8 @@ import {
   Menu,
   X,
   LogOut,
-  AlertCircle
+  AlertCircle,
+  BarChart3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -42,6 +43,12 @@ const sidebarItems = [
     label: 'Pipeline', 
     icon: ArrowRightLeft,
     roles: [Role.MASTER, Role.GESTOR, Role.ESTOQUE]
+  },
+  { 
+    path: '/app/products-dashboard', 
+    label: 'Inteligência de Produtos', 
+    icon: BarChart3,
+    roles: [Role.MASTER, Role.GESTOR]
   },
   { 
     path: '/app/users', 

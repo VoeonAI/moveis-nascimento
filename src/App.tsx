@@ -17,6 +17,7 @@ import CRM from "./pages/app/CRM";
 import Pipeline from "./pages/app/Pipeline";
 import Users from "./pages/app/Users";
 import Settings from "./pages/app/Settings";
+import ProductsDashboard from "./pages/app/ProductsDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -70,6 +71,12 @@ const App = () => (
               <Route path="pipeline" element={
                 <PermissionGate allowedRoles={[Role.MASTER, Role.GESTOR, Role.ESTOQUE]}>
                   <Pipeline />
+                </PermissionGate>
+              } />
+              
+              <Route path="products-dashboard" element={
+                <PermissionGate allowedRoles={[Role.MASTER, Role.GESTOR]}>
+                  <ProductsDashboard />
                 </PermissionGate>
               } />
               

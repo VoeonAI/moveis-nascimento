@@ -81,7 +81,7 @@ export const PipelineRadar: React.FC<PipelineRadarProps> = ({ radar, loading, on
         </Link>
 
         {/* Entregas Atrasadas */}
-        <Link to="/app/pipeline?stage=delivery_route&stuck=true">
+        <Link to="/app/pipeline?stage=delivery_route&delayed=true">
           <Card className="border-yellow-200 bg-yellow-50 hover:shadow-md transition-shadow cursor-pointer group">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center justify-between text-yellow-700">
@@ -119,7 +119,7 @@ export const PipelineRadar: React.FC<PipelineRadarProps> = ({ radar, loading, on
         </Link>
 
         {/* Pedidos Aguardando Ação */}
-        <Link to="/app/pipeline?stage=order_created">
+        <Link to="/app/pipeline?stage=order_created&pending=true">
           <Card className="border-blue-200 bg-blue-50 hover:shadow-md transition-shadow cursor-pointer group">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center justify-between text-blue-700">

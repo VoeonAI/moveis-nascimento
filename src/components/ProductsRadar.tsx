@@ -25,7 +25,7 @@ export const ProductsRadar: React.FC<ProductsRadarProps> = ({ radar, loading, on
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Produto em Alta */}
         {radar.hotProduct ? (
-          <Link to={`/app/products-dashboard`}>
+          <Link to="/app/products-dashboard">
             <Card className="border-orange-200 bg-orange-50 hover:shadow-md transition-shadow cursor-pointer group">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center justify-between text-orange-700">
@@ -66,7 +66,7 @@ export const ProductsRadar: React.FC<ProductsRadarProps> = ({ radar, loading, on
 
         {/* Alta Procura / Baixa Conversão */}
         {radar.highDemandLowConversion ? (
-          <Link to={`/app/catalog?category=${radar.highDemandLowConversion.category_name}`}>
+          <Link to={`/app/crm?product=${radar.highDemandLowConversion.id}`}>
             <Card className="border-yellow-200 bg-yellow-50 hover:shadow-md transition-shadow cursor-pointer group">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center justify-between text-yellow-700">
@@ -119,7 +119,7 @@ export const ProductsRadar: React.FC<ProductsRadarProps> = ({ radar, loading, on
 
         {/* Produto Parado */}
         {radar.stagnantProduct ? (
-          <Link to={`/app/catalog`}>
+          <Link to="/app/catalog?filter=stagnant">
             <Card className="border-gray-200 bg-gray-50 hover:shadow-md transition-shadow cursor-pointer group">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center justify-between text-gray-700">

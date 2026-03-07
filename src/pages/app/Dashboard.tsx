@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { dashboardService, DashboardMetrics, SystemOverview, OpportunityFunnel, OrdersPipeline, EvolutionData, PeriodType } from '@/services/dashboardService';
-import { productsIntelligenceService, MostWorkedProduct, ProductWithoutActivity, CategoryDistribution, ProductsOverview } from '@/services/productsIntelligenceService';
-import { LayoutDashboard, Users, TrendingUp, TrendingDown, Package, CheckCircle, XCircle, RefreshCw, Box, UserCheck, Target, Calendar as CalendarIcon, AlertTriangle, BarChart3 } from 'lucide-react';
+import { productsIntelligenceService, MostWorkedProduct, ProductWithoutActivity, CategoryDistribution, ProductsOverview, BestSellingProduct, ProductConversion, SalesOverview } from '@/services/productsIntelligenceService';
+import { LayoutDashboard, Users, TrendingUp, TrendingDown, Package, CheckCircle, XCircle, RefreshCw, Box, UserCheck, Target, Calendar as CalendarIcon, AlertTriangle, BarChart3, ShoppingCart, Percent } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const COLORS = {
   primary: '#3b82f6',
@@ -48,7 +49,13 @@ const Dashboard = () => {
     productsWithOpportunities: 0,
     productsWithoutActivity: 0,
   });
+  const [salesOverview, setSalesOverview] = useState<SalesOverview>({
+    totalSales: 0,
+    averageConversionRate: 0,
+  });
   const [mostWorkedProducts, setMostWorkedProducts] = useState<MostWorkedProduct[]>([]);
+  const [bestSellingProducts, setBestSellingProducts] = useState<BestSellingProduct[]>([]);
+  const [productConversions, setProductConversions] = useState<ProductConversion[]>([]);
   const [productsWithoutActivity, setProductsWithoutActivity] = useState<ProductWithoutActivity[]>([]);
   const [categoryDistribution, setCategoryDistribution] = useState<CategoryDistribution[]>([]);
 
@@ -83,14 +90,28 @@ const Dashboard = () => {
 
   const loadProductsData = async () => {
     try {
-      const [overviewData, mostWorkedData, withoutActivityData, distributionData] = await Promise.all([
+      const [
+        overviewData,
+        salesData,
+        mostWorkedData,
+        bestSellingData,
+        conversionData,
+        withoutActivityData,
+        distributionData
+      ] = await Promise.all([
         productsIntelligenceService.getOverview(),
+        productsIntelligenceService.getSalesOverview(),
         productsIntelligenceService.getMostWorkedProducts(10),
+        productsIntelligenceService.getBestSellingProducts(10),
+        productsIntelligenceService.getConversionByProduct(),
         productsIntelligenceService.getProductsWithoutActivity(),
         productsIntelligenceService.getCategoryDistribution(),
       ]);
       setProductsOverview(overviewData);
+      setSalesOverview(salesData);
       setMostWorkedProducts(mostWorkedData);
+      setBestSellingProducts(bestSellingData);
+      setProductConversions(conversionData);
       setProductsWithoutActivity(withoutActivityData);
       setCategoryDistribution(distributionData);
     } catch (error) {
@@ -398,7 +419,7 @@ const Dashboard = () => {
         </div>
 
         {/* KPIs de Produtos */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Produtos Ativos</CardTitle>
@@ -429,6 +450,28 @@ const Dashboard = () => {
             <CardContent>
               <div className="text-2xl font-bold text-orange-600">{productsOverview.productsWithoutActivity}</div>
               <p className="text-xs text-muted-foreground mt-1">Produtos inativos</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total de Vendas</CardTitle>
+              <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{salesOverview.totalSales}</div>
+              <p className="text-xs text-muted-foreground mt-1">Pedidos entregues</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Taxa de Conversão Média</CardTitle>
+              <Percent className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">{salesOverview.averageConversionRate.toFixed(1)}%</div>
+              <p className="text-xs text-muted-foreground mt-1">Média por produto</p>
             </CardContent>
           </Card>
         </div>
@@ -466,37 +509,84 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Distribuição por Categoria */}
+          {/* Top 10 Produtos Mais Vendidos */}
           <Card>
             <CardHeader>
-              <CardTitle>Distribuição por Categoria</CardTitle>
+              <CardTitle>Top 10 Produtos Mais Vendidos</CardTitle>
             </CardHeader>
             <CardContent>
-              {categoryDistribution.length === 0 ? (
+              {bestSellingProducts.length === 0 ? (
                 <div className="h-64 flex items-center justify-center text-gray-500">
                   Sem dados
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={categoryDistribution} layout="vertical">
+                  <BarChart data={bestSellingProducts} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis type="number" />
                     <YAxis 
-                      dataKey="category_name" 
+                      dataKey="name" 
                       type="category" 
                       width={150} 
                       tick={{ fontSize: 12 }} 
                     />
                     <Tooltip 
-                      formatter={(value: number) => [`${value} oportunidades`, 'Volume']}
+                      formatter={(value: number) => [`${value} vendas`, 'Volume']}
                     />
-                    <Bar dataKey="opportunity_count" fill={COLORS.info} />
+                    <Bar dataKey="sales_count" fill={COLORS.success} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
             </CardContent>
           </Card>
         </div>
+
+        {/* Conversão por Produto */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Conversão por Produto</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {productConversions.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                Sem dados de conversão
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Produto</TableHead>
+                      <TableHead>Categoria</TableHead>
+                      <TableHead className="text-right">Oportunidades</TableHead>
+                      <TableHead className="text-right">Vendas</TableHead>
+                      <TableHead className="text-right">Taxa de Conversão</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {productConversions.map((product) => (
+                      <TableRow key={product.id}>
+                        <TableCell className="font-medium">{product.name}</TableCell>
+                        <TableCell>{product.category_name}</TableCell>
+                        <TableCell className="text-right">{product.opportunities_count}</TableCell>
+                        <TableCell className="text-right">{product.sales_count}</TableCell>
+                        <TableCell className="text-right">
+                          <span className={`font-medium ${
+                            product.conversion_rate >= 50 ? 'text-green-600' :
+                            product.conversion_rate >= 20 ? 'text-yellow-600' :
+                            'text-red-600'
+                          }`}>
+                            {product.conversion_rate.toFixed(1)}%
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Produtos Sem Movimentação */}
         <Card>

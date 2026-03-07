@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { showSuccess, showError } from '@/utils/toast';
 import { HardDeleteConfirmDialog } from '@/components/HardDeleteConfirmDialog';
-import { startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths, isWithinInterval } from 'date-fns';
+import { startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths, isWithinInterval, format } from 'date-fns';
 
 type DeliveredPeriodType = 'all' | 'today' | 'last_7_days' | 'current_month' | 'last_month' | 'last_3_months';
 
@@ -135,14 +135,22 @@ const Pipeline = () => {
     if (deliveredPeriod === 'all') return orders;
 
     const now = new Date();
+
+    // Special case for 'today': compare YYYY-MM-DD strings directly
+    if (deliveredPeriod === 'today') {
+      const todayYMD = format(now, 'yyyy-MM-dd');
+      return orders.filter((order) => {
+        if (!order.delivery_date) return false;
+        // delivery_date is a DATE field (YYYY-MM-DD), compare strings directly
+        return order.delivery_date === todayYMD;
+      });
+    }
+
+    // For other periods, use date intervals
     let startDate: Date;
     let endDate: Date = now;
 
     switch (deliveredPeriod) {
-      case 'today':
-        startDate = startOfDay(now);
-        endDate = endOfDay(now);
-        break;
       case 'last_7_days':
         startDate = subDays(now, 7);
         endDate = now;

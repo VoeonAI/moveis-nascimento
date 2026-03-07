@@ -19,20 +19,32 @@ export function getProductImageUrl(path: string): string {
   return data.publicUrl;
 }
 
-export function getPublicUrl(pathOrUrl: string): string {
-  if (!pathOrUrl) return "";
-  if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://")) return pathOrUrl;
+export function getPublicUrl(pathOrUrl: string | null | undefined): string {
+  // 1. Aceitar null/undefined
+  if (pathOrUrl == null) return "";
   
-  // Normalizar path legado: remover prefixo "product-images/" se presente
-  const normalizedPath = pathOrUrl.startsWith("product-images/")
-    ? pathOrUrl.replace(/^product-images\//, "")
-    : pathOrUrl;
+  // 2. Aplicar trim
+  const trimmed = pathOrUrl.trim();
   
-  // VALIDAÇÃO ADICIONADA: não chamar Supabase com path vazio
+  // 3. Validar vazio após trim
+  if (!trimmed) return "";
+  
+  // 4. Se for URL completa, retornar como está
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+  
+  // 5. Se começar com "product-images/", remover prefixo
+  const normalizedPath = trimmed.startsWith("product-images/")
+    ? trimmed.replace(/^product-images\//, "")
+    : trimmed;
+  
+  // 6. Validar novamente se ficou vazio
   if (!normalizedPath) return "";
   
+  // 7. Chamar Supabase
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(normalizedPath);
-  return data.publicUrl;
+  
+  // 8. Retornar com fallback defensivo
+  return data?.publicUrl ?? "";
 }
 
 export async function uploadProductImages(productId: string, files: File[]) {

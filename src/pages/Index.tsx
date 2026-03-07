@@ -16,8 +16,8 @@ const Index = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const { profile } = useAuth();
 
-  // Check if user can see price
-  const canSeePrice = profile?.role && [Role.MASTER, Role.GESTOR, Role.ESTOQUE].includes(profile.role);
+  // Check if user can see internal price
+  const canSeeInternalPrice = [Role.MASTER, Role.GESTOR, Role.ESTOQUE].includes(profile?.role ?? "");
 
   useEffect(() => {
     loadData();
@@ -143,7 +143,7 @@ const Index = () => {
                   )}
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-bold text-green-600">
-                      {canSeePrice ? getPrice(product) : 'Preço sob consulta'}
+                      {canSeeInternalPrice ? getPrice(product) : 'Preço sob consulta'}
                     </span>
                     <Link 
                       to={`/product/${product.id}`}

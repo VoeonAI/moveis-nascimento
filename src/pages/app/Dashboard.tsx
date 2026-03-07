@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { dashboardService, DashboardMetrics, SystemOverview, OpportunityFunnel, OrdersPipeline, EvolutionData, PeriodType } from '@/services/dashboardService';
-import { LayoutDashboard, Users, TrendingUp, TrendingDown, Package, CheckCircle, XCircle, RefreshCw, Box, UserCheck, Target, Calendar as CalendarIcon } from 'lucide-react';
+import { productsIntelligenceService, MostWorkedProduct, ProductWithoutActivity, CategoryDistribution, ProductsOverview } from '@/services/productsIntelligenceService';
+import { LayoutDashboard, Users, TrendingUp, TrendingDown, Package, CheckCircle, XCircle, RefreshCw, Box, UserCheck, Target, Calendar as CalendarIcon, AlertTriangle, BarChart3 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
 
 const COLORS = {
@@ -40,6 +42,16 @@ const Dashboard = () => {
   const [evolution, setEvolution] = useState<EvolutionData[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Products Intelligence State
+  const [productsOverview, setProductsOverview] = useState<ProductsOverview>({
+    totalActiveProducts: 0,
+    productsWithOpportunities: 0,
+    productsWithoutActivity: 0,
+  });
+  const [mostWorkedProducts, setMostWorkedProducts] = useState<MostWorkedProduct[]>([]);
+  const [productsWithoutActivity, setProductsWithoutActivity] = useState<ProductWithoutActivity[]>([]);
+  const [categoryDistribution, setCategoryDistribution] = useState<CategoryDistribution[]>([]);
+
   useEffect(() => {
     loadData();
   }, [period]);
@@ -59,10 +71,30 @@ const Dashboard = () => {
       setOpportunityFunnel(funnelData);
       setOrdersPipeline(pipelineData);
       setEvolution(evolutionData);
+      
+      // Load products intelligence data
+      await loadProductsData();
     } catch (error) {
       console.error('[Dashboard] Failed to load data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadProductsData = async () => {
+    try {
+      const [overviewData, mostWorkedData, withoutActivityData, distributionData] = await Promise.all([
+        productsIntelligenceService.getOverview(),
+        productsIntelligenceService.getMostWorkedProducts(10),
+        productsIntelligenceService.getProductsWithoutActivity(),
+        productsIntelligenceService.getCategoryDistribution(),
+      ]);
+      setProductsOverview(overviewData);
+      setMostWorkedProducts(mostWorkedData);
+      setProductsWithoutActivity(withoutActivityData);
+      setCategoryDistribution(distributionData);
+    } catch (error) {
+      console.error('[Dashboard] Failed to load products data:', error);
     }
   };
 
@@ -300,7 +332,7 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Pipeline de Pedidos */}
         <Card>
           <CardHeader>
@@ -347,6 +379,150 @@ const Dashboard = () => {
                   <Line type="monotone" dataKey="ordersDelivered" stroke={COLORS.success} name="Entregues" strokeWidth={2} />
                 </LineChart>
               </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* INTELIGÊNCIA DE PRODUTOS */}
+      <div className="mt-8 pt-8 border-t">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            <BarChart3 size={24} />
+            Inteligência de Produtos
+          </h2>
+          <Button onClick={loadProductsData} variant="outline" size="sm">
+            <RefreshCw size={16} className="mr-2" />
+            Atualizar
+          </Button>
+        </div>
+
+        {/* KPIs de Produtos */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Produtos Ativos</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{productsOverview.totalActiveProducts}</div>
+              <p className="text-xs text-muted-foreground mt-1">Cadastrados</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Com Oportunidades</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{productsOverview.productsWithOpportunities}</div>
+              <p className="text-xs text-muted-foreground mt-1">Produtos trabalhados</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Sem Movimentação</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-600">{productsOverview.productsWithoutActivity}</div>
+              <p className="text-xs text-muted-foreground mt-1">Produtos inativos</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Gráficos de Produtos */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {/* Top 10 Produtos Mais Trabalhados */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Top 10 Produtos Mais Trabalhados</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {mostWorkedProducts.length === 0 ? (
+                <div className="h-64 flex items-center justify-center text-gray-500">
+                  Sem dados
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={mostWorkedProducts} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" />
+                    <YAxis 
+                      dataKey="name" 
+                      type="category" 
+                      width={150} 
+                      tick={{ fontSize: 12 }} 
+                    />
+                    <Tooltip 
+                      formatter={(value: number) => [`${value} oportunidades`, 'Volume']}
+                    />
+                    <Bar dataKey="opportunity_count" fill={COLORS.primary} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Distribuição por Categoria */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Distribuição por Categoria</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {categoryDistribution.length === 0 ? (
+                <div className="h-64 flex items-center justify-center text-gray-500">
+                  Sem dados
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={categoryDistribution} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" />
+                    <YAxis 
+                      dataKey="category_name" 
+                      type="category" 
+                      width={150} 
+                      tick={{ fontSize: 12 }} 
+                    />
+                    <Tooltip 
+                      formatter={(value: number) => [`${value} oportunidades`, 'Volume']}
+                    />
+                    <Bar dataKey="opportunity_count" fill={COLORS.info} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Produtos Sem Movimentação */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle size={20} className="text-orange-500" />
+              Produtos Sem Movimentação
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {productsWithoutActivity.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                Todos os produtos ativos têm oportunidades associadas
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {productsWithoutActivity.map((product) => (
+                  <div 
+                    key={product.id}
+                    className="border rounded-lg p-4 bg-orange-50 border-orange-200"
+                  >
+                    <div className="font-medium text-sm mb-1">{product.name}</div>
+                    <div className="text-xs text-gray-600">{product.category_name}</div>
+                  </div>
+                ))}
+              </div>
             )}
           </CardContent>
         </Card>

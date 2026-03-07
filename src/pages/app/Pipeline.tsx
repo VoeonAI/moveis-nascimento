@@ -25,6 +25,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { showSuccess, showError } from '@/utils/toast';
 import { HardDeleteConfirmDialog } from '@/components/HardDeleteConfirmDialog';
+import { startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths, isWithinInterval } from 'date-fns';
+
+type DeliveredPeriodType = 'all' | 'today' | 'last_7_days' | 'current_month' | 'last_month' | 'last_3_months';
 
 const Pipeline = () => {
   const [ordersByStage, setOrdersByStage] = useState<Record<OrderStage, any>>({} as Record<OrderStage, any>);
@@ -33,6 +36,9 @@ const Pipeline = () => {
   const [movingOrder, setMovingOrder] = useState<string | null>(null);
   const { user, profile } = useAuth();
   const isMaster = profile?.role === 'master';
+
+  // Delivered period filter
+  const [deliveredPeriod, setDeliveredPeriod] = useState<DeliveredPeriodType>('all');
 
   // Hard Delete Modal
   const [hardDeleteDialogOpen, setHardDeleteDialogOpen] = useState(false);
@@ -124,6 +130,58 @@ const Pipeline = () => {
     }
   };
 
+  // Filter delivered orders by period
+  const filterDeliveredByPeriod = (orders: any[]) => {
+    if (deliveredPeriod === 'all') return orders;
+
+    const now = new Date();
+    let startDate: Date;
+    let endDate: Date = now;
+
+    switch (deliveredPeriod) {
+      case 'today':
+        startDate = startOfDay(now);
+        endDate = endOfDay(now);
+        break;
+      case 'last_7_days':
+        startDate = subDays(now, 7);
+        endDate = now;
+        break;
+      case 'current_month':
+        startDate = startOfMonth(now);
+        endDate = endOfMonth(now);
+        break;
+      case 'last_month':
+        startDate = startOfMonth(subMonths(now, 1));
+        endDate = endOfMonth(subMonths(now, 1));
+        break;
+      case 'last_3_months':
+        startDate = startOfMonth(subMonths(now, 2));
+        endDate = endOfMonth(now);
+        break;
+      default:
+        return orders;
+    }
+
+    return orders.filter((order) => {
+      if (!order.delivered_at) return false;
+      const deliveredDate = new Date(order.delivered_at);
+      return isWithinInterval(deliveredDate, { start: startDate, end: endDate });
+    });
+  };
+
+  const getDeliveredPeriodLabel = (period: DeliveredPeriodType) => {
+    const labels: Record<DeliveredPeriodType, string> = {
+      all: 'Todos',
+      today: 'Hoje',
+      last_7_days: 'Últimos 7 dias',
+      current_month: 'Mês atual',
+      last_month: 'Mês anterior',
+      last_3_months: 'Últimos 3 meses',
+    };
+    return labels[period];
+  };
+
   if (loading) {
     return (
       <div className="p-8">
@@ -167,16 +225,39 @@ const Pipeline = () => {
               <div className="text-center text-sm mt-1 opacity-75">
                 {ordersByStage[stage]?.length || 0} pedidos
               </div>
+              
+              {/* Delivered Period Filter - only for Delivered stage */}
+              {stage === OrderStage.DELIVERED && (
+                <div className="mt-3">
+                  <Select value={deliveredPeriod} onValueChange={(value) => setDeliveredPeriod(value as DeliveredPeriodType)}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="today">Hoje</SelectItem>
+                      <SelectItem value="last_7_days">Últimos 7 dias</SelectItem>
+                      <SelectItem value="current_month">Mês atual</SelectItem>
+                      <SelectItem value="last_month">Mês anterior</SelectItem>
+                      <SelectItem value="last_3_months">Últimos 3 meses</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             {/* Orders List */}
             <div className="flex-1 overflow-y-auto p-3 space-y-3">
-              {ordersByStage[stage]?.length === 0 ? (
+              {(stage === OrderStage.DELIVERED 
+                ? filterDeliveredByPeriod(ordersByStage[stage] || [])
+                : ordersByStage[stage])?.length === 0 ? (
                 <div className="text-center text-gray-400 text-sm py-8">
                   Nenhum pedido
                 </div>
               ) : (
-                ordersByStage[stage]?.map((order: any) => {
+                (stage === OrderStage.DELIVERED
+                  ? filterDeliveredByPeriod(ordersByStage[stage] || [])
+                  : ordersByStage[stage])?.map((order: any) => {
                   // Fallback logic for customer name
                   const displayName = order.customer_name ?? order.opportunities?.leads?.name ?? 'Cliente não informado';
                   

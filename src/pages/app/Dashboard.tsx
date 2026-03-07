@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { dashboardService, DashboardMetrics, SystemOverview, OpportunityFunnel, OrdersPipeline, EvolutionData, PeriodType } from '@/services/dashboardService';
 import { productsIntelligenceService, MostWorkedProduct, ProductWithoutActivity, CategoryDistribution, ProductsOverview, BestSellingProduct, ProductConversion, SalesOverview, ProductRadar } from '@/services/productsIntelligenceService';
-import { LayoutDashboard, Users, TrendingUp, TrendingDown, Package, CheckCircle, XCircle, RefreshCw, Box, UserCheck, Target, Calendar as CalendarIcon, AlertTriangle, BarChart3, ShoppingCart, Percent } from 'lucide-react';
+import { leadsIntelligenceService, LeadsRadar } from '@/services/leadsIntelligenceService';
+import { LayoutDashboard, Users, TrendingUp, TrendingDown, Package, CheckCircle, XCircle, RefreshCw, Box, UserCheck, Target, Calendar as CalendarIcon, AlertTriangle, BarChart3, ShoppingCart, Percent, Flame, Clock, Calendar as CalendarIcon2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ProductsRadar } from '@/components/ProductsRadar';
+import { LeadsRadar as LeadsRadarComponent } from '@/components/LeadsRadar';
 
 const COLORS = {
   primary: '#3b82f6',
@@ -60,13 +62,24 @@ const Dashboard = () => {
   const [productsWithoutActivity, setProductsWithoutActivity] = useState<ProductWithoutActivity[]>([]);
   const [categoryDistribution, setCategoryDistribution] = useState<CategoryDistribution[]>([]);
   
-  // Radar State
+  // Products Radar State
   const [productRadar, setProductRadar] = useState<ProductRadar>({
     hotProduct: null,
     highDemandLowConversion: null,
     stagnantProduct: null,
   });
   const [radarLoading, setRadarLoading] = useState(false);
+
+  // Leads Radar State
+  const [leadsRadar, setLeadsRadar] = useState<LeadsRadar>({
+    hotLeads: [],
+    hotLeadsCount: 0,
+    stagnantLeads: [],
+    stagnantLeadsCount: 0,
+    followUpLeads: [],
+    followUpLeadsCount: 0,
+  });
+  const [leadsRadarLoading, setLeadsRadarLoading] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -90,6 +103,9 @@ const Dashboard = () => {
       
       // Load products intelligence data
       await loadProductsData();
+      
+      // Load leads radar data
+      await loadLeadsRadar();
     } catch (error) {
       console.error('[Dashboard] Failed to load data:', error);
     } finally {
@@ -140,6 +156,18 @@ const Dashboard = () => {
       console.error('[Dashboard] Failed to load radar:', error);
     } finally {
       setRadarLoading(false);
+    }
+  };
+
+  const loadLeadsRadar = async () => {
+    setLeadsRadarLoading(true);
+    try {
+      const radarData = await leadsIntelligenceService.getLeadsRadar();
+      setLeadsRadar(radarData);
+    } catch (error) {
+      console.error('[Dashboard] Failed to load leads radar:', error);
+    } finally {
+      setLeadsRadarLoading(false);
     }
   };
 
@@ -643,6 +671,22 @@ const Dashboard = () => {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      {/* RADAR DE LEADS */}
+      <div className="mt-8 pt-8 border-t">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            <Flame size={24} />
+            Radar de Leads
+          </h2>
+          <Button onClick={loadLeadsRadar} variant="outline" size="sm">
+            <RefreshCw size={16} className="mr-2" />
+            Atualizar Radar
+          </Button>
+        </div>
+
+        <LeadsRadarComponent radar={leadsRadar} loading={leadsRadarLoading} onRefresh={loadLeadsRadar} />
       </div>
     </div>
   );

@@ -57,6 +57,84 @@ export const crmService = {
     }
   },
 
+  async createManualLead(data: {
+    name: string;
+    phone: string;
+    channel: string;
+    notes?: string;
+    product_id?: string;
+    createOpportunity?: boolean;
+    userId: string;
+  }): Promise<{ lead: Lead; opportunity?: Opportunity }> {
+    // 1. Verificar duplicidade por phone
+    const { data: existingLead } = await supabase
+      .from('leads')
+      .select('*')
+      .eq('phone', data.phone)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    
+    if (existingLead && !existingLead.archived) {
+      throw new Error('Lead com este telefone já existe');
+    }
+    
+    // 2. Criar lead
+    const { data: lead, error: leadError } = await supabase
+      .from('leads')
+      .insert({
+        name: data.name,
+        phone: data.phone,
+        channel: data.channel,
+        notes: data.notes,
+        status: 'new_interest',
+        archived: false,
+        last_activity_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+    
+    if (leadError) throw leadError;
+    
+    // 3. Criar opportunity se solicitado
+    let opportunity: Opportunity | undefined;
+    if (data.createOpportunity) {
+      const { data: opp, error: oppError } = await supabase
+        .from('opportunities')
+        .insert({
+          lead_id: lead.id,
+          product_id: data.product_id,
+          stage: 'talking_human', // Inicia em "Falando com Humano"
+          archived: false,
+        })
+        .select()
+        .single();
+      
+      if (oppError) throw oppError;
+      opportunity = opp;
+      
+      // Timeline para opportunity
+      await supabase.from('lead_timeline').insert({
+        lead_id: lead.id,
+        type: 'opportunity_created',
+        message: `Oportunidade criada manualmente - Produto: ${data.product_id || 'Não informado'}`,
+        meta: { opportunity_id: opp.id, product_id: data.product_id },
+        created_by: data.userId,
+      });
+    }
+    
+    // 4. Timeline para lead
+    await supabase.from('lead_timeline').insert({
+      lead_id: lead.id,
+      type: 'note',
+      message: 'Lead criado manualmente',
+      meta: { channel: data.channel },
+      created_by: data.userId,
+    });
+    
+    return { lead, opportunity };
+  },
+
   async listOpportunitiesByLead(leadId: string): Promise<(Opportunity & { products?: { id: string; name: string } })[]> {
     const { data, error } = await supabase
       .from('opportunities')

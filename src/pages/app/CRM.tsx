@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { crmService, Opportunity, TimelineEvent } from '@/services/crmService';
 import { ordersService } from '@/services/ordersService';
 import { adminService } from '@/services/adminService';
+import { productsService, Product } from '@/services/productsService';
 import { Lead } from '@/types';
 import { OpportunityStage } from '@/constants/domain';
 import { OPPORTUNITY_STAGE_LABELS, ORDER_STAGE_LABELS, TIMELINE_EVENT_LABELS } from '@/constants/labels';
@@ -37,6 +38,9 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CompleteSaleDialog, CompleteSaleData } from '@/components/CRM/CompleteSaleDialog';
 import { HardDeleteConfirmDialog } from '@/components/HardDeleteConfirmDialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { 
   ArrowLeft, CheckCircle, Clock, User, Phone, MessageSquare, Package, 
   Calendar as CalendarIcon, RefreshCw, Plus, Bell, AlertCircle,
@@ -82,12 +86,35 @@ const CRM = () => {
   const [hardDeleteDialogOpen, setHardDeleteDialogOpen] = useState(false);
   const [deletingEntity, setDeletingEntity] = useState<{ type: 'lead' | 'order', id: string, name: string } | null>(null);
 
+  // New Lead Manual Modal
+  const [newLeadModalOpen, setNewLeadModalOpen] = useState(false);
+  const [newLeadData, setNewLeadData] = useState({
+    name: '',
+    phone: '',
+    channel: 'manual',
+    notes: '',
+    product_id: '',
+    createOpportunity: false,
+  });
+  const [creatingLead, setCreatingLead] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+
   // Check if user is master
   const isMaster = profile?.role === 'master';
 
   useEffect(() => {
     loadLeads();
   }, [showArchived]);
+
+  // Load products for manual lead modal
+  useEffect(() => {
+    if (newLeadModalOpen) {
+      productsService.listAllProducts().then(setProducts).catch(err => {
+        console.error('[CRM] Failed to load products:', err);
+        setProducts([]);
+      });
+    }
+  }, [newLeadModalOpen]);
 
   // Apply filters and sorting
   useEffect(() => {
@@ -185,6 +212,38 @@ const CRM = () => {
     } catch (err) {
       console.error('[CRM] Failed to load lead details', err);
       showError('Erro ao carregar detalhes do lead');
+    }
+  };
+
+  const handleCreateManualLead = async () => {
+    if (!newLeadData.name.trim() || !newLeadData.phone.trim()) {
+      showError('Nome e telefone são obrigatórios');
+      return;
+    }
+
+    setCreatingLead(true);
+    try {
+      await crmService.createManualLead({
+        ...newLeadData,
+        userId: user?.id || '',
+      });
+
+      showSuccess('Lead criado com sucesso');
+      setNewLeadModalOpen(false);
+      setNewLeadData({
+        name: '',
+        phone: '',
+        channel: 'manual',
+        notes: '',
+        product_id: '',
+        createOpportunity: false,
+      });
+      await loadLeads();
+    } catch (error: any) {
+      console.error('[CRM] Failed to create manual lead:', error);
+      showError(error.message || 'Erro ao criar lead');
+    } finally {
+      setCreatingLead(false);
     }
   };
 
@@ -465,6 +524,10 @@ const CRM = () => {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Gestão de Leads</h1>
           <div className="flex gap-2">
+            <Button onClick={() => setNewLeadModalOpen(true)}>
+              <Plus size={16} className="mr-2" />
+              Novo Lead
+            </Button>
             {isMaster && (
               <Button
                 onClick={() => setShowArchived(!showArchived)}
@@ -630,6 +693,117 @@ const CRM = () => {
         entityType={deletingEntity?.type === 'lead' ? 'Lead' : 'Pedido'}
         entityName={deletingEntity?.name}
       />
+
+      {/* New Lead Manual Modal */}
+      <Dialog open={newLeadModalOpen} onOpenChange={setNewLeadModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Novo Lead Manual</DialogTitle>
+            <DialogDescription>
+              Cadastre um lead proveniente de outro canal (telefone, loja, etc.)
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="lead_name">Nome *</Label>
+              <Input
+                id="lead_name"
+                value={newLeadData.name}
+                onChange={(e) => setNewLeadData({ ...newLeadData, name: e.target.value })}
+                disabled={creatingLead}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="lead_phone">Telefone *</Label>
+              <Input
+                id="lead_phone"
+                value={newLeadData.phone}
+                onChange={(e) => setNewLeadData({ ...newLeadData, phone: e.target.value })}
+                disabled={creatingLead}
+                placeholder="(00) 00000-0000"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="lead_channel">Origem *</Label>
+              <Select
+                value={newLeadData.channel}
+                onValueChange={(value) => setNewLeadData({ ...newLeadData, channel: value })}
+                disabled={creatingLead}
+              >
+                <SelectTrigger id="lead_channel">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="manual">Manual (CRM)</SelectItem>
+                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                  <SelectItem value="telefone">Telefone</SelectItem>
+                  <SelectItem value="loja">Loja Física</SelectItem>
+                  <SelectItem value="outro">Outro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="lead_notes">Observação</Label>
+              <Textarea
+                id="lead_notes"
+                value={newLeadData.notes}
+                onChange={(e) => setNewLeadData({ ...newLeadData, notes: e.target.value })}
+                disabled={creatingLead}
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="lead_product">Produto de Interesse (opcional)</Label>
+              <Select
+                value={newLeadData.product_id}
+                onValueChange={(value) => setNewLeadData({ ...newLeadData, product_id: value })}
+                disabled={creatingLead}
+              >
+                <SelectTrigger id="lead_product">
+                  <SelectValue placeholder="Selecione um produto" />
+                </SelectTrigger>
+                <SelectContent>
+                  {products.map((product) => (
+                    <SelectItem key={product.id} value={product.id}>
+                      {product.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="create_opportunity"
+                checked={newLeadData.createOpportunity}
+                onCheckedChange={(checked) => setNewLeadData({ ...newLeadData, createOpportunity: checked })}
+                disabled={creatingLead}
+              />
+              <Label htmlFor="create_opportunity" className="cursor-pointer">
+                Criar oportunidade junto (inicia em "Falando com Humano")
+              </Label>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setNewLeadModalOpen(false)}
+                disabled={creatingLead}
+              >
+                Cancelar
+              </Button>
+              <Button onClick={handleCreateManualLead} disabled={creatingLead}>
+                {creatingLead ? 'Criando...' : 'Criar Lead'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="flex items-center justify-between mb-6">
         <Button 

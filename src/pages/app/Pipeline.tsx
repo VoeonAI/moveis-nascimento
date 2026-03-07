@@ -164,8 +164,8 @@ const Pipeline = () => {
     }
 
     return orders.filter((order) => {
-      if (!order.delivered_at) return false;
-      const deliveredDate = new Date(order.delivered_at);
+      if (!order.delivery_date) return false;
+      const deliveredDate = new Date(order.delivery_date);
       return isWithinInterval(deliveredDate, { start: startDate, end: endDate });
     });
   };

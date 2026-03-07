@@ -37,7 +37,7 @@ async function getOrderWebhookContext(orderId: string) {
         internal_code,
         delivery_address,
         notes,
-        delivered_at,
+        delivery_date,
         opportunities:opportunity_id (
           id,
           lead_id,
@@ -71,7 +71,7 @@ async function getOrderWebhookContext(orderId: string) {
         internal_code: order.internal_code,
         delivery_address: order.delivery_address,
         notes: order.notes,
-        delivered_at: order.delivered_at,
+        delivery_date: order.delivery_date,
       },
       opportunity_id: order.opportunity_id,
       lead_id: order.lead_id,
@@ -403,17 +403,17 @@ export const ordersService = {
 
     const fromStage = currentOrder.current_stage;
 
-    // 2. Build update object with delivered_at logic
+    // 2. Build update object with delivery_date logic
     const updateData: any = {
       current_stage: toStage,
       updated_at: new Date().toISOString(),
     };
 
-    // Update delivered_at based on stage change
+    // Update delivery_date based on stage change
     if (toStage === OrderStage.DELIVERED && fromStage !== OrderStage.DELIVERED) {
-      updateData.delivered_at = new Date().toISOString();
+      updateData.delivery_date = new Date().toISOString();
     } else if (fromStage === OrderStage.DELIVERED && toStage !== OrderStage.DELIVERED) {
-      updateData.delivered_at = null;
+      updateData.delivery_date = null;
     }
 
     // 3. Update Order Stage (CRITICAL - must succeed)
@@ -552,17 +552,17 @@ export const ordersService = {
 
     const fromStage = currentOrder.current_stage;
 
-    // 2. Build update object with delivered_at logic
+    // 2. Build update object with delivery_date logic
     const updateData: any = {
       current_stage: toStage,
       updated_at: new Date().toISOString(),
     };
 
-    // Update delivered_at based on stage change
+    // Update delivery_date based on stage change
     if (toStage === OrderStage.DELIVERED && fromStage !== OrderStage.DELIVERED) {
-      updateData.delivered_at = new Date().toISOString();
+      updateData.delivery_date = new Date().toISOString();
     } else if (fromStage === OrderStage.DELIVERED && toStage !== OrderStage.DELIVERED) {
-      updateData.delivered_at = null;
+      updateData.delivery_date = null;
     }
 
     // 3. Update Order Stage (CRITICAL - must succeed)

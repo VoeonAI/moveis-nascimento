@@ -517,165 +517,9 @@ const CRM = () => {
     return <div className="p-8">Carregando CRM...</div>;
   }
 
-  if (!selectedLeadId) {
-    // List View
-    return (
-      <div className="p-8">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Gestão de Leads</h1>
-          <div className="flex gap-2">
-            <Button onClick={() => setNewLeadModalOpen(true)}>
-              <Plus size={16} className="mr-2" />
-              Novo Lead
-            </Button>
-            {isMaster && (
-              <Button
-                onClick={() => setShowArchived(!showArchived)}
-                variant={showArchived ? "default" : "outline"}
-                size="sm"
-              >
-                <Archive size={16} className="mr-2" />
-                {showArchived ? 'Ocultar Arquivados' : 'Ver Arquivados'}
-              </Button>
-            )}
-            <Button onClick={loadLeads} variant="outline" size="sm">
-              <RefreshCw size={16} className="mr-2" />
-              Atualizar
-            </Button>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="flex items-center gap-4 mb-6">
-          <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)}>
-            <TabsList>
-              <TabsTrigger value="all">Todos ({leads.length})</TabsTrigger>
-              <TabsTrigger value="new">Novos ({leads.filter(l => (l.unread_interest_count || 0) > 0).length})</TabsTrigger>
-              <TabsTrigger value="followup">Follow-up ({leads.filter(l => l.follow_up_needed).length})</TabsTrigger>
-              <TabsTrigger value="status">Por Status</TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          {(filter !== 'all' || statusFilter !== 'all') && (
-            <Button onClick={clearFilters} variant="ghost" size="sm">
-              <X size={14} className="mr-1" />
-              Limpar filtros
-            </Button>
-          )}
-        </div>
-
-        {filter === 'status' && (
-          <div className="mb-4">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-64">
-                <SelectValue placeholder="Selecione o status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os status</SelectItem>
-                <SelectItem value="new_interest">Novo Interesse</SelectItem>
-                <SelectItem value="talking_ai">Falando com IA</SelectItem>
-                <SelectItem value="talking_human">Falando com Humano</SelectItem>
-                <SelectItem value="proposal_sent">Proposta Enviada</SelectItem>
-                <SelectItem value="won">Ganho</SelectItem>
-                <SelectItem value="lost">Perdido</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        {/* Error Banner with Retry */}
-        {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Erro ao carregar dados</AlertTitle>
-            <AlertDescription className="flex items-center justify-between mt-2">
-              <span>{error}</span>
-              <Button onClick={loadLeads} variant="outline" size="sm" className="ml-4">
-                <RefreshCw size={14} className="mr-1" />
-                Tentar Novamente
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {filteredLeads.length === 0 && !error ? (
-          <Card>
-            <CardContent className="p-12 text-center text-gray-500">
-              Nenhum lead encontrado.
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredLeads.map((lead) => (
-              <Card 
-                key={lead.id} 
-                className={`cursor-pointer hover:shadow-md transition-shadow ${lead.archived ? 'opacity-60' : ''}`}
-                onClick={() => handleSelectLead(lead.id)}
-              >
-                <CardHeader>
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <User size={16} className="text-gray-500" />
-                      <CardTitle className="text-lg">{lead.name}</CardTitle>
-                    </div>
-                    <div className="flex gap-1">
-                      {(lead.unread_interest_count || 0) > 0 && (
-                        <Badge className="bg-blue-600 text-white">
-                          <Bell size={12} className="mr-1" />
-                          Novo ({lead.unread_interest_count})
-                        </Badge>
-                      )}
-                      {lead.archived && (
-                        <Badge variant="outline" className="text-gray-500">
-                          <Archive size={12} className="mr-1" />
-                          Arquivado
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  {lead.phone && (
-                    <CardDescription className="flex items-center gap-2">
-                      <Phone size={14} />
-                      {lead.phone}
-                    </CardDescription>
-                  )}
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Badge variant="outline" className="capitalize">
-                      {OPPORTUNITY_STAGE_LABELS[lead.status as OpportunityStage] || lead.status.replace(/_/g, ' ')}
-                    </Badge>
-                    <span className="text-xs text-gray-500">
-                      {format(new Date(lead.created_at), 'dd/MM')}
-                    </span>
-                  </div>
-
-                  <div className="text-xs text-gray-600 flex items-center gap-1">
-                    <Clock size={12} />
-                    Criado em: {format(new Date(lead.created_at), 'dd/MM/yyyy')}
-                  </div>
-
-                  {lead.follow_up_needed && (
-                    <div className="text-xs text-orange-600 flex items-center gap-1 font-medium">
-                      <AlertCircle size={12} />
-                      {lead.follow_up_at 
-                        ? `Follow-up: ${format(new Date(lead.follow_up_at), 'dd/MM')}`
-                        : 'Follow-up: pendente'
-                      }
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Detail View
   return (
     <div className="p-8">
+      {/* Modals globais - fora das condicionais */}
       <CompleteSaleDialog
         open={completeSaleModalOpen}
         onClose={() => {
@@ -805,285 +649,442 @@ const CRM = () => {
         </DialogContent>
       </Dialog>
 
-      <div className="flex items-center justify-between mb-6">
-        <Button 
-          variant="ghost" 
-          onClick={() => {
-            setSelectedLeadId(null);
-            setLeadDetails(null);
-          }}
-        >
-          <ArrowLeft size={16} className="mr-2" />
-          Voltar para Lista
-        </Button>
-        
-        {leadDetails && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <MoreHorizontal size={16} />
+      {!selectedLeadId ? (
+        // List View
+        <div>
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl font-bold">Gestão de Leads</h1>
+            <div className="flex gap-2">
+              <Button onClick={() => setNewLeadModalOpen(true)}>
+                <Plus size={16} className="mr-2" />
+                Novo Lead
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {leadDetails.lead.archived ? (
-                <DropdownMenuItem onClick={() => handleArchiveLead(leadDetails.lead.id, false)}>
-                  <ArchiveRestore size={16} className="mr-2" />
-                  Restaurar Lead
-                </DropdownMenuItem>
-              ) : (
-                <DropdownMenuItem onClick={() => handleArchiveLead(leadDetails.lead.id, true)}>
-                  <Archive size={16} className="mr-2" />
-                  Arquivar Lead
-                </DropdownMenuItem>
-              )}
-              {/* Show delete option only if lead is archived */}
-              {isMaster && leadDetails.lead.archived && !leadsWithOrders.has(leadDetails.lead.id) && (
-                <DropdownMenuItem 
-                  onClick={() => handleDeleteLead(leadDetails.lead.id)}
-                  className="text-red-600"
-                >
-                  <Trash2 size={16} className="mr-2" />
-                  Excluir Permanentemente
-                </DropdownMenuItem>
-              )}
-              {/* Show warning if archived lead has orders */}
-              {isMaster && leadDetails.lead.archived && leadsWithOrders.has(leadDetails.lead.id) && (
-                <div className="px-2 py-1.5 text-sm text-gray-500 flex items-start gap-2">
-                  <Info size={14} className="mt-0.5 flex-shrink-0" />
-                  <span className="text-xs">
-                    Lead arquivado possui pedidos vinculados. Não é possível excluir.
-                  </span>
-                </div>
-              )}
-              {/* Show Hard Delete option for Master users (no archived restriction) */}
               {isMaster && (
-                <DropdownMenuItem 
-                  onClick={handleHardDeleteLead}
-                  className="text-red-600 font-semibold"
+                <Button
+                  onClick={() => setShowArchived(!showArchived)}
+                  variant={showArchived ? "default" : "outline"}
+                  size="sm"
                 >
-                  <Trash2 size={16} className="mr-2" />
-                  Excluir Definitivamente (Hard Delete)
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-      </div>
-
-      {leadDetails && (
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User size={20} />
-                {leadDetails.lead.name}
-                {leadDetails.lead.archived && (
-                  <Badge variant="outline" className="ml-2">
-                    <Archive size={12} className="mr-1" />
-                    Arquivado
-                  </Badge>
-                )}
-              </CardTitle>
-              {leadDetails.lead.phone && (
-                <CardDescription className="flex items-center gap-2 mt-2">
-                  <Phone size={16} />
-                  {leadDetails.lead.phone}
-                </CardDescription>
-              )}
-            </CardHeader>
-            {leadDetails.lead.notes && (
-              <CardContent>
-                <div className="flex items-start gap-2">
-                  <MessageSquare size={16} className="text-gray-500 mt-1" />
-                  <p className="text-sm text-gray-700">{leadDetails.lead.notes}</p>
-                </div>
-              </CardContent>
-            )}
-          </Card>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Anotações</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Textarea
-                  placeholder="Adicione uma nota sobre este lead..."
-                  value={noteText}
-                  onChange={(e) => setNoteText(e.target.value)}
-                  rows={4}
-                />
-                <Button onClick={handleSaveNote} disabled={savingNote || !noteText.trim()}>
-                  {savingNote ? 'Salvando...' : 'Salvar Nota'}
+                  <Archive size={16} className="mr-2" />
+                  {showArchived ? 'Ocultar Arquivados' : 'Ver Arquivados'}
                 </Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Follow-up</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle size={16} className="text-orange-500" />
-                    <span className="font-medium">Precisa de follow-up?</span>
-                  </div>
-                  <Switch
-                    checked={followUpNeeded}
-                    onCheckedChange={handleFollowUpChange}
-                  />
-                </div>
-
-                {followUpNeeded && (
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Data do follow-up</label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start text-left">
-                          <CalendarIcon size={16} className="mr-2" />
-                          {followUpDate ? format(followUpDate, 'dd/MM/yyyy') : 'Selecione uma data'}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar
-                          mode="single"
-                          selected={followUpDate}
-                          onSelect={handleFollowUpDateChange}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+              )}
+              <Button onClick={loadLeads} variant="outline" size="sm">
+                <RefreshCw size={16} className="mr-2" />
+                Atualizar
+              </Button>
+            </div>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Linha do Tempo</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {leadDetails.timeline.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-4">Sem histórico ainda</p>
-              ) : (
-                <div className="space-y-4">
-                  {leadDetails.timeline.map((event) => (
-                    <div key={event.id} className="flex gap-3">
-                      <div className="mt-1">
-                        {getTimelineIcon(event.type)}
+          {/* Filters */}
+          <div className="flex items-center gap-4 mb-6">
+            <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)}>
+              <TabsList>
+                <TabsTrigger value="all">Todos ({leads.length})</TabsTrigger>
+                <TabsTrigger value="new">Novos ({leads.filter(l => (l.unread_interest_count || 0) > 0).length})</TabsTrigger>
+                <TabsTrigger value="followup">Follow-up ({leads.filter(l => l.follow_up_needed).length})</TabsTrigger>
+                <TabsTrigger value="status">Por Status</TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            {(filter !== 'all' || statusFilter !== 'all') && (
+              <Button onClick={clearFilters} variant="ghost" size="sm">
+                <X size={14} className="mr-1" />
+                Limpar filtros
+              </Button>
+            )}
+          </div>
+
+          {filter === 'status' && (
+            <div className="mb-4">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-64">
+                  <SelectValue placeholder="Selecione o status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  <SelectItem value="new_interest">Novo Interesse</SelectItem>
+                  <SelectItem value="talking_ai">Falando com IA</SelectItem>
+                  <SelectItem value="talking_human">Falando com Humano</SelectItem>
+                  <SelectItem value="proposal_sent">Proposta Enviada</SelectItem>
+                  <SelectItem value="won">Ganho</SelectItem>
+                  <SelectItem value="lost">Perdido</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Error Banner with Retry */}
+          {error && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Erro ao carregar dados</AlertTitle>
+              <AlertDescription className="flex items-center justify-between mt-2">
+                <span>{error}</span>
+                <Button onClick={loadLeads} variant="outline" size="sm" className="ml-4">
+                  <RefreshCw size={14} className="mr-1" />
+                  Tentar Novamente
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {filteredLeads.length === 0 && !error ? (
+            <Card>
+              <CardContent className="p-12 text-center text-gray-500">
+                Nenhum lead encontrado.
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredLeads.map((lead) => (
+                <Card 
+                  key={lead.id} 
+                  className={`cursor-pointer hover:shadow-md transition-shadow ${lead.archived ? 'opacity-60' : ''}`}
+                  onClick={() => handleSelectLead(lead.id)}
+                >
+                  <CardHeader>
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <User size={16} className="text-gray-500" />
+                        <CardTitle className="text-lg">{lead.name}</CardTitle>
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm text-gray-900">{getTimelineMessage(event)}</p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {format(new Date(event.created_at), "dd/MM/yyyy 'às' HH:mm")}
-                        </p>
+                      <div className="flex gap-1">
+                        {(lead.unread_interest_count || 0) > 0 && (
+                          <Badge className="bg-blue-600 text-white">
+                            <Bell size={12} className="mr-1" />
+                            Novo ({lead.unread_interest_count})
+                          </Badge>
+                        )}
+                        {lead.archived && (
+                          <Badge variant="outline" className="text-gray-500">
+                            <Archive size={12} className="mr-1" />
+                            Arquivado
+                          </Badge>
+                        )}
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    {lead.phone && (
+                      <CardDescription className="flex items-center gap-2">
+                        <Phone size={14} />
+                        {lead.phone}
+                      </CardDescription>
+                    )}
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline" className="capitalize">
+                        {OPPORTUNITY_STAGE_LABELS[lead.status as OpportunityStage] || lead.status.replace(/_/g, ' ')}
+                      </Badge>
+                      <span className="text-xs text-gray-500">
+                        {format(new Date(lead.created_at), 'dd/MM')}
+                      </span>
+                    </div>
 
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Oportunidades</h2>
-            
-            {leadDetails.opportunities.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center text-gray-500">
-                  Nenhuma oportunidade associada.
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {leadDetails.opportunities.map((opp) => (
-                  <Card key={opp.id}>
-                    <CardContent className="p-6">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="flex-1 space-y-2">
-                          {opp.products?.name ? (
-                            <div className="flex items-center gap-2">
-                              <Package size={16} className="text-gray-500" />
-                              <span className="font-medium">{opp.products.name}</span>
-                            </div>
-                          ) : opp.product_id ? (
-                            <div className="flex items-center gap-2">
-                              <Package size={16} className="text-gray-500" />
-                              <span className="font-medium text-gray-600">Produto removido (ID: {opp.product_id.slice(0, 8)}...)</span>
-                            </div>
-                          ) : null}
+                    <div className="text-xs text-gray-600 flex items-center gap-1">
+                      <Clock size={12} />
+                      Criado em: {format(new Date(lead.created_at), 'dd/MM/yyyy')}
+                    </div>
 
-                          <div className="flex items-center gap-2">
-                            <Clock size={16} className="text-gray-500" />
-                            <span className="text-sm text-gray-500">
-                              Criada em {new Date(opp.created_at).toLocaleDateString()}
-                            </span>
-                          </div>
-                          
-                          <div className="flex items-center gap-3">
-                            <span className="text-sm font-medium">Estágio:</span>
-                            <Badge className={getStageColor(opp.stage)}>
-                              {OPPORTUNITY_STAGE_LABELS[opp.stage as OpportunityStage] || opp.stage.replace(/_/g, ' ')}
-                            </Badge>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col gap-2 min-w-[200px]">
-                          <Select
-                            value={opp.stage}
-                            onValueChange={(value) => handleStageChange(opp.id, value)}
-                            disabled={updatingStage === opp.id}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Mudar estágio" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value={OpportunityStage.NEW_INTEREST}>Novo Interesse</SelectItem>
-                              <SelectItem value={OpportunityStage.TALKING_AI}>Falando com IA</SelectItem>
-                              <SelectItem value={OpportunityStage.TALKING_HUMAN}>Falando com Humano</SelectItem>
-                              <SelectItem value={OpportunityStage.PROPOSAL_SENT}>Proposta Enviada</SelectItem>
-                              <SelectItem value={OpportunityStage.WON}>Ganho</SelectItem>
-                              <SelectItem value={OpportunityStage.LOST}>Perdido</SelectItem>
-                            </SelectContent>
-                          </Select>
-
-                          <div className="flex gap-2">
-                            <Button
-                              onClick={() => handleArchiveOpportunity(opp.id, !opp.archived)}
-                              variant="outline"
-                              size="sm"
-                              className="flex-1"
-                            >
-                              <Archive size={14} className="mr-1" />
-                              {opp.archived ? 'Restaurar' : 'Arquivar'}
-                            </Button>
-                            {isMaster && !opportunitiesWithOrders.has(opp.id) && (
-                              <Button
-                                onClick={() => handleDeleteOpportunity(opp.id)}
-                                variant="ghost"
-                                size="sm"
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 size={14} />
-                              </Button>
-                            )}
-                            {isMaster && opportunitiesWithOrders.has(opp.id) && (
-                              <div className="flex items-center gap-1 text-xs text-gray-500 px-2 py-1 bg-gray-100 rounded">
-                                <Info size={12} />
-                                <span>Possui pedido</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
+                    {lead.follow_up_needed && (
+                      <div className="text-xs text-orange-600 flex items-center gap-1 font-medium">
+                        <AlertCircle size={12} />
+                        {lead.follow_up_at 
+                          ? `Follow-up: ${format(new Date(lead.follow_up_at), 'dd/MM')}`
+                          : 'Follow-up: pendente'
+                        }
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        // Detail View
+        <div>
+          <div className="flex items-center justify-between mb-6">
+            <Button 
+              variant="ghost" 
+              onClick={() => {
+                setSelectedLeadId(null);
+                setLeadDetails(null);
+              }}
+            >
+              <ArrowLeft size={16} className="mr-2" />
+              Voltar para Lista
+            </Button>
+            
+            {leadDetails && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <MoreHorizontal size={16} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {leadDetails.lead.archived ? (
+                    <DropdownMenuItem onClick={() => handleArchiveLead(leadDetails.lead.id, false)}>
+                      <ArchiveRestore size={16} className="mr-2" />
+                      Restaurar Lead
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem onClick={() => handleArchiveLead(leadDetails.lead.id, true)}>
+                      <Archive size={16} className="mr-2" />
+                      Arquivar Lead
+                    </DropdownMenuItem>
+                  )}
+                  {/* Show delete option only if lead is archived */}
+                  {isMaster && leadDetails.lead.archived && !leadsWithOrders.has(leadDetails.lead.id) && (
+                    <DropdownMenuItem 
+                      onClick={() => handleDeleteLead(leadDetails.lead.id)}
+                      className="text-red-600"
+                    >
+                      <Trash2 size={16} className="mr-2" />
+                      Excluir Permanentemente
+                    </DropdownMenuItem>
+                  )}
+                  {/* Show warning if archived lead has orders */}
+                  {isMaster && leadDetails.lead.archived && leadsWithOrders.has(leadDetails.lead.id) && (
+                    <div className="px-2 py-1.5 text-sm text-gray-500 flex items-start gap-2">
+                      <Info size={14} className="mt-0.5 flex-shrink-0" />
+                      <span className="text-xs">
+                        Lead arquivado possui pedidos vinculados. Não é possível excluir.
+                      </span>
+                    </div>
+                  )}
+                  {/* Show Hard Delete option for Master users (no archived restriction) */}
+                  {isMaster && (
+                    <DropdownMenuItem 
+                      onClick={handleHardDeleteLead}
+                      className="text-red-600 font-semibold"
+                    >
+                      <Trash2 size={16} className="mr-2" />
+                      Excluir Definitivamente (Hard Delete)
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
+
+          {leadDetails && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User size={20} />
+                    {leadDetails.lead.name}
+                    {leadDetails.lead.archived && (
+                      <Badge variant="outline" className="ml-2">
+                        <Archive size={12} className="mr-1" />
+                        Arquivado
+                      </Badge>
+                    )}
+                  </CardTitle>
+                  {leadDetails.lead.phone && (
+                    <CardDescription className="flex items-center gap-2 mt-2">
+                      <Phone size={16} />
+                      {leadDetails.lead.phone}
+                    </CardDescription>
+                  )}
+                </CardHeader>
+                {leadDetails.lead.notes && (
+                  <CardContent>
+                    <div className="flex items-start gap-2">
+                      <MessageSquare size={16} className="text-gray-500 mt-1" />
+                      <p className="text-sm text-gray-700">{leadDetails.lead.notes}</p>
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Anotações</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <Textarea
+                      placeholder="Adicione uma nota sobre este lead..."
+                      value={noteText}
+                      onChange={(e) => setNoteText(e.target.value)}
+                      rows={4}
+                    />
+                    <Button onClick={handleSaveNote} disabled={savingNote || !noteText.trim()}>
+                      {savingNote ? 'Salvando...' : 'Salvar Nota'}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Follow-up</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle size={16} className="text-orange-500" />
+                        <span className="font-medium">Precisa de follow-up?</span>
+                      </div>
+                      <Switch
+                        checked={followUpNeeded}
+                        onCheckedChange={handleFollowUpChange}
+                      />
+                    </div>
+
+                    {followUpNeeded && (
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Data do follow-up</label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="w-full justify-start text-left">
+                              <CalendarIcon size={16} className="mr-2" />
+                              {followUpDate ? format(followUpDate, 'dd/MM/yyyy') : 'Selecione uma data'}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <Calendar
+                              mode="single"
+                              selected={followUpDate}
+                              onSelect={handleFollowUpDateChange}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Linha do Tempo</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {leadDetails.timeline.length === 0 ? (
+                    <p className="text-sm text-gray-500 text-center py-4">Sem histórico ainda</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {leadDetails.timeline.map((event) => (
+                        <div key={event.id} className="flex gap-3">
+                          <div className="mt-1">
+                            {getTimelineIcon(event.type)}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm text-gray-900">{getTimelineMessage(event)}</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {format(new Date(event.created_at), "dd/MM/yyyy 'às' HH:mm")}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <div>
+                <h2 className="text-xl font-semibold mb-4">Oportunidades</h2>
+                
+                {leadDetails.opportunities.length === 0 ? (
+                  <Card>
+                    <CardContent className="p-8 text-center text-gray-500">
+                      Nenhuma oportunidade associada.
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-4">
+                    {leadDetails.opportunities.map((opp) => (
+                      <Card key={opp.id}>
+                        <CardContent className="p-6">
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="flex-1 space-y-2">
+                              {opp.products?.name ? (
+                                <div className="flex items-center gap-2">
+                                  <Package size={16} className="text-gray-500" />
+                                  <span className="font-medium">{opp.products.name}</span>
+                                </div>
+                              ) : opp.product_id ? (
+                                <div className="flex items-center gap-2">
+                                  <Package size={16} className="text-gray-500" />
+                                  <span className="font-medium text-gray-600">Produto removido (ID: {opp.product_id.slice(0, 8)}...)</span>
+                                </div>
+                              ) : null}
+
+                              <div className="flex items-center gap-2">
+                                <Clock size={16} className="text-gray-500" />
+                                <span className="text-sm text-gray-500">
+                                  Criada em {new Date(opp.created_at).toLocaleDateString()}
+                                </span>
+                              </div>
+                              
+                              <div className="flex items-center gap-3">
+                                <span className="text-sm font-medium">Estágio:</span>
+                                <Badge className={getStageColor(opp.stage)}>
+                                  {OPPORTUNITY_STAGE_LABELS[opp.stage as OpportunityStage] || opp.stage.replace(/_/g, ' ')}
+                                </Badge>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col gap-2 min-w-[200px]">
+                              <Select
+                                value={opp.stage}
+                                onValueChange={(value) => handleStageChange(opp.id, value)}
+                                disabled={updatingStage === opp.id}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Mudar estágio" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value={OpportunityStage.NEW_INTEREST}>Novo Interesse</SelectItem>
+                                  <SelectItem value={OpportunityStage.TALKING_AI}>Falando com IA</SelectItem>
+                                  <SelectItem value={OpportunityStage.TALKING_HUMAN}>Falando com Humano</SelectItem>
+                                  <SelectItem value={OpportunityStage.PROPOSAL_SENT}>Proposta Enviada</SelectItem>
+                                  <SelectItem value={OpportunityStage.WON}>Ganho</SelectItem>
+                                  <SelectItem value={OpportunityStage.LOST}>Perdido</SelectItem>
+                                </SelectContent>
+                              </Select>
+
+                              <div className="flex gap-2">
+                                <Button
+                                  onClick={() => handleArchiveOpportunity(opp.id, !opp.archived)}
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex-1"
+                                >
+                                  <Archive size={14} className="mr-1" />
+                                  {opp.archived ? 'Restaurar' : 'Arquivar'}
+                                </Button>
+                                {isMaster && !opportunitiesWithOrders.has(opp.id) && (
+                                  <Button
+                                    onClick={() => handleDeleteOpportunity(opp.id)}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <Trash2 size={14} />
+                                  </Button>
+                                )}
+                                {isMaster && opportunitiesWithOrders.has(opp.id) && (
+                                  <div className="flex items-center gap-1 text-xs text-gray-500 px-2 py-1 bg-gray-100 rounded">
+                                    <Info size={12} />
+                                    <span>Possui pedido</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { dashboardService, DashboardMetrics, OpportunityFunnel, OrdersPipeline, EvolutionData } from '@/services/dashboardService';
-import { LayoutDashboard, Users, TrendingUp, TrendingDown, Package, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+import { dashboardService, DashboardMetrics, SystemOverview, OpportunityFunnel, OrdersPipeline, EvolutionData, PeriodType } from '@/services/dashboardService';
+import { LayoutDashboard, Users, TrendingUp, TrendingDown, Package, CheckCircle, XCircle, RefreshCw, Box, UserCheck, Target, Calendar as CalendarIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
 
 const COLORS = {
@@ -13,6 +14,16 @@ const COLORS = {
 };
 
 const Dashboard = () => {
+  const [period, setPeriod] = useState<PeriodType>('last_30_days');
+  
+  const [overview, setOverview] = useState<SystemOverview>({
+    totalProducts: 0,
+    totalLeads: 0,
+    totalOpportunities: 0,
+    totalUsers: 0,
+    totalDelivered: 0,
+  });
+  
   const [metrics, setMetrics] = useState<DashboardMetrics>({
     totalActiveProducts: 0,
     leadsByStatus: {},
@@ -23,6 +34,7 @@ const Dashboard = () => {
     lostInPeriod: 0,
     deliveredInPeriod: 0,
   });
+  
   const [opportunityFunnel, setOpportunityFunnel] = useState<OpportunityFunnel[]>([]);
   const [ordersPipeline, setOrdersPipeline] = useState<OrdersPipeline[]>([]);
   const [evolution, setEvolution] = useState<EvolutionData[]>([]);
@@ -30,17 +42,19 @@ const Dashboard = () => {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [period]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [metricsData, funnelData, pipelineData, evolutionData] = await Promise.all([
-        dashboardService.getMetrics(),
-        dashboardService.getOpportunityFunnel(),
-        dashboardService.getOrdersPipeline(),
-        dashboardService.getEvolutionByPeriod(),
+      const [overviewData, metricsData, funnelData, pipelineData, evolutionData] = await Promise.all([
+        dashboardService.getSystemOverview(),
+        dashboardService.getMetrics(period),
+        dashboardService.getOpportunityFunnel(period),
+        dashboardService.getOrdersPipeline(period),
+        dashboardService.getEvolutionByPeriod(period),
       ]);
+      setOverview(overviewData);
       setMetrics(metricsData);
       setOpportunityFunnel(funnelData);
       setOrdersPipeline(pipelineData);
@@ -72,28 +86,111 @@ const Dashboard = () => {
     { name: 'Perdidas', value: metrics.lostInPeriod, color: COLORS.danger },
   ];
 
+  const periodLabels: Record<PeriodType, string> = {
+    today: 'Hoje',
+    last_7_days: 'Últimos 7 dias',
+    last_30_days: 'Últimos 30 dias',
+    current_month: 'Mês atual',
+    last_month: 'Mês anterior',
+    last_6_months: 'Últimos 6 meses',
+  };
+
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Dashboard</h1>
-        <button
-          onClick={loadData}
-          className="flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-gray-50 transition-colors"
-        >
-          <RefreshCw size={16} />
-          Atualizar
-        </button>
+        <div className="flex items-center gap-4">
+          <Select value={period} onValueChange={(value) => setPeriod(value as PeriodType)}>
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="today">Hoje</SelectItem>
+              <SelectItem value="last_7_days">Últimos 7 dias</SelectItem>
+              <SelectItem value="last_30_days">Últimos 30 dias</SelectItem>
+              <SelectItem value="current_month">Mês atual</SelectItem>
+              <SelectItem value="last_month">Mês anterior</SelectItem>
+              <SelectItem value="last_6_months">Últimos 6 meses</SelectItem>
+            </SelectContent>
+          </Select>
+          <button
+            onClick={loadData}
+            className="flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-gray-50 transition-colors"
+          >
+            <RefreshCw size={16} />
+            Atualizar
+          </button>
+        </div>
       </div>
 
-      {/* KPIs */}
+      {/* System Overview */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Leads (30 dias)</CardTitle>
+            <CardTitle className="text-sm font-medium">Produtos</CardTitle>
+            <Box className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{overview.totalProducts}</div>
+            <p className="text-xs text-muted-foreground mt-1">Cadastrados</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Leads</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{overview.totalLeads}</div>
+            <p className="text-xs text-muted-foreground mt-1">Total</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Oportunidades</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{overview.totalOpportunities}</div>
+            <p className="text-xs text-muted-foreground mt-1">Total</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Usuários</CardTitle>
+            <UserCheck className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{overview.totalUsers}</div>
+            <p className="text-xs text-muted-foreground mt-1">Ativos</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Entregues</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{overview.totalDelivered}</div>
+            <p className="text-xs text-muted-foreground mt-1">Total</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Period KPIs */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Leads</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metrics.leadsInPeriod}</div>
+            <p className="text-xs text-muted-foreground mt-1">{periodLabels[period]}</p>
           </CardContent>
         </Card>
 
@@ -104,36 +201,40 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metrics.activeOpportunities}</div>
+            <p className="text-xs text-muted-foreground mt-1">Em aberto</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ganhos (30 dias)</CardTitle>
+            <CardTitle className="text-sm font-medium">Ganhos</CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{metrics.wonInPeriod}</div>
+            <p className="text-xs text-muted-foreground mt-1">{periodLabels[period]}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Perdidas (30 dias)</CardTitle>
+            <CardTitle className="text-sm font-medium">Perdidas</CardTitle>
             <XCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{metrics.lostInPeriod}</div>
+            <p className="text-xs text-muted-foreground mt-1">{periodLabels[period]}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Entregues (30 dias)</CardTitle>
+            <CardTitle className="text-sm font-medium">Entregues</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{metrics.deliveredInPeriod}</div>
+            <p className="text-xs text-muted-foreground mt-1">{periodLabels[period]}</p>
           </CardContent>
         </Card>
       </div>
@@ -167,7 +268,7 @@ const Dashboard = () => {
         {/* Ganhos vs Perdidas */}
         <Card>
           <CardHeader>
-            <CardTitle>Ganhos vs Perdidas (30 dias)</CardTitle>
+            <CardTitle>Ganhos vs Perdidas</CardTitle>
           </CardHeader>
           <CardContent>
             {metrics.wonInPeriod === 0 && metrics.lostInPeriod === 0 ? (
@@ -227,7 +328,7 @@ const Dashboard = () => {
         {/* Evolução por Período */}
         <Card>
           <CardHeader>
-            <CardTitle>Evolução (últimos 6 meses)</CardTitle>
+            <CardTitle>Evolução</CardTitle>
           </CardHeader>
           <CardContent>
             {evolution.length === 0 ? (

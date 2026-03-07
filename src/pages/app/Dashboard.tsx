@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { dashboardService, DashboardMetrics, SystemOverview, OpportunityFunnel, OrdersPipeline, EvolutionData, PeriodType } from '@/services/dashboardService';
 import { productsIntelligenceService, MostWorkedProduct, ProductWithoutActivity, CategoryDistribution, ProductsOverview, BestSellingProduct, ProductConversion, SalesOverview, ProductRadar } from '@/services/productsIntelligenceService';
 import { leadsIntelligenceService, LeadsRadar } from '@/services/leadsIntelligenceService';
-import { LayoutDashboard, Users, TrendingUp, TrendingDown, Package, CheckCircle, XCircle, RefreshCw, Box, UserCheck, Target, Calendar as CalendarIcon, AlertTriangle, BarChart3, ShoppingCart, Percent, Flame, Clock, Calendar as CalendarIcon2 } from 'lucide-react';
+import { pipelineIntelligenceService, PipelineRadar } from '@/services/pipelineIntelligenceService';
+import { LayoutDashboard, Users, TrendingUp, TrendingDown, Package, CheckCircle, XCircle, RefreshCw, Box, UserCheck, Target, Calendar as CalendarIcon, AlertTriangle, BarChart3, ShoppingCart, Percent, Flame, Clock, Calendar as CalendarIcon2, Truck, AlertTriangle as AlertTriangleIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ProductsRadar } from '@/components/ProductsRadar';
 import { LeadsRadar as LeadsRadarComponent } from '@/components/LeadsRadar';
+import { PipelineRadar as PipelineRadarComponent } from '@/components/PipelineRadar';
 
 const COLORS = {
   primary: '#3b82f6',
@@ -81,6 +83,17 @@ const Dashboard = () => {
   });
   const [leadsRadarLoading, setLeadsRadarLoading] = useState(false);
 
+  // Pipeline Radar State
+  const [pipelineRadar, setPipelineRadar] = useState<PipelineRadar>({
+    stuckOrders: [],
+    stuckOrdersCount: 0,
+    delayedDeliveries: [],
+    delayedDeliveriesCount: 0,
+    pendingOrders: [],
+    pendingOrdersCount: 0,
+  });
+  const [pipelineRadarLoading, setPipelineRadarLoading] = useState(false);
+
   useEffect(() => {
     loadData();
   }, [period]);
@@ -106,6 +119,9 @@ const Dashboard = () => {
       
       // Load leads radar data
       await loadLeadsRadar();
+      
+      // Load pipeline radar data
+      await loadPipelineRadar();
     } catch (error) {
       console.error('[Dashboard] Failed to load data:', error);
     } finally {
@@ -168,6 +184,18 @@ const Dashboard = () => {
       console.error('[Dashboard] Failed to load leads radar:', error);
     } finally {
       setLeadsRadarLoading(false);
+    }
+  };
+
+  const loadPipelineRadar = async () => {
+    setPipelineRadarLoading(true);
+    try {
+      const radarData = await pipelineIntelligenceService.getPipelineRadar();
+      setPipelineRadar(radarData);
+    } catch (error) {
+      console.error('[Dashboard] Failed to load pipeline radar:', error);
+    } finally {
+      setPipelineRadarLoading(false);
     }
   };
 
@@ -687,6 +715,22 @@ const Dashboard = () => {
         </div>
 
         <LeadsRadarComponent radar={leadsRadar} loading={leadsRadarLoading} onRefresh={loadLeadsRadar} />
+      </div>
+
+      {/* RADAR DE PIPELINE */}
+      <div className="mt-8 pt-8 border-t">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            <Truck size={24} />
+            Radar de Pipeline
+          </h2>
+          <Button onClick={loadPipelineRadar} variant="outline" size="sm">
+            <RefreshCw size={16} className="mr-2" />
+            Atualizar Radar
+          </Button>
+        </div>
+
+        <PipelineRadarComponent radar={pipelineRadar} loading={pipelineRadarLoading} onRefresh={loadPipelineRadar} />
       </div>
     </div>
   );

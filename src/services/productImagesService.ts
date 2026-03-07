@@ -28,6 +28,9 @@ export function getPublicUrl(pathOrUrl: string): string {
     ? pathOrUrl.replace(/^product-images\//, "")
     : pathOrUrl;
   
+  // VALIDAÇÃO ADICIONADA: não chamar Supabase com path vazio
+  if (!normalizedPath) return "";
+  
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(normalizedPath);
   return data.publicUrl;
 }

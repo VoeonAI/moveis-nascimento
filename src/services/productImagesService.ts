@@ -20,7 +20,7 @@ export function getProductImageUrl(path: string): string {
 }
 
 export function getPublicUrl(pathOrUrl: string | null | undefined): string {
-  // 1. Aceitar null/undefined
+  // 1. Se valor vazio -> retornar ""
   if (pathOrUrl == null) return "";
   
   // 2. Aplicar trim
@@ -29,21 +29,17 @@ export function getPublicUrl(pathOrUrl: string | null | undefined): string {
   // 3. Validar vazio após trim
   if (!trimmed) return "";
   
-  // 4. Se for URL completa, retornar como está
+  // 4. Se for URL completa -> retornar como está
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
   
-  // 5. Se começar com "product-images/", remover prefixo
-  const normalizedPath = trimmed.startsWith("product-images/")
-    ? trimmed.replace(/^product-images\//, "")
-    : trimmed;
+  // 5. Se for path como "product-images/arquivo.webp" -> usar exatamente esse path
+  // NÃO remover o prefixo "product-images/" pois faz parte do path válido
+  const path = trimmed;
   
-  // 6. Validar novamente se ficou vazio
-  if (!normalizedPath) return "";
+  // 6. Chamar Supabase com o path exato
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
   
-  // 7. Chamar Supabase
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(normalizedPath);
-  
-  // 8. Retornar com fallback defensivo
+  // 7. Retornar com fallback defensivo
   return data?.publicUrl ?? "";
 }
 

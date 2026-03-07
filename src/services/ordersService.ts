@@ -37,6 +37,7 @@ async function getOrderWebhookContext(orderId: string) {
         internal_code,
         delivery_address,
         notes,
+        delivered_at,
         opportunities:opportunity_id (
           id,
           lead_id,
@@ -70,6 +71,7 @@ async function getOrderWebhookContext(orderId: string) {
         internal_code: order.internal_code,
         delivery_address: order.delivery_address,
         notes: order.notes,
+        delivered_at: order.delivered_at,
       },
       opportunity_id: order.opportunity_id,
       lead_id: order.lead_id,
@@ -401,13 +403,23 @@ export const ordersService = {
 
     const fromStage = currentOrder.current_stage;
 
-    // 2. Update Order Stage (CRITICAL - must succeed)
+    // 2. Build update object with delivered_at logic
+    const updateData: any = {
+      current_stage: toStage,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Update delivered_at based on stage change
+    if (toStage === OrderStage.DELIVERED && fromStage !== OrderStage.DELIVERED) {
+      updateData.delivered_at = new Date().toISOString();
+    } else if (fromStage === OrderStage.DELIVERED && toStage !== OrderStage.DELIVERED) {
+      updateData.delivered_at = null;
+    }
+
+    // 3. Update Order Stage (CRITICAL - must succeed)
     const { data: updatedOrder, error: updateError } = await supabase
       .from('orders')
-      .update({ 
-        current_stage: toStage, 
-        updated_at: new Date().toISOString() 
-      })
+      .update(updateData)
       .eq('id', orderId)
       .select()
       .single();
@@ -417,7 +429,7 @@ export const ordersService = {
       throw updateError;
     }
 
-    // 3. Create Order Event (best-effort - don't fail if this fails)
+    // 4. Create Order Event (best-effort - don't fail if this fails)
     try {
       const { error: eventError } = await supabase
         .from('order_events')
@@ -436,7 +448,7 @@ export const ordersService = {
       console.error('[updateOrderStage] Failed to create order event (non-critical):', eventError);
     }
 
-    // 4. Emit Webhook with enriched payload (best-effort)
+    // 5. Emit Webhook with enriched payload (best-effort)
     const context = await getOrderWebhookContext(orderId);
     
     const payload = context ? {
@@ -540,13 +552,23 @@ export const ordersService = {
 
     const fromStage = currentOrder.current_stage;
 
-    // 2. Update Order Stage (CRITICAL - must succeed)
+    // 2. Build update object with delivered_at logic
+    const updateData: any = {
+      current_stage: toStage,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Update delivered_at based on stage change
+    if (toStage === OrderStage.DELIVERED && fromStage !== OrderStage.DELIVERED) {
+      updateData.delivered_at = new Date().toISOString();
+    } else if (fromStage === OrderStage.DELIVERED && toStage !== OrderStage.DELIVERED) {
+      updateData.delivered_at = null;
+    }
+
+    // 3. Update Order Stage (CRITICAL - must succeed)
     const { data: updatedOrder, error: updateError } = await supabase
       .from('orders')
-      .update({ 
-        current_stage: toStage, 
-        updated_at: new Date().toISOString() 
-      })
+      .update(updateData)
       .eq('id', orderId)
       .select()
       .single();
@@ -556,7 +578,7 @@ export const ordersService = {
       throw updateError;
     }
 
-    // 3. Create Order Event (best-effort - don't fail if this fails)
+    // 4. Create Order Event (best-effort - don't fail if this fails)
     try {
       const { error: eventError } = await supabase
         .from('order_events')
@@ -575,7 +597,7 @@ export const ordersService = {
       console.error('[moveOrderStage] Failed to create order event (non-critical):', eventError);
     }
 
-    // 4. Emit Webhook with enriched payload (best-effort)
+    // 5. Emit Webhook with enriched payload (best-effort)
     const context = await getOrderWebhookContext(orderId);
     
     const payload = context ? {

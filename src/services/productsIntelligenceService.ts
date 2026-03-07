@@ -45,10 +45,38 @@ export interface SalesOverview {
   averageConversionRate: number;
 }
 
+// Radar de Produtos
+export interface HotProduct {
+  id: string;
+  name: string;
+  category_name: string | null;
+  sales_count: number;
+}
+
+export interface HighDemandLowConversion {
+  id: string;
+  name: string;
+  category_name: string | null;
+  opportunities_count: number;
+  sales_count: number;
+  conversion_rate: number;
+}
+
+export interface StagnantProduct {
+  id: string;
+  name: string;
+  category_name: string | null;
+}
+
+export interface ProductRadar {
+  hotProduct: HotProduct | null;
+  highDemandLowConversion: HighDemandLowConversion | null;
+  stagnantProduct: StagnantProduct | null;
+}
+
 export const productsIntelligenceService = {
   async getOverview(): Promise<ProductsOverview> {
     try {
-      // Get total active products
       const { count: totalActiveProducts, error: productsError } = await supabase
         .from('products')
         .select('*', { count: 'exact', head: true })
@@ -58,7 +86,6 @@ export const productsIntelligenceService = {
         console.error('[productsIntelligenceService.getOverview] products:', productsError.message);
       }
 
-      // Get products with opportunities
       const { count: productsWithOpportunities, error: oppsError } = await supabase
         .from('opportunities')
         .select('product_id', { count: 'exact', head: true })
@@ -68,7 +95,6 @@ export const productsIntelligenceService = {
         console.error('[productsIntelligenceService.getOverview] opportunities:', oppsError.message);
       }
 
-      // Products without activity = total active - with opportunities
       const productsWithoutActivity = (totalActiveProducts || 0) - (productsWithOpportunities || 0);
 
       return {
@@ -88,7 +114,6 @@ export const productsIntelligenceService = {
 
   async getSalesOverview(): Promise<SalesOverview> {
     try {
-      // Get total delivered orders
       const { count: totalSales, error: salesError } = await supabase
         .from('orders')
         .select('*', { count: 'exact', head: true })
@@ -98,7 +123,6 @@ export const productsIntelligenceService = {
         console.error('[productsIntelligenceService.getSalesOverview] sales:', salesError.message);
       }
 
-      // Get conversion data
       const { data: conversions, error: conversionError } = await supabase
         .from('opportunities')
         .select('product_id')
@@ -108,12 +132,10 @@ export const productsIntelligenceService = {
         console.error('[productsIntelligenceService.getSalesOverview] conversions:', conversionError.message);
       }
 
-      // Calculate average conversion rate
       let averageConversionRate = 0;
       if (conversions && conversions.length > 0) {
         const productIds = [...new Set(conversions.map(c => c.product_id))];
         
-        // Get sales per product
         const { data: orders } = await supabase
           .from('orders')
           .select('opportunity_id')
@@ -121,7 +143,6 @@ export const productsIntelligenceService = {
 
         const opportunityIds = orders?.map(o => o.opportunity_id) || [];
         
-        // Get product for each opportunity
         const { data: oppsWithProduct } = await supabase
           .from('opportunities')
           .select('product_id')
@@ -166,7 +187,6 @@ export const productsIntelligenceService = {
 
       if (error) throw error;
 
-      // Group by product and count opportunities
       const productCounts = (data || []).reduce((acc, opp) => {
         const productId = opp.product_id;
         const product = opp.products;
@@ -186,7 +206,6 @@ export const productsIntelligenceService = {
         return acc;
       }, {} as Record<string, MostWorkedProduct>);
 
-      // Sort by opportunity count and limit
       return Object.values(productCounts)
         .sort((a, b) => b.opportunity_count - a.opportunity_count)
         .slice(0, limit);
@@ -198,7 +217,6 @@ export const productsIntelligenceService = {
 
   async getBestSellingProducts(limit: number = 10): Promise<BestSellingProduct[]> {
     try {
-      // Get delivered orders with product info
       const { data, error } = await supabase
         .from('orders')
         .select(`
@@ -218,7 +236,6 @@ export const productsIntelligenceService = {
 
       if (error) throw error;
 
-      // Group by product and count sales
       const productSales = (data || []).reduce((acc, order) => {
         const product = order.opportunities?.products;
         if (!product) return acc;
@@ -236,7 +253,6 @@ export const productsIntelligenceService = {
         return acc;
       }, {} as Record<string, BestSellingProduct>);
 
-      // Sort by sales count and limit
       return Object.values(productSales)
         .sort((a, b) => b.sales_count - a.sales_count)
         .slice(0, limit);
@@ -248,7 +264,6 @@ export const productsIntelligenceService = {
 
   async getConversionByProduct(): Promise<ProductConversion[]> {
     try {
-      // Get all opportunities with product info
       const { data: opportunities, error: oppsError } = await supabase
         .from('opportunities')
         .select(`
@@ -266,7 +281,6 @@ export const productsIntelligenceService = {
 
       if (oppsError) throw oppsError;
 
-      // Get all delivered orders
       const { data: orders, error: ordersError } = await supabase
         .from('orders')
         .select('opportunity_id')
@@ -274,10 +288,8 @@ export const productsIntelligenceService = {
 
       if (ordersError) throw ordersError;
 
-      // Create set of delivered opportunity IDs
       const deliveredOppIds = new Set(orders?.map(o => o.opportunity_id) || []);
 
-      // Group by product and calculate conversion
       const productConversions = (opportunities || []).reduce((acc, opp) => {
         const product = opp.products;
         if (!product) return acc;
@@ -302,14 +314,12 @@ export const productsIntelligenceService = {
         return acc;
       }, {} as Record<string, ProductConversion>);
 
-      // Calculate conversion rates
       Object.values(productConversions).forEach(product => {
         if (product.opportunities_count > 0) {
           product.conversion_rate = (product.sales_count / product.opportunities_count) * 100;
         }
       });
 
-      // Sort by sales count
       return Object.values(productConversions)
         .sort((a, b) => b.sales_count - a.sales_count);
     } catch (error) {
@@ -320,7 +330,6 @@ export const productsIntelligenceService = {
 
   async getProductsWithoutActivity(): Promise<ProductWithoutActivity[]> {
     try {
-      // Get all active products
       const { data: products, error: productsError } = await supabase
         .from('products')
         .select(`
@@ -335,7 +344,6 @@ export const productsIntelligenceService = {
 
       if (productsError) throw productsError;
 
-      // Get all products with opportunities
       const { data: opportunities, error: oppsError } = await supabase
         .from('opportunities')
         .select('product_id')
@@ -343,12 +351,10 @@ export const productsIntelligenceService = {
 
       if (oppsError) throw oppsError;
 
-      // Create set of product IDs with opportunities
       const productIdsWithOpps = new Set(
         (opportunities || []).map(o => o.product_id)
       );
 
-      // Filter products without opportunities
       return (products || [])
         .filter(p => !productIdsWithOpps.has(p.id))
         .map(p => ({
@@ -378,7 +384,6 @@ export const productsIntelligenceService = {
 
       if (error) throw error;
 
-      // Group by category
       const categoryCounts = (data || []).reduce((acc, opp) => {
         const categories = opp.products?.product_categories || [];
         
@@ -399,12 +404,129 @@ export const productsIntelligenceService = {
         return acc;
       }, {} as Record<string, CategoryDistribution>);
 
-      // Sort by opportunity count
       return Object.values(categoryCounts)
         .sort((a, b) => b.opportunity_count - a.opportunity_count);
     } catch (error) {
       console.error('[productsIntelligenceService.getCategoryDistribution]', error);
       return [];
+    }
+  },
+
+  async getProductRadar(): Promise<ProductRadar> {
+    try {
+      // 1. Produto em alta (mais vendas no período - últimos 30 dias)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const { data: hotProductData } = await supabase
+        .from('orders')
+        .select(`
+          id,
+          opportunities (
+            product_id,
+            products (
+              id,
+              name,
+              product_categories (
+                categories (name)
+              )
+            )
+          )
+        `)
+        .eq('current_stage', 'delivered')
+        .gte('created_at', thirtyDaysAgo.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const hotProduct: HotProduct | null = hotProductData?.opportunities?.products ? {
+        id: hotProductData.opportunities.products.id,
+        name: hotProductData.opportunities.products.name,
+        category_name: hotProductData.opportunities.products.product_categories?.[0]?.categories?.name || 'Sem categoria',
+        sales_count: 1, // Este é o produto mais recente vendido
+      } : null;
+
+      // 2. Produto com alta procura mas baixa conversão
+      const { data: conversionsData } = await supabase
+        .from('products')
+        .select(`
+          id,
+          name,
+          product_categories (
+            categories (name)
+          ),
+          opportunities (
+            id,
+            orders (
+              id,
+              current_stage
+            )
+          )
+        `)
+        .eq('active', true);
+
+      let highDemandLowConversion: HighDemandLowConversion | null = null;
+
+      if (conversionsData) {
+        const productsWithConversions = conversionsData
+          .map(p => {
+            const opportunities = p.opportunities || [];
+            const opportunitiesCount = opportunities.length;
+            const salesCount = opportunities.filter(o => 
+              o.orders?.some(ord => ord.current_stage === 'delivered')
+            ).length;
+            const conversionRate = opportunitiesCount > 0 
+              ? (salesCount / opportunitiesCount) * 100 
+              : 0;
+
+            return {
+              id: p.id,
+              name: p.name,
+              category_name: p.product_categories?.[0]?.categories?.name || 'Sem categoria',
+              opportunities_count: opportunitiesCount,
+              sales_count: salesCount,
+              conversion_rate: conversionRate,
+            };
+          })
+          .filter(p => p.opportunities_count >= 5 && p.conversion_rate < 20)
+          .sort((a, b) => b.opportunities_count - a.opportunities_count);
+
+        highDemandLowConversion = productsWithConversions[0] || null;
+      }
+
+      // 3. Produto parado (ativo sem oportunidades)
+      const { data: stagnantProductData } = await supabase
+        .from('products')
+        .select(`
+          id,
+          name,
+          product_categories (
+            categories (name)
+          )
+        `)
+        .eq('active', true)
+        .is('opportunities', null)
+        .limit(1)
+        .maybeSingle();
+
+      const stagnantProduct: StagnantProduct | null = stagnantProductData ? {
+        id: stagnantProductData.id,
+        name: stagnantProductData.name,
+        category_name: stagnantProductData.product_categories?.[0]?.categories?.name || 'Sem categoria',
+      } : null;
+
+      return {
+        hotProduct,
+        highDemandLowConversion,
+        stagnantProduct,
+      };
+    } catch (error) {
+      console.error('[productsIntelligenceService.getProductRadar]', error);
+      return {
+        hotProduct: null,
+        highDemandLowConversion: null,
+        stagnantProduct: null,
+      };
     }
   },
 };

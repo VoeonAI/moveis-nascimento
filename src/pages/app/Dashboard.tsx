@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { dashboardService, DashboardMetrics, SystemOverview, OpportunityFunnel, OrdersPipeline, EvolutionData, PeriodType } from '@/services/dashboardService';
-import { productsIntelligenceService, MostWorkedProduct, ProductWithoutActivity, CategoryDistribution, ProductsOverview, BestSellingProduct, ProductConversion, SalesOverview } from '@/services/productsIntelligenceService';
+import { productsIntelligenceService, MostWorkedProduct, ProductWithoutActivity, CategoryDistribution, ProductsOverview, BestSellingProduct, ProductConversion, SalesOverview, ProductRadar } from '@/services/productsIntelligenceService';
 import { LayoutDashboard, Users, TrendingUp, TrendingDown, Package, CheckCircle, XCircle, RefreshCw, Box, UserCheck, Target, Calendar as CalendarIcon, AlertTriangle, BarChart3, ShoppingCart, Percent } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ProductsRadar } from '@/components/ProductsRadar';
 
 const COLORS = {
   primary: '#3b82f6',
@@ -58,6 +59,14 @@ const Dashboard = () => {
   const [productConversions, setProductConversions] = useState<ProductConversion[]>([]);
   const [productsWithoutActivity, setProductsWithoutActivity] = useState<ProductWithoutActivity[]>([]);
   const [categoryDistribution, setCategoryDistribution] = useState<CategoryDistribution[]>([]);
+  
+  // Radar State
+  const [productRadar, setProductRadar] = useState<ProductRadar>({
+    hotProduct: null,
+    highDemandLowConversion: null,
+    stagnantProduct: null,
+  });
+  const [radarLoading, setRadarLoading] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -97,7 +106,8 @@ const Dashboard = () => {
         bestSellingData,
         conversionData,
         withoutActivityData,
-        distributionData
+        distributionData,
+        radarData
       ] = await Promise.all([
         productsIntelligenceService.getOverview(),
         productsIntelligenceService.getSalesOverview(),
@@ -106,6 +116,7 @@ const Dashboard = () => {
         productsIntelligenceService.getConversionByProduct(),
         productsIntelligenceService.getProductsWithoutActivity(),
         productsIntelligenceService.getCategoryDistribution(),
+        productsIntelligenceService.getProductRadar(),
       ]);
       setProductsOverview(overviewData);
       setSalesOverview(salesData);
@@ -114,8 +125,21 @@ const Dashboard = () => {
       setProductConversions(conversionData);
       setProductsWithoutActivity(withoutActivityData);
       setCategoryDistribution(distributionData);
+      setProductRadar(radarData);
     } catch (error) {
       console.error('[Dashboard] Failed to load products data:', error);
+    }
+  };
+
+  const loadRadar = async () => {
+    setRadarLoading(true);
+    try {
+      const radarData = await productsIntelligenceService.getProductRadar();
+      setProductRadar(radarData);
+    } catch (error) {
+      console.error('[Dashboard] Failed to load radar:', error);
+    } finally {
+      setRadarLoading(false);
     }
   };
 
@@ -418,8 +442,11 @@ const Dashboard = () => {
           </Button>
         </div>
 
+        {/* Radar de Produtos */}
+        <ProductsRadar radar={productRadar} loading={radarLoading} onRefresh={loadRadar} />
+
         {/* KPIs de Produtos */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6 mt-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Produtos Ativos</CardTitle>

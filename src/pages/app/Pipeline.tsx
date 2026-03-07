@@ -215,178 +215,183 @@ const Pipeline = () => {
       )}
       
       <div className="flex gap-4 overflow-x-auto pb-4">
-        {ORDER_STAGES_FLOW.map((stage) => (
-          <div key={stage} className="flex-shrink-0 w-80 bg-gray-50 rounded-lg border flex flex-col max-h-[calc(100vh-140px)]">
-            {/* Stage Header */}
-            <div className={`p-4 border-b rounded-t-lg ${getStageColor(stage)}`}>
-              <h2 className="font-semibold text-center">
-                {ORDER_STAGE_LABELS[stage]}
-              </h2>
-              <div className="text-center text-sm mt-1 opacity-75">
-                {ordersByStage[stage]?.length || 0} pedidos
+        {ORDER_STAGES_FLOW.map((stage) => {
+          // Calculate filtered count for delivered stage
+          const filteredOrders = stage === OrderStage.DELIVERED 
+            ? filterDeliveredByPeriod(ordersByStage[stage] || [])
+            : ordersByStage[stage];
+          
+          const count = filteredOrders?.length || 0;
+
+          return (
+            <div key={stage} className="flex-shrink-0 w-80 bg-gray-50 rounded-lg border flex flex-col max-h-[calc(100vh-140px)]">
+              {/* Stage Header */}
+              <div className={`p-4 border-b rounded-t-lg ${getStageColor(stage)}`}>
+                <h2 className="font-semibold text-center">
+                  {ORDER_STAGE_LABELS[stage]}
+                </h2>
+                <div className="text-center text-sm mt-1 opacity-75">
+                  {count} pedidos
+                </div>
+                
+                {/* Delivered Period Filter - only for Delivered stage */}
+                {stage === OrderStage.DELIVERED && (
+                  <div className="mt-3">
+                    <Select value={deliveredPeriod} onValueChange={(value) => setDeliveredPeriod(value as DeliveredPeriodType)}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        <SelectItem value="today">Hoje</SelectItem>
+                        <SelectItem value="last_7_days">Últimos 7 dias</SelectItem>
+                        <SelectItem value="current_month">Mês atual</SelectItem>
+                        <SelectItem value="last_month">Mês anterior</SelectItem>
+                        <SelectItem value="last_3_months">Últimos 3 meses</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
-              
-              {/* Delivered Period Filter - only for Delivered stage */}
-              {stage === OrderStage.DELIVERED && (
-                <div className="mt-3">
-                  <Select value={deliveredPeriod} onValueChange={(value) => setDeliveredPeriod(value as DeliveredPeriodType)}>
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="today">Hoje</SelectItem>
-                      <SelectItem value="last_7_days">Últimos 7 dias</SelectItem>
-                      <SelectItem value="current_month">Mês atual</SelectItem>
-                      <SelectItem value="last_month">Mês anterior</SelectItem>
-                      <SelectItem value="last_3_months">Últimos 3 meses</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
 
-            {/* Orders List */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-3">
-              {(stage === OrderStage.DELIVERED 
-                ? filterDeliveredByPeriod(ordersByStage[stage] || [])
-                : ordersByStage[stage])?.length === 0 ? (
-                <div className="text-center text-gray-400 text-sm py-8">
-                  Nenhum pedido
-                </div>
-              ) : (
-                (stage === OrderStage.DELIVERED
-                  ? filterDeliveredByPeriod(ordersByStage[stage] || [])
-                  : ordersByStage[stage])?.map((order: any) => {
-                  // Fallback logic for customer name
-                  const displayName = order.customer_name ?? order.opportunities?.leads?.name ?? 'Cliente não informado';
-                  
-                  return (
-                    <Card key={order.id} className="shadow-sm hover:shadow-md transition-shadow">
-                      <CardContent className="p-4 space-y-3">
-                        {/* Order Header */}
-                        <div className="flex justify-between items-start">
-                          <div className="flex items-center gap-2">
-                            <Hash size={16} className="text-gray-500" />
-                            <span className="font-bold text-sm">#{order.id.slice(0, 8)}</span>
+              {/* Orders List */}
+              <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                {filteredOrders?.length === 0 ? (
+                  <div className="text-center text-gray-400 text-sm py-8">
+                    Nenhum pedido
+                  </div>
+                ) : (
+                  filteredOrders?.map((order: any) => {
+                    // Fallback logic for customer name
+                    const displayName = order.customer_name ?? order.opportunities?.leads?.name ?? 'Cliente não informado';
+                    
+                    return (
+                      <Card key={order.id} className="shadow-sm hover:shadow-md transition-shadow">
+                        <CardContent className="p-4 space-y-3">
+                          {/* Order Header */}
+                          <div className="flex justify-between items-start">
+                            <div className="flex items-center gap-2">
+                              <Hash size={16} className="text-gray-500" />
+                              <span className="font-bold text-sm">#{order.id.slice(0, 8)}</span>
+                            </div>
+                            <Badge variant="secondary" className="text-xs">
+                              R$ {(order.total_value ?? 0).toFixed(2)}
+                            </Badge>
                           </div>
-                          <Badge variant="secondary" className="text-xs">
-                            R$ {(order.total_value ?? 0).toFixed(2)}
-                          </Badge>
-                        </div>
 
-                        {/* Customer Info */}
-                        <div className="text-sm">
-                          <span className="text-gray-500">Cliente: </span>
-                          <span className="font-medium">{displayName}</span>
-                        </div>
-
-                        {/* Internal Code */}
-                        {order.internal_code && (
+                          {/* Customer Info */}
                           <div className="text-sm">
-                            <span className="text-gray-500">Código: </span>
-                            <span className="font-mono text-xs">{order.internal_code}</span>
+                            <span className="text-gray-500">Cliente: </span>
+                            <span className="font-medium">{displayName}</span>
                           </div>
-                        )}
 
-                        {/* Delivery Address */}
-                        {order.delivery_address && (
-                          <div className="text-sm">
-                            <span className="text-gray-500">Entrega: </span>
-                            <span className="text-xs line-clamp-1">{order.delivery_address}</span>
-                          </div>
-                        )}
-
-                        {/* Product Name */}
-                        {order.opportunities?.products?.name && (
-                          <div className="text-sm">
-                            <span className="text-gray-500">Produto: </span>
-                            <span className="font-medium truncate block" title={order.opportunities.products.name}>
-                              {order.opportunities.products.name}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Date */}
-                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                          <Calendar size={12} />
-                          {new Date(order.created_at).toLocaleDateString()}
-                        </div>
-
-                        {/* Notes */}
-                        {order.notes && (
-                          <div className="text-xs text-gray-600 bg-gray-100 p-2 rounded">
-                            {order.notes}
-                          </div>
-                        )}
-
-                        {/* Action Buttons */}
-                        <div className="flex gap-2 items-center justify-between">
-                          {stage !== OrderStage.DELIVERED && stage !== OrderStage.CANCELED && (
-                            <Button
-                              onClick={() => {
-                                const currentIndex = ORDER_STAGES_FLOW.indexOf(stage);
-                                if (currentIndex !== -1 && currentIndex < ORDER_STAGES_FLOW.length - 1) {
-                                  handleMoveStage(order, ORDER_STAGES_FLOW[currentIndex + 1]);
-                                }
-                              }}
-                              disabled={movingOrder === order.id}
-                              size="sm"
-                              className="flex-1"
-                              variant="outline"
-                            >
-                              {movingOrder === order.id ? (
-                                'Movendo...'
-                              ) : (
-                                <>
-                                  Avançar
-                                  <ArrowRight size={14} className="ml-2" />
-                                </>
-                              )}
-                            </Button>
+                          {/* Internal Code */}
+                          {order.internal_code && (
+                            <div className="text-sm">
+                              <span className="text-gray-500">Código: </span>
+                              <span className="font-mono text-xs">{order.internal_code}</span>
+                            </div>
                           )}
 
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
+                          {/* Delivery Address */}
+                          {order.delivery_address && (
+                            <div className="text-sm">
+                              <span className="text-gray-500">Entrega: </span>
+                              <span className="text-xs line-clamp-1">{order.delivery_address}</span>
+                            </div>
+                          )}
+
+                          {/* Product Name */}
+                          {order.opportunities?.products?.name && (
+                            <div className="text-sm">
+                              <span className="text-gray-500">Produto: </span>
+                              <span className="font-medium truncate block" title={order.opportunities.products.name}>
+                                {order.opportunities.products.name}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Date */}
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <Calendar size={12} />
+                            {new Date(order.created_at).toLocaleDateString()}
+                          </div>
+
+                          {/* Notes */}
+                          {order.notes && (
+                            <div className="text-xs text-gray-600 bg-gray-100 p-2 rounded">
+                              {order.notes}
+                            </div>
+                          )}
+
+                          {/* Action Buttons */}
+                          <div className="flex gap-2 items-center justify-between">
+                            {stage !== OrderStage.DELIVERED && stage !== OrderStage.CANCELED && (
                               <Button
-                                variant="outline"
-                                size="sm"
+                                onClick={() => {
+                                  const currentIndex = ORDER_STAGES_FLOW.indexOf(stage);
+                                  if (currentIndex !== -1 && currentIndex < ORDER_STAGES_FLOW.length - 1) {
+                                    handleMoveStage(order, ORDER_STAGES_FLOW[currentIndex + 1]);
+                                  }
+                                }}
                                 disabled={movingOrder === order.id}
+                                size="sm"
+                                className="flex-1"
+                                variant="outline"
                               >
-                                <MoreHorizontal size={14} />
+                                {movingOrder === order.id ? (
+                                  'Movendo...'
+                                ) : (
+                                  <>
+                                    Avançar
+                                    <ArrowRight size={14} className="ml-2" />
+                                  </>
+                                )}
                               </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {ORDER_STAGES_FLOW.map((targetStage) => (
-                                targetStage !== stage && (
-                                  <DropdownMenuItem
-                                    key={targetStage}
-                                    onClick={() => handleMoveStage(order, targetStage)}
-                                  >
-                                    {ORDER_STAGE_LABELS[targetStage]}
-                                  </DropdownMenuItem>
-                                )
-                              ))}
-                              {isMaster && (
-                                <DropdownMenuItem 
-                                  onClick={() => handleHardDeleteOrder(order)}
-                                  className="text-red-600 font-semibold"
+                            )}
+
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={movingOrder === order.id}
                                 >
-                                  <Trash2 size={14} className="mr-2" />
-                                  Excluir Definitivamente
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })
-              )}
+                                  <MoreHorizontal size={14} />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {ORDER_STAGES_FLOW.map((targetStage) => (
+                                  targetStage !== stage && (
+                                    <DropdownMenuItem
+                                      key={targetStage}
+                                      onClick={() => handleMoveStage(order, targetStage)}
+                                    >
+                                      {ORDER_STAGE_LABELS[targetStage]}
+                                    </DropdownMenuItem>
+                                  )
+                                ))}
+                                {isMaster && (
+                                  <DropdownMenuItem 
+                                    onClick={() => handleHardDeleteOrder(order)}
+                                    className="text-red-600 font-semibold"
+                                  >
+                                    <Trash2 size={14} className="mr-2" />
+                                    Excluir Definitivamente
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       
       <HardDeleteConfirmDialog

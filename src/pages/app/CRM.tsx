@@ -770,7 +770,7 @@ const CRM = () => {
                         {(lead.unread_interest_count || 0) > 0 && (
                           <Badge className="bg-blue-600 text-white">
                             <Bell size={12} className="mr-1" />
-                            Novo ({lead.unread_interest_count})
+                            Novo Interesse ({lead.unread_interest_count})
                           </Badge>
                         )}
                         {isNewLead(lead) && (

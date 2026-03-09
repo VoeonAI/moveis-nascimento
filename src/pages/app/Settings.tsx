@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/core/auth/AuthProvider";
 import { Role } from "@/constants/domain";
 import { PermissionGate } from "@/core/guards/PermissionGate";

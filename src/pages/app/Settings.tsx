@@ -11,8 +11,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
-import { RefreshCw, Globe, Phone, Code, Clock, Copy, Save, Loader2, Key, Plus, AlertCircle } from "lucide-react";
+import { RefreshCw, Globe, Phone, Code, Clock, Copy, Save, Loader2, Key, Plus, AlertCircle, Edit, Trash2 } from "lucide-react";
 
 import {
   webhooksManagementService,
@@ -39,15 +40,21 @@ export default function Settings() {
   const [savingWhatsApp, setSavingWhatsApp] = useState(false);
   const [whatsappSaved, setWhatsappSaved] = useState(false);
 
-  // Webhook creation state
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [createFormData, setCreateFormData] = useState({
+  // Webhook creation/edit state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingEndpoint, setEditingEndpoint] = useState<WebhookEndpoint | null>(null);
+  const [formData, setFormData] = useState({
     name: '',
     url: '',
     active: true,
     events: [] as string[],
   });
-  const [creatingEndpoint, setCreatingEndpoint] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Delete confirmation state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [endpointToDelete, setEndpointToDelete] = useState<WebhookEndpoint | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
   const projectRef = useMemo(() => {
@@ -142,37 +149,72 @@ export default function Settings() {
     }
   }
 
-  const handleCreateEndpoint = async (e: React.FormEvent) => {
+  const handleOpenCreateModal = () => {
+    setEditingEndpoint(null);
+    setFormData({
+      name: '',
+      url: '',
+      active: true,
+      events: [],
+    });
+    setModalOpen(true);
+  };
+
+  const handleOpenEditModal = (endpoint: WebhookEndpoint) => {
+    setEditingEndpoint(endpoint);
+    setFormData({
+      name: endpoint.name,
+      url: endpoint.url,
+      active: endpoint.active,
+      events: endpoint.events,
+    });
+    setModalOpen(true);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!createFormData.name.trim()) {
+    if (!formData.name.trim()) {
       showError("Nome é obrigatório");
       return;
     }
     
-    if (!createFormData.url.trim()) {
+    if (!formData.url.trim()) {
       showError("URL é obrigatória");
       return;
     }
     
-    if (createFormData.events.length === 0) {
+    if (formData.events.length === 0) {
       showError("Selecione pelo menos um evento");
       return;
     }
     
-    setCreatingEndpoint(true);
+    setSaving(true);
     try {
-      await webhooksManagementService.createEndpoint({
-        name: createFormData.name,
-        url: createFormData.url,
-        active: createFormData.active,
-        events: createFormData.events,
-        secret: undefined,
-      });
+      if (editingEndpoint) {
+        // Update existing endpoint
+        await webhooksManagementService.updateEndpoint(editingEndpoint.id, {
+          name: formData.name,
+          url: formData.url,
+          active: formData.active,
+          events: formData.events,
+        });
+        showSuccess("Endpoint atualizado com sucesso");
+      } else {
+        // Create new endpoint
+        await webhooksManagementService.createEndpoint({
+          name: formData.name,
+          url: formData.url,
+          active: formData.active,
+          events: formData.events,
+          secret: undefined,
+        });
+        showSuccess("Endpoint criado com sucesso");
+      }
       
-      showSuccess("Endpoint criado com sucesso");
-      setCreateModalOpen(false);
-      setCreateFormData({
+      setModalOpen(false);
+      setEditingEndpoint(null);
+      setFormData({
         name: '',
         url: '',
         active: true,
@@ -180,15 +222,38 @@ export default function Settings() {
       });
       await loadData();
     } catch (error: any) {
-      console.error("[Settings] create endpoint error", error);
-      showError(error.message || "Erro ao criar endpoint");
+      console.error("[Settings] save endpoint error", error);
+      showError(error.message || "Erro ao salvar endpoint");
     } finally {
-      setCreatingEndpoint(false);
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteClick = (endpoint: WebhookEndpoint) => {
+    setEndpointToDelete(endpoint);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!endpointToDelete) return;
+    
+    setDeleting(true);
+    try {
+      await webhooksManagementService.deleteEndpoint(endpointToDelete.id);
+      showSuccess("Endpoint excluído com sucesso");
+      setDeleteDialogOpen(false);
+      setEndpointToDelete(null);
+      await loadData();
+    } catch (error: any) {
+      console.error("[Settings] delete endpoint error", error);
+      showError(error.message || "Erro ao excluir endpoint");
+    } finally {
+      setDeleting(false);
     }
   };
 
   const toggleEvent = (eventKey: string) => {
-    setCreateFormData(prev => ({
+    setFormData(prev => ({
       ...prev,
       events: prev.events.includes(eventKey)
         ? prev.events.filter(e => e !== eventKey)
@@ -226,7 +291,7 @@ export default function Settings() {
                   <CardDescription>Configure endpoints para receber notificações de eventos</CardDescription>
                 </div>
                 <PermissionGate allowedRoles={[Role.MASTER]}>
-                  <Button onClick={() => setCreateModalOpen(true)}>
+                  <Button onClick={handleOpenCreateModal}>
                     <Plus size={16} className="mr-2" />
                     Novo Endpoint
                   </Button>
@@ -243,15 +308,32 @@ export default function Settings() {
                   {endpoints.map((ep) => (
                     <div key={ep.id} className="border rounded-lg p-4">
                       <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 mb-2">
                             <div className="font-semibold">{ep.name}</div>
                             <Badge variant={ep.active ? "default" : "secondary"}>{ep.active ? "Ativo" : "Inativo"}</Badge>
                           </div>
-                          <div className="text-xs text-gray-600 font-mono break-all mt-1">{ep.url}</div>
+                          <div className="text-xs text-gray-600 font-mono break-all">{ep.url}</div>
                         </div>
                         <PermissionGate allowedRoles={[Role.MASTER]}>
-                          <div className="text-xs text-gray-500">Edição avançada permanece na versão anterior.</div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenEditModal(ep)}
+                            >
+                              <Edit size={14} className="mr-1" />
+                              Editar
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteClick(ep)}
+                            >
+                              <Trash2 size={14} className="mr-1" />
+                              Excluir
+                            </Button>
+                          </div>
                         </PermissionGate>
                       </div>
 
@@ -422,25 +504,25 @@ export default function Settings() {
         )}
       </Tabs>
 
-      {/* Create Webhook Modal */}
-      <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
+      {/* Create/Edit Webhook Modal */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Novo Endpoint de Webhook</DialogTitle>
+            <DialogTitle>{editingEndpoint ? 'Editar Endpoint de Webhook' : 'Novo Endpoint de Webhook'}</DialogTitle>
             <DialogDescription>
-              Configure um novo endpoint para receber notificações de eventos.
+              {editingEndpoint ? 'Altere as configurações do endpoint.' : 'Configure um novo endpoint para receber notificações de eventos.'}
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleCreateEndpoint} className="space-y-4 mt-4">
+          <form onSubmit={handleSave} className="space-y-4 mt-4">
             <div className="space-y-2">
               <Label htmlFor="webhook_name">Nome *</Label>
               <Input
                 id="webhook_name"
-                value={createFormData.name}
-                onChange={(e) => setCreateFormData({ ...createFormData, name: e.target.value })}
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Ex: Integração n8n"
-                disabled={creatingEndpoint}
+                disabled={saving}
                 required
               />
             </div>
@@ -449,10 +531,10 @@ export default function Settings() {
               <Label htmlFor="webhook_url">URL *</Label>
               <Input
                 id="webhook_url"
-                value={createFormData.url}
-                onChange={(e) => setCreateFormData({ ...createFormData, url: e.target.value })}
+                value={formData.url}
+                onChange={(e) => setFormData({ ...formData, url: e.target.value })}
                 placeholder="https://seu-endpoint.com/webhook"
-                disabled={creatingEndpoint}
+                disabled={saving}
                 required
               />
             </div>
@@ -460,9 +542,9 @@ export default function Settings() {
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="webhook_active"
-                checked={createFormData.active}
-                onCheckedChange={(checked) => setCreateFormData({ ...createFormData, active: checked as boolean })}
-                disabled={creatingEndpoint}
+                checked={formData.active}
+                onCheckedChange={(checked) => setFormData({ ...formData, active: checked as boolean })}
+                disabled={saving}
               />
               <Label htmlFor="webhook_active" className="cursor-pointer">
                 Ativo
@@ -476,9 +558,9 @@ export default function Settings() {
                   <div key={key} className="flex items-center space-x-2">
                     <Checkbox
                       id={`event_${key}`}
-                      checked={createFormData.events.includes(value)}
+                      checked={formData.events.includes(value)}
                       onCheckedChange={() => toggleEvent(value)}
-                      disabled={creatingEndpoint}
+                      disabled={saving}
                     />
                     <Label htmlFor={`event_${key}`} className="cursor-pointer">
                       {WEBHOOK_EVENT_LABELS[value as keyof typeof WEBHOOK_EVENT_LABELS] || value}
@@ -492,25 +574,56 @@ export default function Settings() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setCreateModalOpen(false)}
-                disabled={creatingEndpoint}
+                onClick={() => {
+                  setModalOpen(false);
+                  setEditingEndpoint(null);
+                  setFormData({
+                    name: '',
+                    url: '',
+                    active: true,
+                    events: [],
+                  });
+                }}
+                disabled={saving}
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={creatingEndpoint}>
-                {creatingEndpoint ? (
+              <Button type="submit" disabled={saving}>
+                {saving ? (
                   <>
                     <Loader2 size={16} className="mr-2 animate-spin" />
-                    Criando...
+                    Salvando...
                   </>
                 ) : (
-                  'Criar Endpoint'
+                  editingEndpoint ? 'Salvar alterações' : 'Criar Endpoint'
                 )}
               </Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir endpoint de webhook?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação removerá o endpoint e ele não receberá mais eventos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? 'Excluindo...' : 'Excluir'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

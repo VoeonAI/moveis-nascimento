@@ -49,7 +49,12 @@ export const productsService = {
       const { data, error } = await query;
 
       if (error) {
-        console.error('[productsService.listPublicProducts]', error.message);
+        console.error('[productsService.listPublicProducts] Query error:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+        });
         return [];
       }
 
@@ -58,8 +63,8 @@ export const productsService = {
         ...product,
         categories: product.product_categories?.map((pc: any) => pc.categories) || [],
       }));
-    } catch (error) {
-      console.error('[productsService.listPublicProducts]', error);
+    } catch (error: any) {
+      console.error('[productsService.listPublicProducts] Unexpected error:', error);
       return [];
     }
   },
@@ -79,7 +84,12 @@ export const productsService = {
         .single();
 
       if (error) {
-        console.error('[productsService.getProductById]', error.message);
+        console.error('[productsService.getProductById] Query error:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+        });
         return null;
       }
       if (!data) return null;
@@ -88,8 +98,8 @@ export const productsService = {
         ...data,
         categories: data.product_categories?.map((pc: any) => pc.categories) || [],
       };
-    } catch (error) {
-      console.error('[productsService.getProductById]', error);
+    } catch (error: any) {
+      console.error('[productsService.getProductById] Unexpected error:', error);
       return null;
     }
   },
@@ -120,7 +130,12 @@ export const productsService = {
       const { data, error } = await query;
 
       if (error) {
-        console.error('[productsService.listAllProducts]', error.message);
+        console.error('[productsService.listAllProducts] Query error:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+        });
         return [];
       }
 
@@ -129,8 +144,8 @@ export const productsService = {
         ...product,
         categories: product.product_categories?.map((pc: any) => pc.categories) || [],
       }));
-    } catch (error) {
-      console.error('[productsService.listAllProducts]', error);
+    } catch (error: any) {
+      console.error('[productsService.listAllProducts] Unexpected error:', error);
       return [];
     }
   },

@@ -23,6 +23,12 @@ function log(level: 'info' | 'error', requestId: string, message: string, data?:
   console.log(JSON.stringify(logEntry))
 }
 
+// Helper to normalize phone numbers
+function normalizePhone(phone: string): string {
+  // Remove all non-numeric characters
+  return phone.replace(/\D/g, '');
+}
+
 // Helper to emit webhooks (best-effort)
 async function emitWebhook(supabase: any, eventType: string, payload: any, channel: string) {
   try {
@@ -65,13 +71,17 @@ serve(async (req) => {
 
     const { product_id, name, phone, message, source = 'site', page_url } = body
 
+    // Normalize phone if provided
+    const normalizedPhone = phone ? normalizePhone(phone) : null;
+
     log('info', requestId, 'Request received', {
       product_id,
       has_name: !!name,
-      has_phone: !!phone,
+      has_phone: !!normalizedPhone,
       has_message: !!message,
       source,
       page_url,
+      normalizedPhone: normalizedPhone ? normalizedPhone.substring(0, 4) + '***' : null,
     })
 
     if (!product_id) {
@@ -113,14 +123,14 @@ serve(async (req) => {
 
     log('info', requestId, 'Product found', { product_id, product_name: product.name })
 
-    // 2. Deduplicate/Find Lead
+    // 2. Deduplicate/Find Lead (using normalized phone)
     let lead = null
-    if (phone) {
-      log('info', requestId, 'Searching for existing lead')
+    if (normalizedPhone) {
+      log('info', requestId, 'Searching for existing lead', { normalizedPhone: normalizedPhone.substring(0, 4) + '***' })
       const { data: existingLead } = await supabase
         .from('leads')
         .select('*')
-        .eq('phone', phone)
+        .eq('phone', normalizedPhone)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
@@ -134,7 +144,7 @@ serve(async (req) => {
         .from('leads')
         .insert({
           name: name || 'Cliente Interessado',
-          phone,
+          phone: normalizedPhone,
           channel: source,
           status: 'new_interest',
           notes: message,
@@ -249,7 +259,7 @@ Link: ${page_url || `/product/${product.id}`}
 ${message ? `Mensagem: ${message}` : ''}
 
 Nome: ${lead.name}
-${phone ? `Telefone: ${phone}` : ''}`
+${normalizedPhone ? `Telefone: ${normalizedPhone}` : ''}`
 
     // 7. Webhooks (best-effort)
     const webhookPayload = {

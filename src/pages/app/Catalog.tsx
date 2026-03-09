@@ -40,6 +40,8 @@ const Catalog = () => {
     price: '',
     category_id: '',
     active: true,
+    featured: false,
+    on_promotion: false,
     metadata: {
       attrs: {} as Record<string, any>,
     },
@@ -115,6 +117,8 @@ const Catalog = () => {
       price: '',
       category_id: '',
       active: true,
+      featured: false,
+      on_promotion: false,
       metadata: {
         attrs: {},
       },
@@ -134,6 +138,8 @@ const Catalog = () => {
       price: String(product.price ?? product.metadata?.price ?? ''),
       category_id: product.categories?.[0]?.id || '',
       active: product.active,
+      featured: product.featured || false,
+      on_promotion: product.on_promotion || false,
       metadata: {
         attrs: product.metadata?.attrs || {},
       },
@@ -213,6 +219,8 @@ const Catalog = () => {
           name: formData.name,
           description: formData.description,
           active: formData.active,
+          featured: formData.featured,
+          on_promotion: formData.on_promotion,
           images: currentImages,
           metadata: {
             ...formData.metadata,
@@ -226,6 +234,8 @@ const Catalog = () => {
           name: formData.name,
           description: formData.description,
           active: formData.active,
+          featured: formData.featured,
+          on_promotion: formData.on_promotion,
           metadata: {
             ...formData.metadata,
             price: formData.price ? Number(formData.price) : null,
@@ -394,6 +404,14 @@ const Catalog = () => {
                     ))}
                   </div>
                 )}
+                <div className="mt-3 flex gap-2">
+                  {product.featured && (
+                    <Badge variant="default" className="text-xs">Em Destaque</Badge>
+                  )}
+                  {product.on_promotion && (
+                    <Badge variant="secondary" className="text-xs">Promoção</Badge>
+                  )}
+                </div>
               </CardContent>
             </Card>
           );
@@ -486,6 +504,30 @@ const Catalog = () => {
               />
               <Label htmlFor="active" className="cursor-pointer">
                 Produto Ativo
+              </Label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="featured"
+                checked={formData.featured}
+                onCheckedChange={(checked) => setFormData({ ...formData, featured: checked })}
+                disabled={saving}
+              />
+              <Label htmlFor="featured" className="cursor-pointer">
+                Produto em Destaque (Vitrine)
+              </Label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="on_promotion"
+                checked={formData.on_promotion}
+                onCheckedChange={(checked) => setFormData({ ...formData, on_promotion: checked })}
+                disabled={saving}
+              />
+              <Label htmlFor="on_promotion" className="cursor-pointer">
+                Em Promoção (Selo)
               </Label>
             </div>
 

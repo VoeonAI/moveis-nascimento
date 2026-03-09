@@ -11,6 +11,8 @@ export interface Product {
   active: boolean;
   images: any[];
   metadata: any;
+  featured: boolean;
+  on_promotion: boolean;
   created_at: string;
   categories?: Category[];
 }
@@ -26,7 +28,7 @@ export const productsService = {
       let query = supabase
         .from('products')
         .select(`
-          id, name, description, images, metadata, active,
+          id, name, description, images, metadata, active, featured, on_promotion,
           product_categories (
             categories (*)
           )
@@ -67,7 +69,7 @@ export const productsService = {
       const { data, error } = await supabase
         .from('products')
         .select(`
-          id, name, description, images, metadata, active,
+          id, name, description, images, metadata, active, featured, on_promotion,
           product_categories (
             categories (*)
           )
@@ -97,7 +99,7 @@ export const productsService = {
       let query = supabase
         .from('products')
         .select(`
-          id, name, description, images, metadata, active,
+          id, name, description, images, metadata, active, featured, on_promotion,
           product_categories (
             categories (*)
           )

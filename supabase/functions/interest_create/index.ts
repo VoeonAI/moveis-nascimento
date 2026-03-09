@@ -222,15 +222,24 @@ serve(async (req) => {
       })
 
       // 5. Increment unread count and update activity
+      // FIX: Fetch fresh value to avoid race condition
+      const { data: freshLead } = await supabase
+        .from('leads')
+        .select('unread_interest_count')
+        .eq('id', lead.id)
+        .single()
+
+      const currentCount = freshLead?.unread_interest_count || 0
+
       await supabase
         .from('leads')
         .update({
-          unread_interest_count: (lead.unread_interest_count || 0) + 1,
+          unread_interest_count: currentCount + 1,
           last_activity_at: new Date().toISOString(),
         })
         .eq('id', lead.id)
 
-      log('info', requestId, 'Timeline and lead stats updated')
+      log('info', requestId, 'Timeline and lead stats updated', { unread_interest_count: currentCount + 1 })
 
       // Emit opportunity.created webhook (server-side)
       await emitWebhook(supabase, 'opportunity.created', {

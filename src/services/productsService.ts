@@ -104,6 +104,7 @@ export const productsService = {
             categories (*)
           )
         `)
+        .eq('active', true)
         .order('created_at', { ascending: false });
 
       // Filter by category slug

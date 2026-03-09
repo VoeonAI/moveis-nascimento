@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "@/core/auth/AuthProvider";
 import { Role } from "@/constants/domain";
 import { PermissionGate } from "@/core/guards/PermissionGate";
@@ -9,8 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
-import { RefreshCw, Globe, Phone, Code, Clock, Copy, Save, Loader2, Key } from "lucide-react";
+import { RefreshCw, Globe, Phone, Code, Clock, Copy, Save, Loader2, Key, Plus, AlertCircle } from "lucide-react";
 
 import {
   webhooksManagementService,
@@ -36,6 +38,16 @@ export default function Settings() {
   const [storeWhatsApp, setStoreWhatsApp] = useState("");
   const [savingWhatsApp, setSavingWhatsApp] = useState(false);
   const [whatsappSaved, setWhatsappSaved] = useState(false);
+
+  // Webhook creation state
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createFormData, setCreateFormData] = useState({
+    name: '',
+    url: '',
+    active: true,
+    events: [] as string[],
+  });
+  const [creatingEndpoint, setCreatingEndpoint] = useState(false);
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
   const projectRef = useMemo(() => {
@@ -130,6 +142,60 @@ export default function Settings() {
     }
   }
 
+  const handleCreateEndpoint = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!createFormData.name.trim()) {
+      showError("Nome é obrigatório");
+      return;
+    }
+    
+    if (!createFormData.url.trim()) {
+      showError("URL é obrigatória");
+      return;
+    }
+    
+    if (createFormData.events.length === 0) {
+      showError("Selecione pelo menos um evento");
+      return;
+    }
+    
+    setCreatingEndpoint(true);
+    try {
+      await webhooksManagementService.createEndpoint({
+        name: createFormData.name,
+        url: createFormData.url,
+        active: createFormData.active,
+        events: createFormData.events,
+        secret: undefined,
+      });
+      
+      showSuccess("Endpoint criado com sucesso");
+      setCreateModalOpen(false);
+      setCreateFormData({
+        name: '',
+        url: '',
+        active: true,
+        events: [],
+      });
+      await loadData();
+    } catch (error: any) {
+      console.error("[Settings] create endpoint error", error);
+      showError(error.message || "Erro ao criar endpoint");
+    } finally {
+      setCreatingEndpoint(false);
+    }
+  };
+
+  const toggleEvent = (eventKey: string) => {
+    setCreateFormData(prev => ({
+      ...prev,
+      events: prev.events.includes(eventKey)
+        ? prev.events.filter(e => e !== eventKey)
+        : [...prev.events, eventKey],
+    }));
+  };
+
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
@@ -154,8 +220,18 @@ export default function Settings() {
         <TabsContent value="webhooks">
           <Card>
             <CardHeader>
-              <CardTitle>Webhooks</CardTitle>
-              <CardDescription>Configure endpoints para receber notificações de eventos</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Webhooks</CardTitle>
+                  <CardDescription>Configure endpoints para receber notificações de eventos</CardDescription>
+                </div>
+                <PermissionGate allowedRoles={[Role.MASTER]}>
+                  <Button onClick={() => setCreateModalOpen(true)}>
+                    <Plus size={16} className="mr-2" />
+                    Novo Endpoint
+                  </Button>
+                </PermissionGate>
+              </div>
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -345,6 +421,96 @@ export default function Settings() {
           </TabsContent>
         )}
       </Tabs>
+
+      {/* Create Webhook Modal */}
+      <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Novo Endpoint de Webhook</DialogTitle>
+            <DialogDescription>
+              Configure um novo endpoint para receber notificações de eventos.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleCreateEndpoint} className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="webhook_name">Nome *</Label>
+              <Input
+                id="webhook_name"
+                value={createFormData.name}
+                onChange={(e) => setCreateFormData({ ...createFormData, name: e.target.value })}
+                placeholder="Ex: Integração n8n"
+                disabled={creatingEndpoint}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="webhook_url">URL *</Label>
+              <Input
+                id="webhook_url"
+                value={createFormData.url}
+                onChange={(e) => setCreateFormData({ ...createFormData, url: e.target.value })}
+                placeholder="https://seu-endpoint.com/webhook"
+                disabled={creatingEndpoint}
+                required
+              />
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="webhook_active"
+                checked={createFormData.active}
+                onCheckedChange={(checked) => setCreateFormData({ ...createFormData, active: checked as boolean })}
+                disabled={creatingEndpoint}
+              />
+              <Label htmlFor="webhook_active" className="cursor-pointer">
+                Ativo
+              </Label>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Eventos *</Label>
+              <div className="space-y-2">
+                {Object.entries(WEBHOOK_EVENTS).map(([key, value]) => (
+                  <div key={key} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`event_${key}`}
+                      checked={createFormData.events.includes(value)}
+                      onCheckedChange={() => toggleEvent(value)}
+                      disabled={creatingEndpoint}
+                    />
+                    <Label htmlFor={`event_${key}`} className="cursor-pointer">
+                      {WEBHOOK_EVENT_LABELS[value as keyof typeof WEBHOOK_EVENT_LABELS] || value}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCreateModalOpen(false)}
+                disabled={creatingEndpoint}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={creatingEndpoint}>
+                {creatingEndpoint ? (
+                  <>
+                    <Loader2 size={16} className="mr-2 animate-spin" />
+                    Criando...
+                  </>
+                ) : (
+                  'Criar Endpoint'
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ArrowRight, Filter, Heart, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {

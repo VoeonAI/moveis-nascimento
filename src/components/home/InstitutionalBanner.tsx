@@ -12,10 +12,10 @@ const InstitutionalBanner = ({
   backgroundImage
 }: InstitutionalBannerProps) => {
   return (
-    <section className="py-16">
+    <section className="py-8">
       <div className="max-w-[1200px] mx-auto px-4">
         <div 
-          className="bg-gradient-to-r from-green-700 to-green-600 rounded-2xl p-12 text-white text-center relative overflow-hidden"
+          className="bg-gradient-to-r from-green-700 to-green-600 rounded-2xl p-10 md:p-12 text-white text-center relative overflow-hidden"
           style={backgroundImage ? { backgroundImage: `url(${backgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
         >
           {/* Overlay if background image exists */}

@@ -11,6 +11,7 @@ interface HowToBuyProps {
     description: string;
   }>;
   ctaText?: string;
+  showMascot?: boolean;
 }
 
 const defaultSteps = [
@@ -40,7 +41,8 @@ const HowToBuy = ({
   title = "Como comprar",
   subtitle = "Simples, rápido e personalizado",
   steps = defaultSteps,
-  ctaText = "Fale com o Nas"
+  ctaText = "Fale com o Nas",
+  showMascot = true
 }: HowToBuyProps) => {
   const handleWhatsAppClick = () => {
     window.open('https://wa.me/5511999999999', '_blank');
@@ -50,6 +52,15 @@ const HowToBuy = ({
     <section className="bg-white py-20">
       <div className="max-w-7xl mx-auto px-4">
         <div className="text-center mb-12">
+          {showMascot && (
+            <div className="mb-6">
+              <img 
+                src="https://kbpkdnptzvsvoujirfwe.supabase.co/storage/v1/object/public/logo-variacoes/Mascote%203D%20-%20Moveis%20Nascimento.png"
+                alt="Mascote Móveis Nascimento"
+                className="h-32 mx-auto"
+              />
+            </div>
+          )}
           <h2 className="text-3xl font-bold text-gray-800">{title}</h2>
           <p className="text-gray-600 mt-2">{subtitle}</p>
         </div>

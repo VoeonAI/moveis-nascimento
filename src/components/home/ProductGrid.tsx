@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Filter } from 'lucide-react';
+import { ArrowRight, Filter, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -66,16 +66,27 @@ const ProductGrid = () => {
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {filteredProducts.map((product) => (
-          <Card key={product.id} className="overflow-hidden group hover:shadow-lg transition-shadow">
+          <Card key={product.id} className="overflow-hidden group hover:shadow-xl transition-all duration-300 relative">
             <CardContent className="p-0">
-              <div className="aspect-square bg-gray-100">
+              <div className="aspect-square bg-gray-100 relative">
                 <img
                   src={product.image}
                   alt={product.name}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
+                
+                {/* Overlay com botão "Gostei" */}
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                  <Button 
+                    size="lg"
+                    className="bg-white text-green-600 hover:bg-green-600 hover:text-white font-semibold px-6 py-3 rounded-lg"
+                  >
+                    <Heart size={20} className="mr-2" />
+                    GOSTEI DESSE PRODUTO
+                  </Button>
+                </div>
               </div>
               <div className="p-4">
                 <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>

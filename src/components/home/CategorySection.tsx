@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -47,18 +49,6 @@ const categories = [
     slug: 'multiuso',
     image: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=400&q=80',
   },
-];
-
-const allCategories = [
-  'Sala',
-  'Sala de jantar',
-  'Quarto',
-  'Cozinha',
-  'Escritório',
-  'Infantil',
-  'Multiuso',
-  'Bikes',
-  'Outros',
 ];
 
 const CategorySection = () => {
@@ -106,7 +96,7 @@ const CategorySection = () => {
         ))}
       </div>
 
-      {/* All Categories Dropdown */}
+      {/* All Categories Dropdown with Subcategories */}
       <div className="bg-white rounded-xl shadow-sm p-6">
         <div className="flex items-center gap-4">
           <span className="text-sm font-medium text-gray-700">Categorias completas:</span>
@@ -116,11 +106,47 @@ const CategorySection = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas</SelectItem>
-              {allCategories.map((cat) => (
-                <SelectItem key={cat} value={cat.toLowerCase().replace(' ', '_')}>
-                  {cat}
-                </SelectItem>
-              ))}
+              
+              <SelectGroup>
+                <SelectLabel>Sala</SelectLabel>
+                <SelectItem value="sofa">Sofá</SelectItem>
+                <SelectItem value="rack">Rack</SelectItem>
+                <SelectItem value="estante">Estante</SelectItem>
+                <SelectItem value="painel-tv">Painel TV</SelectItem>
+              </SelectGroup>
+
+              <SelectGroup>
+                <SelectLabel>Quarto</SelectLabel>
+                <SelectItem value="guarda-roupa">Guarda-roupa</SelectItem>
+                <SelectItem value="cama">Cama</SelectItem>
+                <SelectItem value="cabeceira">Cabeceira</SelectItem>
+                <SelectItem value="criado-mudo">Criado-mudo</SelectItem>
+              </SelectGroup>
+
+              <SelectGroup>
+                <SelectLabel>Cozinha</SelectLabel>
+                <SelectItem value="armario">Armário</SelectItem>
+                <SelectItem value="mesa">Mesa</SelectItem>
+                <SelectItem value="cadeira">Cadeira</SelectItem>
+              </SelectGroup>
+
+              <SelectGroup>
+                <SelectLabel>Escritório</SelectLabel>
+                <SelectItem value="mesa-escritorio">Mesa escritório</SelectItem>
+                <SelectItem value="cadeira-escritorio">Cadeira escritório</SelectItem>
+              </SelectGroup>
+
+              <SelectGroup>
+                <SelectLabel>Infantil</SelectLabel>
+                <SelectItem value="cama-infantil">Cama infantil</SelectItem>
+                <SelectItem value="guarda-roupa-infantil">Guarda-roupa infantil</SelectItem>
+              </SelectGroup>
+
+              <SelectGroup>
+                <SelectLabel>Outros</SelectLabel>
+                <SelectItem value="bikes">Bikes</SelectItem>
+                <SelectItem value="multiuso">Multiuso</SelectItem>
+              </SelectGroup>
             </SelectContent>
           </Select>
         </div>

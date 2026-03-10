@@ -14,7 +14,6 @@ const HomeHeader = () => {
   };
 
   const handleWhatsAppClick = () => {
-    // Futuro: integrar com IA ou abrir WhatsApp
     window.open('https://wa.me/5511999999999', '_blank');
   };
 
@@ -23,12 +22,13 @@ const HomeHeader = () => {
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">N</span>
-            </div>
-            <span className="font-bold text-xl text-gray-800">Móveis Nascimento</span>
-          </div>
+          <Link to="/" className="flex items-center gap-3">
+            <img 
+              src="https://kbpkdnptzvsvoujirfwe.supabase.co/storage/v1/object/public/logo-variacoes/Moveis-nascimento---logo-site.png"
+              alt="Móveis Nascimento"
+              className="h-12 w-auto"
+            />
+          </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">

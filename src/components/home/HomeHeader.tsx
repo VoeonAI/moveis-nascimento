@@ -21,13 +21,13 @@ const HomeHeader = () => {
   return (
     <header className="bg-white/95 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-100 shadow-sm">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
+        <div className="flex items-center justify-between h-20">
+          {/* Logo - Aumentado em 60% (h-12 → h-20) */}
           <Link to="/" className="flex items-center gap-3">
             <img 
               src="https://kbpkdnptzvsvoujirfwe.supabase.co/storage/v1/object/public/logo-variacoes/Moveis-nascimento---logo-site.png"
               alt="Móveis Nascimento"
-              className="h-12 w-auto"
+              className="h-20 w-auto"
             />
           </Link>
 

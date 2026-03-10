@@ -6,6 +6,9 @@ import CategorySection from '@/components/home/CategorySection';
 import InstitutionalBanner from '@/components/home/InstitutionalBanner';
 import HowToBuy from '@/components/home/HowToBuy';
 import ProductGrid from '@/components/home/ProductGrid';
+import EnvironmentsSection from '@/components/home/EnvironmentsSection';
+import PopularProducts from '@/components/home/PopularProducts';
+import PersonalizedService from '@/components/home/PersonalizedService';
 import { Card, CardContent } from '@/components/ui/card';
 
 const HomeNew = () => {
@@ -20,11 +23,20 @@ const HomeNew = () => {
       {/* Categorias Principais */}
       <CategorySection />
 
+      {/* NOVO: Ambientes em Destaque */}
+      <EnvironmentsSection />
+
       {/* Banner Institucional */}
       <InstitutionalBanner />
 
       {/* Como Comprar */}
       <HowToBuy />
+
+      {/* NOVO: Produtos Mais Procurados/Vendidos */}
+      <PopularProducts />
+
+      {/* NOVO: Atendimento Personalizado */}
+      <PersonalizedService />
 
       {/* Produtos Destaque */}
       <section className="bg-white py-20">
@@ -40,8 +52,8 @@ const HomeNew = () => {
                 <CardContent className="p-0">
                   <div className="aspect-video bg-gray-100">
                     <img
-                      src={`https://images.unsplash.com/photo-${[
-                        '1555041469-a586c61ea9bc',
+                      src={`https://images.unsplash.com/photo-${
+                        ['1555041469-a586c61ea9bc',
                         '1616594039914-746bb0062b09',
                         '1556911220-e15b29be8c8f'
                       ][i - 1]}?w=400&q=80`}

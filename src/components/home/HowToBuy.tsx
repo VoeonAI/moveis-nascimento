@@ -27,7 +27,7 @@ const defaultSteps = [
   {
     icon: <MessageCircle size={32} className="text-purple-600" />,
     title: 'Fale com o Nas',
-    description: 'Receba atendimento personalizado via WhatsApp',
+    description: 'Faça um pequeno cadastro para consultar no Whats',
   },
   {
     icon: <UserCheck size={32} className="text-orange-600" />,

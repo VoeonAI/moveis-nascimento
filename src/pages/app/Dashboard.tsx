@@ -624,10 +624,21 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* Conversão por Produto */}
+        {/* Conversão por Produto - Limitado a 10 */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Conversão por Produto</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Conversão por Produto</CardTitle>
+              {productConversions.length > 10 && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  asChild
+                >
+                  <a href="/app/products-dashboard">Ver mais</a>
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {productConversions.length === 0 ? (
@@ -647,7 +658,7 @@ const Dashboard = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {productConversions.map((product) => (
+                    {productConversions.slice(0, 10).map((product) => (
                       <TableRow key={product.id}>
                         <TableCell className="font-medium">{product.name}</TableCell>
                         <TableCell>{product.category_name}</TableCell>
@@ -666,18 +677,37 @@ const Dashboard = () => {
                     ))}
                   </TableBody>
                 </Table>
+                {productConversions.length > 10 && (
+                  <div className="mt-4 text-center text-sm text-gray-500">
+                    +{productConversions.length - 10} produtos restantes.{' '}
+                    <a href="/app/products-dashboard" className="text-blue-600 hover:underline">
+                      Ver todos
+                    </a>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Produtos Sem Movimentação */}
+        {/* Produtos Sem Movimentação - Limitado a 5 */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle size={20} className="text-orange-500" />
-              Produtos Sem Movimentação
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle size={20} className="text-orange-500" />
+                Produtos Sem Movimentação
+              </CardTitle>
+              {productsWithoutActivity.length > 5 && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  asChild
+                >
+                  <a href="/app/products-dashboard">Ver mais</a>
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {productsWithoutActivity.length === 0 ? (
@@ -685,17 +715,27 @@ const Dashboard = () => {
                 Todos os produtos ativos têm oportunidades associadas
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {productsWithoutActivity.map((product) => (
-                  <div 
-                    key={product.id}
-                    className="border rounded-lg p-4 bg-orange-50 border-orange-200"
-                  >
-                    <div className="font-medium text-sm mb-1">{product.name}</div>
-                    <div className="text-xs text-gray-600">{product.category_name}</div>
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {productsWithoutActivity.slice(0, 5).map((product) => (
+                    <div 
+                      key={product.id}
+                      className="border rounded-lg p-4 bg-orange-50 border-orange-200"
+                    >
+                      <div className="font-medium text-sm mb-1">{product.name}</div>
+                      <div className="text-xs text-gray-600">{product.category_name}</div>
+                    </div>
+                  ))}
+                </div>
+                {productsWithoutActivity.length > 5 && (
+                  <div className="mt-4 text-center text-sm text-gray-500">
+                    +{productsWithoutActivity.length - 5} produtos restantes.{' '}
+                    <a href="/app/products-dashboard" className="text-blue-600 hover:underline">
+                      Ver todos
+                    </a>
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>

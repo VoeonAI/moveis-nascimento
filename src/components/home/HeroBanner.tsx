@@ -27,7 +27,7 @@ const HeroBanner = () => {
             </h1>
             
             <p className="text-lg md:text-xl text-gray-200">
-              Atendimento rápido com o Nas e suporte do nosso time de consultores.
+              Atendimento personalizado com o Nas e suporte do nosso time de consultores.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
@@ -43,10 +43,10 @@ const HeroBanner = () => {
               
               <Button 
                 size="lg" 
-                variant="outline"
-                className="border-2 border-white text-white hover:bg-white/10 px-8 py-6 text-lg font-semibold rounded-xl transition-all"
+                className="bg-white border-2 border-green-600 text-green-700 hover:bg-green-700 hover:text-white px-8 py-6 text-lg font-semibold rounded-xl transition-all"
+                onClick={() => window.open('https://wa.me/5511999999999', '_blank')}
               >
-                Consultar Condições
+                Fale com o Nas
               </Button>
             </div>
 
@@ -54,7 +54,7 @@ const HeroBanner = () => {
             <div className="flex items-center gap-6 pt-8">
               <div className="flex items-center gap-2 text-white">
                 <Phone size={20} className="text-green-400" />
-                <span className="font-medium">Atendimento Humanizado</span>
+                <span className="font-medium">Atendimento Personalizado</span>
               </div>
               <div className="w-px h-8 bg-white/30"></div>
               <div className="flex items-center gap-2 text-white">

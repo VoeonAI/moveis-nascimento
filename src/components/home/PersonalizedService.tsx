@@ -1,5 +1,5 @@
 import React from 'react';
-import { MessageCircle, CheckCircle, UserCheck, Phone } from 'lucide-react';
+import { MessageCircle, CheckCircle, UserCheck, Phone, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const PersonalizedService = () => {

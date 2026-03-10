@@ -1,0 +1,71 @@
+# Módulo: Usuários
+
+Responsável pela gestão de usuários do sistema e permissões de acesso.
+
+## Objetivo
+
+Permitir que administradores criem e gerenciem usuários internos.
+
+## Tabela Principal
+
+profiles
+
+Campos importantes:
+
+- id
+- user_id
+- name
+- role
+- created_at
+
+## Roles
+
+master  
+gestor  
+estoque
+
+### master
+
+- acesso total ao sistema
+- pode criar usuários
+- pode apagar registros
+- pode configurar integrações
+
+### gestor
+
+- acesso ao CRM
+- acesso ao catálogo
+- acesso ao pipeline
+- acesso ao dashboard
+
+### estoque
+
+- acesso ao pipeline
+- controle operacional de pedidos
+
+## Regras
+
+Todo usuário autenticado possui um registro em profiles.
+
+A role define permissões no sistema.
+
+## Edge Functions
+
+admin_create_user  
+admin_set_user_role  
+admin_hard_delete
+
+## Services
+
+usersService.ts
+
+Principais funções:
+
+- createUser
+- updateUserRole
+- listUsers
+- deleteUser
+
+## Página
+
+Users.tsx

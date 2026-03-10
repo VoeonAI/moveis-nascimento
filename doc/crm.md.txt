@@ -1,0 +1,30 @@
+# Módulo: CRM
+
+Responsável por:
+
+- Leads
+- Oportunidades
+- Timeline
+- Follow-up
+- Novo interesse
+
+## Tabelas
+
+leads
+opportunities
+lead_timeline
+
+## Regras
+
+Telefone não pode duplicar lead.
+
+Se telefone já existir:
+- não criar lead
+- criar nova opportunity
+
+## Funcionalidades
+
+- Badge Novo
+- Badge Novo Interesse
+- Follow-up hoje
+- Follow-up atrasado

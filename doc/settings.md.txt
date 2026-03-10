@@ -1,0 +1,80 @@
+# Módulo: Configurações
+
+Responsável pelas configurações gerais do sistema e integrações.
+
+## Objetivo
+
+Centralizar integrações e parâmetros do sistema.
+
+## Seções
+
+Webhooks  
+Logs  
+APIs  
+Configurações gerais
+
+## Webhooks
+
+Permite integrar o sistema com ferramentas externas.
+
+Exemplo:
+
+n8n  
+automação  
+integrações externas
+
+## Tabelas
+
+webhook_endpoints  
+webhook_logs
+
+## Estrutura do Endpoint
+
+Campos:
+
+- name
+- url
+- active
+- events
+
+## Eventos Disponíveis
+
+lead.created  
+opportunity.created  
+opportunity.stage_changed  
+order.created  
+order.stage_changed
+
+## Funcionalidades
+
+- criar endpoint
+- editar endpoint
+- excluir endpoint
+- ativar/desativar
+- testar endpoint
+- visualizar logs
+
+## Logs
+
+webhook_logs registra:
+
+- evento enviado
+- payload
+- status
+- resposta do endpoint
+
+## Services
+
+settingsService.ts  
+webhooksService.ts
+
+Principais funções:
+
+- createWebhook
+- updateWebhook
+- deleteWebhook
+- sendTestWebhook
+
+## Página
+
+Settings.tsx

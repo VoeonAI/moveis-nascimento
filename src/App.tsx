@@ -19,6 +19,7 @@ import Users from "./pages/app/Users";
 import Settings from "./pages/app/Settings";
 import ProductsDashboard from "./pages/app/ProductsDashboard";
 import NotFound from "./pages/NotFound";
+import HomeNew from "./pages/HomeNew";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,9 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/catalog" element={<Index />} />
             <Route path="/product/:id" element={<ProductDetail />} />
+            
+            {/* NOVA HOME EM PARALELO - para visualização */}
+            <Route path="/new-home" element={<HomeNew />} />
             
             {/* Login Route Alias */}
             <Route path="/login" element={<Navigate to="/app/login" replace />} />

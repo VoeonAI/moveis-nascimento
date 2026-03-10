@@ -1,0 +1,31 @@
+# Módulo: Catálogo
+
+Responsável por:
+
+- Cadastro de produtos
+- Categorias
+- Upload de imagens
+- Destaque (featured)
+- Promoção
+
+## Tabelas
+
+products
+categories
+
+## Services
+
+productsService
+productImagesService
+
+## Páginas
+
+Catalog.tsx
+ProductDetail.tsx
+
+## Funcionalidades
+
+- Upload de múltiplas imagens
+- Definir imagem principal
+- Marcar produto como destaque
+- Marcar produto como promoção

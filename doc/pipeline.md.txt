@@ -1,0 +1,76 @@
+# Módulo: Pipeline
+
+Responsável por gerenciar o fluxo operacional de pedidos após a venda.
+
+## Objetivo
+
+Controlar a evolução do pedido desde a criação até a entrega ao cliente.
+
+## Tabela Principal
+
+orders
+
+Campos importantes:
+
+- id
+- lead_id
+- opportunity_id
+- current_stage
+- delivery_date
+- created_at
+- updated_at
+
+## Estágios do Pipeline
+
+Pedido Criado  
+Preparando Pedido  
+Em Montagem  
+Pronto para Envio  
+Rota de Entrega  
+Entregue
+
+## Regras Importantes
+
+Quando uma oportunidade muda para estágio "Ganho":
+
+- criar pedido automaticamente
+- vincular ao lead
+- iniciar estágio "Pedido Criado"
+
+## Data de Entrega
+
+Quando o pedido entra no estágio:
+
+"Entregue"
+
+o sistema registra:
+
+delivery_date = data atual
+
+Essa data é usada para:
+
+- filtro de pedidos entregues
+- indicadores no dashboard
+
+## Funcionalidades
+
+- mover pedidos entre estágios
+- visualizar pipeline em formato kanban
+- registrar data de entrega
+- filtro por período de entrega
+- webhooks de mudança de estágio
+
+## Services
+
+ordersService.ts
+
+Principais funções:
+
+- createOrder
+- updateOrderStage
+- listOrders
+- getOrdersByStage
+
+## Página
+
+Pipeline.tsx

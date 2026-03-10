@@ -1,0 +1,78 @@
+# Módulo: Dashboard
+
+Responsável por apresentar indicadores estratégicos do sistema.
+
+O dashboard mostra uma visão rápida do estado comercial e operacional.
+
+## Objetivo
+
+Permitir que o usuário entenda rapidamente:
+
+- volume de leads
+- conversão de vendas
+- desempenho de produtos
+- estado do pipeline
+
+## Componentes
+
+Radar de Leads  
+Radar de Pipeline  
+Radar de Produtos  
+Indicadores gerais
+
+## Indicadores
+
+- total de leads
+- leads novos
+- leads em negociação
+- vendas ganhas
+- vendas perdidas
+
+## Inteligência de Produtos
+
+- produtos mais trabalhados
+- produtos sem movimentação
+- distribuição por categoria
+
+## Radar de Pipeline
+
+- pedidos criados
+- pedidos em produção
+- pedidos em entrega
+- pedidos entregues
+
+## Radar de Leads
+
+- leads novos
+- leads com follow-up hoje
+- leads com follow-up atrasado
+- novos interesses
+
+## Regras de Visualização
+
+O dashboard não deve listar todos os registros.
+
+Limites recomendados:
+
+- leads: 5
+- produtos: 10
+- pedidos: 5
+
+Se houver mais itens:
+
+mostrar indicador "+X restantes".
+
+## Services
+
+dashboardService.ts
+
+Principais funções:
+
+- getDashboardMetrics
+- getLeadsRadar
+- getPipelineRadar
+- getProductsRadar
+
+## Página
+
+Dashboard.tsx

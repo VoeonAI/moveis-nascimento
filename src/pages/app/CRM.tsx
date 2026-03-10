@@ -55,8 +55,8 @@ type FilterType = 'all' | 'new' | 'followup' | 'status';
 const CRM = () => {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
+  const [leads, setLeads] = useState<(Lead & { last_timeline_event_type?: string | null })[]>([]);
+  const [filteredLeads, setFilteredLeads] = useState<(Lead & { last_timeline_event_type?: string | null })[]>([]);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [leadDetails, setLeadDetails] = useState<{ lead: Lead; opportunities: (Opportunity & { products?: { id: string; name: string } })[]; timeline: TimelineEvent[] } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -129,7 +129,7 @@ const CRM = () => {
   };
 
   // Helper: Check if lead has new interest based on last timeline event
-  const hasNewInterest = (lead: Lead) => {
+  const hasNewInterest = (lead: Lead & { last_timeline_event_type?: string | null }) => {
     return lead.last_timeline_event_type === 'opportunity_created';
   };
 

@@ -19,7 +19,7 @@ const HomeHeader = () => {
   };
 
   return (
-    <header className="bg-white/95 backdrop-blur-sm sticky top-0 z-50 border-b border-gray-100 shadow-sm">
+    <header className="bg-black sticky top-0 z-50 border-b border-gray-800 shadow-sm">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-20">
           {/* Logo - Aumentado em 60% (h-12 → h-20) */}
@@ -35,11 +35,11 @@ const HomeHeader = () => {
           <nav className="hidden md:flex items-center gap-8">
             <button 
               onClick={scrollToProducts}
-              className="text-gray-600 hover:text-green-600 font-medium transition-colors"
+              className="text-white hover:text-green-400 font-medium transition-colors"
             >
               Produtos
             </button>
-            <a href="#" className="text-gray-600 hover:text-green-600 font-medium transition-colors">
+            <a href="#" className="text-white hover:text-green-400 font-medium transition-colors">
               Sobre nós
             </a>
             <Button 
@@ -59,7 +59,7 @@ const HomeHeader = () => {
                 placeholder="Buscar produtos..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 w-64"
+                className="pl-10 w-64 bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
               />
             </div>
           </div>
@@ -67,7 +67,7 @@ const HomeHeader = () => {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2"
+            className="md:hidden p-2 text-white"
           >
             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -75,14 +75,14 @@ const HomeHeader = () => {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden py-4 space-y-4 border-t border-gray-100">
+          <div className="md:hidden py-4 space-y-4 border-t border-gray-800 bg-black">
             <button 
               onClick={scrollToProducts}
-              className="block w-full text-left text-gray-600 hover:text-green-600 font-medium py-2"
+              className="block w-full text-left text-white hover:text-green-400 font-medium py-2"
             >
               Produtos
             </button>
-            <a href="#" className="block w-full text-left text-gray-600 hover:text-green-600 font-medium py-2">
+            <a href="#" className="block w-full text-left text-white hover:text-green-400 font-medium py-2">
               Sobre nós
             </a>
             <Button 
@@ -96,7 +96,7 @@ const HomeHeader = () => {
               placeholder="Buscar produtos..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full"
+              className="w-full bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
             />
           </div>
         )}

@@ -4,12 +4,11 @@ import HomeHeader from '@/components/home/HomeHeader';
 import HeroBanner from '@/components/home/HeroBanner';
 import CategorySection from '@/components/home/CategorySection';
 import HomeAmbiences from '@/components/home/HomeAmbiences';
-import WeeklyHighlights from '@/components/home/WeeklyHighlights';
 import FeaturedProducts from '@/components/home/FeaturedProducts';
+import WeeklyHighlights from '@/components/home/WeeklyHighlights';
 import PromotionalBanner from '@/components/home/PromotionalBanner';
 import HowToBuySection from '@/components/home/HowToBuySection';
 import ProductGrid from '@/components/home/ProductGrid';
-import PopularProducts from '@/components/home/PopularProducts';
 
 const HomeNew = () => {
   return (
@@ -37,20 +36,20 @@ const HomeNew = () => {
       {/* BLOCOS AUTOMÁTICOS (preenchidos por regra) */}
       {/* ================================================== */}
 
-      {/* 5. Destaques da semana (on_promotion = true) */}
-      <WeeklyHighlights />
-
-      {/* 6. Produtos em destaque (featured = true) */}
+      {/* 5. Produtos em destaque (featured = true) */}
       <FeaturedProducts />
 
+      {/* 6. Destaques da semana (on_promotion = true) */}
+      <WeeklyHighlights />
+
       {/* ================================================== */}
-      {/* BLOCOS MANUAIS / ESTATÁTICOS */}
+      {/* BLOCOS MANUAIS / ESTATÍTICOS */}
       {/* ================================================== */}
 
       {/* 7. Como comprar */}
       <HowToBuySection />
 
-      {/* 8. Nosso catálogo (todos os produtos) */}
+      {/* 8. Nossos produtos (todos os produtos) */}
       <ProductGrid />
 
       {/* Footer */}

@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Card, CardContent } from '@/components/ui/card';
+import ProductCard from './ProductCard';
 
 const ProductGrid = () => {
   const [selectedFilter, setSelectedFilter] = useState('all');
@@ -42,7 +42,7 @@ const ProductGrid = () => {
     <section id="products-section" className="max-w-7xl mx-auto px-4 py-20">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-gray-800">Nossos Produtos</h2>
+          <h2 className="text-3xl font-bold text-gray-800">Nossos produtos</h2>
           <p className="text-gray-600 mt-2">Explore todo o catálogo</p>
         </div>
         
@@ -68,33 +68,26 @@ const ProductGrid = () => {
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {filteredProducts.map((product) => (
-          <Card key={product.id} className="overflow-hidden group hover:shadow-xl transition-all duration-300 relative">
-            <CardContent className="p-0">
-              <div className="aspect-square bg-gray-100 relative">
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                
-                {/* Overlay com botão "Gostei" */}
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                  <Button 
-                    size="lg"
-                    className="bg-white text-green-600 hover:bg-green-600 hover:text-white font-semibold px-6 py-3 rounded-lg"
-                  >
-                    <Heart size={20} className="mr-2" />
-                    GOSTEI DESSE PRODUTO
-                  </Button>
-                </div>
-              </div>
-              <div className="p-4">
-                <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                <div className="mt-3 h-4 bg-gray-200 rounded w-1/3"></div>
-              </div>
-            </CardContent>
-          </Card>
+          <div key={product.id} className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden">
+            {/* Imagem */}
+            <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
+              <img
+                src={product.image}
+                alt={product.name}
+                className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+              />
+            </div>
+
+            {/* Conteúdo */}
+            <div className="p-4">
+              <h3 className="font-semibold text-gray-800 mb-2 line-clamp-2">{product.name}</h3>
+              <p className="text-xs text-gray-500 mb-3">{product.category}</p>
+              <Button className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 rounded-xl transition-colors">
+                <Heart size={16} className="mr-2" />
+                Gostei desse produto
+              </Button>
+            </div>
+          </div>
         ))}
       </div>
 

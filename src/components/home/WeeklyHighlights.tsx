@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { productsService, Product } from '@/services/productsService';
-import { productImagesService } from '@/services/productImagesService';
-import { ArrowRight, Tag, Heart } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ArrowRight, Tag } from 'lucide-react';
+import ProductCard from './ProductCard';
 
 const WeeklyHighlights = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -17,7 +16,6 @@ const WeeklyHighlights = () => {
     setLoading(true);
     try {
       const data = await productsService.listAllProducts();
-      // Filtrar produtos em promoção
       const promotionalProducts = data.filter(p => p.on_promotion === true);
       setProducts(promotionalProducts);
     } catch (error) {
@@ -64,59 +62,9 @@ const WeeklyHighlights = () => {
 
         {/* Grid de Produtos */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {products.map((product) => {
-            const coverPath = Array.isArray(product.images) ? product.images[0] : null;
-            const coverUrl = coverPath ? productImagesService.getPublicUrl(coverPath) : '';
-            
-            return (
-              <Link
-                key={product.id}
-                to={`/product/${product.id}`}
-                className="group relative overflow-hidden rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 bg-white"
-              >
-                {/* Badge de Promoção */}
-                <div className="absolute top-4 left-4 z-10">
-                  <div className="bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
-                    <Tag size={12} />
-                    Promoção
-                  </div>
-                </div>
-
-                {/* Imagem */}
-                <div className="aspect-[4/3] overflow-hidden bg-gray-100">
-                  {coverUrl ? (
-                    <img
-                      src={coverUrl}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                      Sem imagem
-                    </div>
-                  )}
-                </div>
-
-                {/* Overlay com botão */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-6">
-                  <Button className="bg-white text-green-600 hover:bg-green-600 hover:text-white font-semibold px-6 py-2 rounded-lg shadow-lg">
-                    <Heart size={18} className="mr-2" />
-                    Ver Oferta
-                  </Button>
-                </div>
-
-                {/* Info */}
-                <div className="p-4">
-                  <h3 className="font-semibold text-gray-800 mb-2 line-clamp-2">{product.name}</h3>
-                  <p className="text-sm text-gray-600 line-clamp-2 mb-3">{product.description}</p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-lg font-bold text-orange-600">Em promoção</span>
-                    <span className="text-xs text-gray-500">Ver detalhes →</span>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
+          {products.map((product) => (
+            <ProductCard key={product.id} product={product} showBadge="promotion" />
+          ))}
         </div>
 
         {/* CTA */}

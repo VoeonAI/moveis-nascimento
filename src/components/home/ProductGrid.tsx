@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,32 +10,39 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import ProductCard from '../products/ProductCard';
+import { productsService, Product } from '@/services/productsService';
 
 const ProductGrid = () => {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState('all');
 
-  // Placeholder products - futuramente conectar com banco
-  const placeholderProducts = Array.from({ length: 8 }, (_, i) => ({
-    id: i,
-    name: 'Produto Exemplo',
-    category: ['Sala', 'Quarto', 'Cozinha', 'Escritório', 'Infantil', 'Multiuso'][i % 6],
-    image: `https://images.unsplash.com/photo-${
-      ['1555041469-a586c61ea9bc',
-      '1616594039914-746bb0062b09',
-      '1556911220-e15b29be8c8f',
-      '1518455027359-f3f8164ba6bd',
-      '1538688525198-9b88f6f53126',
-      '1505693314120-0d443867891c',
-      '1618221195710-dd6b41faaea6',
-      '1556228453-9a9c0b017f2e'
-    ][i]}?w=400&q=80`,
-    price: 'R$ 1.999,00',
-  }));
+  useEffect(() => {
+    loadProducts();
+  }, []);
+
+  const loadProducts = async () => {
+    setLoading(true);
+    try {
+      const data = await productsService.listAllProducts();
+      setProducts(data);
+    } catch (error) {
+      console.error('[ProductGrid] Failed to load products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getBadgeType = (product: Product): 'featured' | 'promotion' | 'none' => {
+    if (product.featured) return 'featured';
+    if (product.on_promotion) return 'promotion';
+    return 'none';
+  };
 
   const filteredProducts = selectedFilter === 'all'
-    ? placeholderProducts
-    : placeholderProducts.filter(p => 
-        p.category.toLowerCase() === selectedFilter.toLowerCase()
+    ? products
+    : products.filter(p => 
+        p.categories?.some(cat => cat.slug === selectedFilter)
       );
 
   return (
@@ -46,7 +53,7 @@ const ProductGrid = () => {
           <p className="text-gray-600 mt-2">Explore todo o catálogo</p>
         </div>
         
-        {/* Filter Dropdown */}
+        {/* Filter Dropdown - usando slugs para filtrar corretamente */}
         <div className="flex items-center gap-2">
           <Filter size={20} className="text-gray-500" />
           <Select value={selectedFilter} onValueChange={setSelectedFilter}>
@@ -58,7 +65,7 @@ const ProductGrid = () => {
               <SelectItem value="sala">Sala</SelectItem>
               <SelectItem value="quarto">Quarto</SelectItem>
               <SelectItem value="cozinha">Cozinha</SelectItem>
-              <SelectItem value="escritório">Escritório</SelectItem>
+              <SelectItem value="escritorio">Escritório</SelectItem>
               <SelectItem value="infantil">Infantil</SelectItem>
               <SelectItem value="multiuso">Multiuso</SelectItem>
             </SelectContent>
@@ -66,11 +73,34 @@ const ProductGrid = () => {
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {filteredProducts.map((product) => (
-          <ProductCard key={product.id} product={product} showBadge="none" />
-        ))}
-      </div>
+      {/* Loading State */}
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <div key={i} className="aspect-[4/3] bg-gray-200 rounded-2xl animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <>
+          {/* Grid de Produtos - limitado a 8 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {filteredProducts.slice(0, 8).map((product) => (
+              <ProductCard 
+                key={product.id} 
+                product={product} 
+                showBadge={getBadgeType(product)} 
+              />
+            ))}
+          </div>
+
+          {/* Mensagem se não houver produtos */}
+          {filteredProducts.length === 0 && !loading && (
+            <div className="text-center py-12 bg-white rounded-2xl border border-gray-200">
+              <p className="text-gray-500">Nenhum produto encontrado nesta categoria.</p>
+            </div>
+          )}
+        </>
+      )}
 
       <div className="text-center mt-12">
         <Link 

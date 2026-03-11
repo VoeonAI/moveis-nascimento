@@ -109,6 +109,7 @@ const CategorySection = () => {
               
               <SelectGroup>
                 <SelectLabel>Sala</SelectLabel>
+                <SelectItem value="sala-de-jantar">Sala de jantar</SelectItem>
                 <SelectItem value="sofa">Sofá</SelectItem>
                 <SelectItem value="rack">Rack</SelectItem>
                 <SelectItem value="estante">Estante</SelectItem>

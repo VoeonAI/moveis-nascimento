@@ -2,14 +2,12 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import HomeHeader from '@/components/home/HomeHeader';
 import HeroBanner from '@/components/home/HeroBanner';
-import HomeAmbiences from '@/components/home/HomeAmbiences'; // NOVA SEÇÃO
 import CategorySection from '@/components/home/CategorySection';
-import InstitutionalBanner from '@/components/home/InstitutionalBanner';
-import HowToBuy from '@/components/home/HowToBuy';
+import PromotionalBanner from '@/components/home/PromotionalBanner';
+import HowToBuySection from '@/components/home/HowToBuySection';
 import ProductGrid from '@/components/home/ProductGrid';
 import EnvironmentsSection from '@/components/home/EnvironmentsSection';
 import PopularProducts from '@/components/home/PopularProducts';
-import PersonalizedService from '@/components/home/PersonalizedService';
 import { Card, CardContent } from '@/components/ui/card';
 
 const HomeNew = () => {
@@ -21,26 +19,17 @@ const HomeNew = () => {
       {/* Hero Principal */}
       <HeroBanner />
 
-      {/* NOVO: Seção de Ambientes (após Hero) */}
-      <HomeAmbiences />
-
       {/* Categorias Principais */}
       <CategorySection />
 
-      {/* Ambientes em Destaque (legado - mantido) */}
-      <EnvironmentsSection />
+      {/* Banner Promocional (Verde) */}
+      <PromotionalBanner />
 
-      {/* Banner Institucional */}
-      <InstitutionalBanner />
-
-      {/* Como Comprar */}
-      <HowToBuy />
+      {/* Como Comprar - BLOCO UNIFICADO */}
+      <HowToBuySection />
 
       {/* Produtos Mais Procurados/Vendidos */}
       <PopularProducts />
-
-      {/* Atendimento Personalizado */}
-      <PersonalizedService />
 
       {/* Produtos Destaque */}
       <section className="bg-white py-20">

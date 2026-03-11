@@ -43,9 +43,10 @@ const HeroBanner = () => {
               
               <Button 
                 size="lg" 
-                className="bg-white border-2 border-green-600 text-green-700 hover:bg-green-700 hover:text-white px-8 py-6 text-lg font-semibold rounded-xl transition-all"
+                className="bg-white border-2 border-green-600 text-green-700 hover:bg-green-50 hover:border-green-700 hover:text-green-800 px-8 py-6 text-lg font-semibold rounded-xl transition-all"
                 onClick={() => window.open('https://wa.me/5511999999999', '_blank')}
               >
+                <Phone size={20} className="mr-2" />
                 Fale com o Nas
               </Button>
             </div>

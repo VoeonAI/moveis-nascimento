@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import HomeHeader from '@/components/home/HomeHeader';
 import HeroBanner from '@/components/home/HeroBanner';
+import HomeAmbiences from '@/components/home/HomeAmbiences'; // NOVA SEÇÃO
 import CategorySection from '@/components/home/CategorySection';
 import InstitutionalBanner from '@/components/home/InstitutionalBanner';
 import HowToBuy from '@/components/home/HowToBuy';
@@ -20,10 +21,13 @@ const HomeNew = () => {
       {/* Hero Principal */}
       <HeroBanner />
 
+      {/* NOVO: Seção de Ambientes (após Hero) */}
+      <HomeAmbiences />
+
       {/* Categorias Principais */}
       <CategorySection />
 
-      {/* NOVO: Ambientes em Destaque */}
+      {/* Ambientes em Destaque (legado - mantido) */}
       <EnvironmentsSection />
 
       {/* Banner Institucional */}
@@ -32,10 +36,10 @@ const HomeNew = () => {
       {/* Como Comprar */}
       <HowToBuy />
 
-      {/* NOVO: Produtos Mais Procurados/Vendidos */}
+      {/* Produtos Mais Procurados/Vendidos */}
       <PopularProducts />
 
-      {/* NOVO: Atendimento Personalizado */}
+      {/* Atendimento Personalizado */}
       <PersonalizedService />
 
       {/* Produtos Destaque */}

@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Loader2, Copy, MessageCircle, AlertCircle, Star, Tag, ArrowRight, CheckCircle } from 'lucide-react';
+import { Loader2, Copy, MessageCircle, AlertCircle, Star, Tag, ArrowRight } from 'lucide-react';
 import { productImagesService } from '@/services/productImagesService';
 import ProductCard from '@/components/products/ProductCard';
 
@@ -574,7 +574,7 @@ const ProductDetail = () => {
                     className="w-full"
                     size="lg"
                   >
-                    <Copy size={20} className="className="mr-2" />
+                    <Copy size={20} className="mr-2" />
                     Copiar Mensagem
                   </Button>
                   <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">

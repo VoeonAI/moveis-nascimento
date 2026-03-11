@@ -13,18 +13,26 @@ const HomeAmbiences = () => {
   }, []);
 
   const loadAmbiences = async () => {
+    console.log('[HomeAmbiences] Carregando ambientes...');
     setLoading(true);
     setError(null);
+    
     try {
       const data = await homeAmbiencesService.listActiveAmbiences();
+      console.log('[HomeAmbiences] Dados recebidos:', {
+        count: data.length,
+        data: data,
+      });
       setAmbiences(data);
     } catch (error) {
-      console.error('[HomeAmbiences] Failed to load ambiances:', error);
+      console.error('[HomeAmbiences] Erro ao carregar:', error);
       setError('Erro ao carregar ambientes');
     } finally {
       setLoading(false);
     }
   };
+
+  console.log('[HomeAmbiences] Render:', { loading, error, ambiencesCount: ambiences.length });
 
   return (
     <section className="py-20 bg-white">

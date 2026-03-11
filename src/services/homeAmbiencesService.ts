@@ -13,6 +13,8 @@ export interface HomeAmbience {
 export const homeAmbiencesService = {
   async listActiveAmbiences(): Promise<HomeAmbience[]> {
     try {
+      console.log('[homeAmbiencesService] Iniciando query...');
+      
       const { data, error } = await supabase
         .from('home_ambiences')
         .select('*')
@@ -20,13 +22,24 @@ export const homeAmbiencesService = {
         .order('sort_order', { ascending: true });
 
       if (error) {
-        console.error('[homeAmbiencesService.listActiveAmbiences]', error.message);
+        console.error('[homeAmbiencesService] Erro na query:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+        });
         return [];
       }
 
+      console.log('[homeAmbiencesService] Query retornou:', {
+        count: data?.length || 0,
+        hasData: !!data && data.length > 0,
+        firstItem: data?.[0] || null,
+      });
+
       return data || [];
     } catch (error) {
-      console.error('[homeAmbiencesService.listActiveAmbiences]', error);
+      console.error('[homeAmbiencesService] Erro inesperado:', error);
       return [];
     }
   },

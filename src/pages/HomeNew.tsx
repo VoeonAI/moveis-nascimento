@@ -4,11 +4,12 @@ import HomeHeader from '@/components/home/HomeHeader';
 import HeroBanner from '@/components/home/HeroBanner';
 import CategorySection from '@/components/home/CategorySection';
 import HomeAmbiences from '@/components/home/HomeAmbiences';
+import WeeklyHighlights from '@/components/home/WeeklyHighlights';
+import FeaturedProducts from '@/components/home/FeaturedProducts';
 import PromotionalBanner from '@/components/home/PromotionalBanner';
 import HowToBuySection from '@/components/home/HowToBuySection';
 import ProductGrid from '@/components/home/ProductGrid';
 import PopularProducts from '@/components/home/PopularProducts';
-import { Card, CardContent } from '@/components/ui/card';
 
 const HomeNew = () => {
   return (
@@ -16,59 +17,40 @@ const HomeNew = () => {
       {/* Header */}
       <HomeHeader />
 
-      {/* Hero Principal */}
+      {/* ================================================== */}
+      {/* BLOCOS MANUAIS (personalizáveis via admin) */}
+      {/* ================================================== */}
+      
+      {/* 1. Hero principal */}
       <HeroBanner />
 
-      {/* Categorias Principais */}
+      {/* 2. Categorias principais */}
       <CategorySection />
 
-      {/* Ambientes que inspiram */}
+      {/* 3. Ambientes que inspiram */}
       <HomeAmbiences />
 
-      {/* Banner Promocional (Verde) */}
+      {/* 4. Banner institucional/promocional */}
       <PromotionalBanner />
 
-      {/* Como Comprar - BLOCO UNIFICADO */}
+      {/* ================================================== */}
+      {/* BLOCOS AUTOMÁTICOS (preenchidos por regra) */}
+      {/* ================================================== */}
+
+      {/* 5. Destaques da semana (on_promotion = true) */}
+      <WeeklyHighlights />
+
+      {/* 6. Produtos em destaque (featured = true) */}
+      <FeaturedProducts />
+
+      {/* ================================================== */}
+      {/* BLOCOS MANUAIS / ESTATÁTICOS */}
+      {/* ================================================== */}
+
+      {/* 7. Como comprar */}
       <HowToBuySection />
 
-      {/* Produtos Mais Procurados/Vendidos */}
-      <PopularProducts />
-
-      {/* Produtos Destaque */}
-      <section className="bg-white py-20">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-800">Destaques da Semana</h2>
-            <p className="text-gray-600 mt-2">Confira nossas ofertas especiais</p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="overflow-hidden group hover:shadow-lg transition-shadow">
-                <CardContent className="p-0">
-                  <div className="aspect-video bg-gray-100">
-                    <img
-                      src={`https://images.unsplash.com/photo-${
-                        ['1555041469-a586c61ea9bc',
-                        '1616594039914-746bb0062b09',
-                        '1556911220-e15b29be8c8f'
-                      ][i - 1]}?w=400&q=80`}
-                      alt="Destaque"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-                  <div className="p-4">
-                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Grade de Produtos */}
+      {/* 8. Nosso catálogo (todos os produtos) */}
       <ProductGrid />
 
       {/* Footer */}

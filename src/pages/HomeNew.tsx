@@ -3,10 +3,10 @@ import { Link } from 'react-router-dom';
 import HomeHeader from '@/components/home/HomeHeader';
 import HeroBanner from '@/components/home/HeroBanner';
 import CategorySection from '@/components/home/CategorySection';
+import HomeAmbiences from '@/components/home/HomeAmbiences';
 import PromotionalBanner from '@/components/home/PromotionalBanner';
 import HowToBuySection from '@/components/home/HowToBuySection';
 import ProductGrid from '@/components/home/ProductGrid';
-import EnvironmentsSection from '@/components/home/EnvironmentsSection';
 import PopularProducts from '@/components/home/PopularProducts';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -21,6 +21,9 @@ const HomeNew = () => {
 
       {/* Categorias Principais */}
       <CategorySection />
+
+      {/* Ambientes que inspiram */}
+      <HomeAmbiences />
 
       {/* Banner Promocional (Verde) */}
       <PromotionalBanner />

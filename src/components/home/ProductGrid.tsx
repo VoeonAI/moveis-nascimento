@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Filter, Heart } from 'lucide-react';
+import { ArrowRight, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import ProductCard from './ProductCard';
+import ProductCard from '../products/ProductCard';
 
 const ProductGrid = () => {
   const [selectedFilter, setSelectedFilter] = useState('all');
@@ -68,26 +68,7 @@ const ProductGrid = () => {
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {filteredProducts.map((product) => (
-          <div key={product.id} className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden">
-            {/* Imagem */}
-            <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
-              <img
-                src={product.image}
-                alt={product.name}
-                className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-              />
-            </div>
-
-            {/* Conteúdo */}
-            <div className="p-4">
-              <h3 className="font-semibold text-gray-800 mb-2 line-clamp-2">{product.name}</h3>
-              <p className="text-xs text-gray-500 mb-3">{product.category}</p>
-              <Button className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 rounded-xl transition-colors">
-                <Heart size={16} className="mr-2" />
-                Gostei desse produto
-              </Button>
-            </div>
-          </div>
+          <ProductCard key={product.id} product={product} showBadge="none" />
         ))}
       </div>
 

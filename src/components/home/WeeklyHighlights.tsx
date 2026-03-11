@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { productsService, Product } from '@/services/productsService';
 import { ArrowRight, Tag } from 'lucide-react';
-import ProductCard from './ProductCard';
+import ProductCard from '../products/ProductCard';
 
 const WeeklyHighlights = () => {
   const [products, setProducts] = useState<Product[]>([]);

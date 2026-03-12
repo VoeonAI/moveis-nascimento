@@ -175,6 +175,19 @@ serve(async (req) => {
       )
     }
 
+    // PATCH: Update lead notes with latest message
+    if (message && message.trim()) {
+      log('info', requestId, 'Updating lead notes', { lead_id: resolvedLead.id, has_message: true })
+      const { error: notesError } = await supabase
+        .from('leads')
+        .update({ notes: message })
+        .eq('id', resolvedLead.id);
+      
+      if (notesError) {
+        log('error', requestId, 'Failed to update lead notes', { error: notesError.message })
+      }
+    }
+
     // 3. Check/Create Opportunity
     const { data: existingOpp } = await supabase
       .from('opportunities')
@@ -291,6 +304,7 @@ serve(async (req) => {
         opportunity = newOpp
         log('info', requestId, 'New opportunity created for repeat interest', { opportunity_id: opportunity.id })
 
+        // Create Timeline Event
         await supabase.from('lead_timeline').insert({
           lead_id: resolvedLead.id,
           type: 'opportunity_created',
@@ -305,6 +319,7 @@ serve(async (req) => {
           },
         })
 
+        // Increment unread count
         const { data: freshLead } = await supabase
           .from('leads')
           .select('unread_interest_count')
@@ -323,6 +338,7 @@ serve(async (req) => {
 
         log('info', requestId, 'Timeline and lead stats updated', { unread_interest_count: currentCount + 1 })
 
+        // Emit opportunity.created webhook
         try {
           await emitWebhook(supabase, 'opportunity.created', {
             opportunity_id: opportunity.id,
@@ -341,6 +357,64 @@ serve(async (req) => {
 
     // Flag segura para is_duplicate
     const isDuplicate = !!existingOpp && opportunity?.id === existingOpp.id;
+
+    // 6. Build message for agent
+    const message_to_agent = 
+`Tenho interesse neste móvel: ${product.name}
+Produto ID: ${product.id}
+Link: ${page_url || `/product/${product.id}`}
+${message ? `Mensagem: ${message}` : ''}
+
+Nome: ${resolvedLead.name}
+${normalizedPhone ? `Telefone: ${normalizedPhone}` : ''}`
+
+    // 7. Webhooks (best-effort)
+    const webhookPayload = {
+      event_type: 'opportunity.created',
+      lead: resolvedLead,
+      opportunity,
+      product: { id: product.id, name: product.name },
+      message_to_agent,
+      context: { source, page_url, timestamp: new Date().toISOString() },
+    }
+
+    const { data: endpoints } = await supabase
+      .from('webhook_endpoints')
+      .select('*')
+      .contains('events', ['opportunity.created'])
+      .eq('active', true)
+
+    if (endpoints && endpoints.length > 0) {
+      log('info', requestId, 'Sending webhooks', { count: endpoints.length })
+      for (const endpoint of endpoints) {
+        let statusCode = 500
+        let success = false
+        try {
+          const response = await fetch(endpoint.url, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              ...(endpoint.secret ? { 'X-Webhook-Secret': endpoint.secret } : {}),
+            },
+            body: JSON.stringify(webhookPayload),
+          })
+          statusCode = response.status
+          success = response.ok
+        } catch (error) {
+          log('error', requestId, 'Webhook failed', { endpoint_id: endpoint.id, error })
+          statusCode = 0
+        }
+        // Log attempt
+        await supabase.from('webhook_logs').insert({
+          endpoint_id: endpoint.id,
+          event_type: 'opportunity.created',
+          payload: webhookPayload,
+          status_code: statusCode,
+          success,
+          error: success ? null : 'Failed',
+        })
+      }
+    }
 
     log('info', requestId, 'Request completed successfully', {
       lead_id: resolvedLead.id,

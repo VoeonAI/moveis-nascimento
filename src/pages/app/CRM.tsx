@@ -119,7 +119,7 @@ const CRM = () => {
   // Helper: Check if lead is considered "New" based on business rule
   const isNewLead = (lead: Lead) => {
     const threeDaysAgo = new Date();
-    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    threeDaysAgo.setDate(threeDaysAgo.getDate() -3);
     
     return (
       lead.status === 'new_interest' &&
@@ -192,22 +192,22 @@ const CRM = () => {
       // Overdue follow-ups first
       const aOverdue = isFollowUpOverdue(a);
       const bOverdue = isFollowUpOverdue(b);
-      if (aOverdue !== bOverdue) return aOverdue ? -1 : 1;
+      if (aOverdue !== bOverdue) return aOverdue ? -1 :1;
 
       // Today follow-ups second
       const aToday = isFollowUpToday(a);
       const bToday = isFollowUpToday(b);
-      if (aToday !== bToday) return aToday ? -1 : 1;
+      if (aToday !== bToday) return aToday ? -1 :1;
 
       // New leads third
       const aIsNew = isNewLead(a);
       const bIsNew = isNewLead(b);
-      if (aIsNew !== bIsNew) return aIsNew ? -1 : 1;
+      if (aIsNew !== bIsNew) return aIsNew ? -1 :1;
 
       // New interest fourth
       const aHasNewInterest = hasNewInterest(a);
       const bHasNewInterest = hasNewInterest(b);
-      if (aHasNewInterest !== bHasNewInterest) return aHasNewInterest ? -1 : 1;
+      if (aHasNewInterest !== bHasNewInterest) return aHasNewInterest ? -1 :1;
 
       const aTime = new Date(a.created_at).getTime();
       const bTime = new Date(b.created_at).getTime();
@@ -227,7 +227,7 @@ const CRM = () => {
       const leadsWithLastEvent = await Promise.all(
         data.map(async (lead) => {
           const timeline = await crmService.listLeadTimeline(lead.id);
-          const lastEvent = timeline.length > 0 ? timeline[0] : null;
+          const lastEvent = timeline.length >0 ? timeline[0] : null;
           return {
             ...lead,
             last_timeline_event_type: lastEvent?.type || null,
@@ -549,8 +549,8 @@ const CRM = () => {
   const getStageColor = (stage: string) => {
     switch (stage) {
       case OpportunityStage.NEW_INTEREST: return 'bg-blue-100 text-blue-800';
-      case OpportunityStage.TALKING_AI: return 'bg-purple-100 text-purple-800';
-      case OpportunityStage.TALKING_HUMAN: return 'bg-orange-100 text-orange-800';
+      case OpportunityStage.TALK_ING_AI: return 'bg-purple-100 text-purple-800';
+      case OpportunityStage.TALK_ING_HUMAN: return 'bg-orange-100 text-orange-800';
       case OpportunityStage.PROPOSAL_SENT: return 'bg-yellow-100 text-yellow-800';
       case OpportunityStage.WON: return 'bg-green-100 text-green-800';
       case OpportunityStage.LOST: return 'bg-red-100 text-red-800';
@@ -782,7 +782,7 @@ const CRM = () => {
             <div className="mb-4">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-64">
-                  <SelectValue placeholder="Selecione o status" />
+                  <selectValue placeholder="Selecione o status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os status</SelectItem>
@@ -792,7 +792,7 @@ const CRM = () => {
                   <SelectItem value="proposal_sent">Proposta Enviada</SelectItem>
                   <SelectItem value="won">Ganho</SelectItem>
                   <SelectItem value="lost">Perdido</SelectItem>
-                </SelectContent>
+            </SelectContent>
               </Select>
             </div>
           )}
@@ -866,6 +866,14 @@ const CRM = () => {
                           {format(new Date(lead.created_at), 'dd/MM')}
                         </span>
                       </div>
+
+                      {/* Latest Message */}
+                      {lead.notes && (
+                        <div className="text-xs text-gray-600 mt-2 line-clamp-2 bg-gray-50 p-2 rounded">
+                          <MessageSquare size={12} className="inline mr-1 text-gray-500" />
+                          {lead.notes}
+                        </div>
+                      )}
 
                       <div className="text-xs text-gray-600 flex items-center gap-1">
                         <Clock size={12} />
@@ -1127,8 +1135,8 @@ const CRM = () => {
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value={OpportunityStage.NEW_INTEREST}>Novo Interesse</SelectItem>
-                                  <SelectItem value={OpportunityStage.TALKING_AI}>Falando com IA</SelectItem>
-                                  <SelectItem value={OpportunityStage.TALKING_HUMAN}>Falando com Humano</SelectItem>
+                                  <SelectItem value={OpportunityStage.TALK_ING_AI}>Falando com IA</SelectItem>
+                                  <SelectItem value={OpportunityStage.TALK_ING_HUMAN}>Falando com Humano</SelectItem>
                                   <SelectItem value={OpportunityStage.PROPOSAL_SENT}>Proposta Enviada</SelectItem>
                                   <SelectItem value={OpportunityStage.WON}>Ganho</SelectItem>
                                   <SelectItem value={OpportunityStage.LOST}>Perdido</SelectItem>

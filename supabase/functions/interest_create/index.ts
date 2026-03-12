@@ -25,7 +25,6 @@ function log(level: 'info' | 'error', requestId: string, message: string, data?:
 
 // Helper to normalize phone numbers
 function normalizePhone(phone: string): string {
-  // Remove all non-numeric characters
   return phone.replace(/\D/g, '');
 }
 
@@ -43,7 +42,6 @@ async function emitWebhook(supabase: any, eventType: string, payload: any, chann
     }
   } catch (err) {
     console.warn('[interest_create] Webhook emit error:', eventType, err);
-    // Never fail the main flow
   }
 }
 
@@ -221,6 +219,7 @@ serve(async (req) => {
           JSON.stringify({ ok: false, code: 'opportunity_creation_failed', message: 'Failed to create opportunity' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
+      }
       opportunity = newOpp
       log('info', requestId, 'Opportunity created', { opportunity_id: opportunity.id })
 
@@ -258,14 +257,18 @@ serve(async (req) => {
       log('info', requestId, 'Timeline and lead stats updated', { unread_interest_count: currentCount + 1 })
 
       // Emit opportunity.created webhook (server-side)
-      await emitWebhook(supabase, 'opportunity.created', {
-        opportunity_id: opportunity.id,
-        lead_id: resolvedLead.id,
-        product_id: product.id,
-        product_name: product.name,
-        stage: opportunity.stage,
-        source,
-      }, 'site')
+      try {
+        await emitWebhook(supabase, 'opportunity.created', {
+          opportunity_id: opportunity.id,
+          lead_id: resolvedLead.id,
+          product_id: product.id,
+          product_name: product.name,
+          stage: opportunity.stage,
+          source,
+        }, 'site')
+      } catch (webhookError) {
+        log('error', requestId, 'Webhook emit failed (non-critical)', { error: webhookError })
+      }
     } else {
       // Existing opportunity found - check time window
       const now = new Date()
@@ -322,7 +325,7 @@ serve(async (req) => {
           },
         })
 
-        // Increment unread count and update activity
+        // Increment unread count
         const { data: freshLead } = await supabase
           .from('leads')
           .select('unread_interest_count')
@@ -342,15 +345,19 @@ serve(async (req) => {
         log('info', requestId, 'Timeline and lead stats updated', { unread_interest_count: currentCount + 1 })
 
         // Emit opportunity.created webhook
-        await emitWebhook(supabase, 'opportunity.created', {
-          opportunity_id: opportunity.id,
-          lead_id: resolvedLead.id,
-          product_id: product.id,
-          product_name: product.name,
-          stage: opportunity.stage,
-          source,
-          is_repeat_interest: true,
-        }, 'site')
+        try {
+          await emitWebhook(supabase, 'opportunity.created', {
+            opportunity_id: opportunity.id,
+            lead_id: resolvedLead.id,
+            product_id: product.id,
+            product_name: product.name,
+            stage: opportunity.stage,
+            source,
+            is_repeat_interest: true,
+          }, 'site')
+        } catch (webhookError) {
+          log('error', requestId, 'Webhook emit failed (non-critical)', { error: webhookError })
+        }
       }
     }
 

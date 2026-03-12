@@ -130,7 +130,8 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ ok: false, code: 'lead_creation_failed', message: 'Failed to create lead' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+        )
+      }
       newLead = newLeadData
       lead = newLead
       log('info', requestId, 'Lead created', { lead_id: lead.id })
@@ -190,7 +191,8 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ ok: false, code: 'opportunity_creation_failed', message: 'Failed to create opportunity' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+        )
+      }
       opportunity = newOpp
       log('info', requestId, 'Opportunity created', { opportunity_id: opportunity.id })
 

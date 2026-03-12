@@ -188,6 +188,7 @@ serve(async (req) => {
         JSON.stringify({ ok: false, code: 'lead_invalid', message: 'Lead is invalid' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
+    }
 
     // 3. Check/Create Opportunity with time-based deduplication
     const { data: existingOpp } = await supabase
@@ -219,7 +220,7 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ ok: false, code: 'opportunity_creation_failed', message: 'Failed to create opportunity' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+        )
       opportunity = newOpp
       log('info', requestId, 'Opportunity created', { opportunity_id: opportunity.id })
 

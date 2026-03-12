@@ -27,21 +27,6 @@ function normalizePhone(phone: string): string {
   return phone.replace(/\D/g, '');
 }
 
-async function emitWebhook(supabase: any, eventType: string, payload: any, channel: string) {
-  try {
-    const { error } = await supabase.functions.invoke('webhooks_dispatch', {
-      body: { eventType, payload, channel },
-    });
-    if (error) {
-      console.warn('[interest_create] Webhook emit failed:', eventType, error);
-    } else {
-      console.log('[interest_create] Webhook emitted:', eventType);
-    }
-  } catch (err) {
-    console.warn('[interest_create] Webhook emit error:', eventType, err);
-  }
-}
-
 const DUPLICATE_WINDOW_MINUTES = 10;
 
 serve(async (req) => {
@@ -145,23 +130,10 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ ok: false, code: 'lead_creation_failed', message: 'Failed to create lead' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
+      )
       newLead = newLeadData
       lead = newLead
       log('info', requestId, 'Lead created', { lead_id: lead.id })
-
-      try {
-        await emitWebhook(supabase, 'lead.created', {
-          lead_id: lead.id,
-          name: lead.name,
-          phone: lead.phone,
-          channel: lead.channel,
-          source,
-        }, 'site')
-      } catch (webhookError) {
-        log('error', requestId, 'Webhook emit failed (non-critical)', { error: webhookError })
-      }
     } else {
       log('info', requestId, 'Using existing lead', { lead_id: lead.id })
     }
@@ -218,8 +190,7 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ ok: false, code: 'opportunity_creation_failed', message: 'Failed to create opportunity' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
+      )
       opportunity = newOpp
       log('info', requestId, 'Opportunity created', { opportunity_id: opportunity.id })
 
@@ -254,19 +225,6 @@ serve(async (req) => {
         .eq('id', resolvedLead.id)
 
       log('info', requestId, 'Timeline and lead stats updated', { unread_interest_count: currentCount + 1 })
-
-      try {
-        await emitWebhook(supabase, 'opportunity.created', {
-          opportunity_id: opportunity.id,
-          lead_id: resolvedLead.id,
-          product_id: product.id,
-          product_name: product.name,
-          stage: opportunity.stage,
-          source,
-        }, 'site')
-      } catch (webhookError) {
-        log('error', requestId, 'Webhook emit failed (non-critical)', { error: webhookError })
-      }
     } else {
       // Existing opportunity - check time window
       const now = new Date()
@@ -337,21 +295,6 @@ serve(async (req) => {
           .eq('id', resolvedLead.id)
 
         log('info', requestId, 'Timeline and lead stats updated', { unread_interest_count: currentCount + 1 })
-
-        // Emit opportunity.created webhook
-        try {
-          await emitWebhook(supabase, 'opportunity.created', {
-            opportunity_id: opportunity.id,
-            lead_id: resolvedLead.id,
-            product_id: product.id,
-            product_name: product.name,
-            stage: opportunity.stage,
-            source,
-            is_repeat_interest: true,
-          }, 'site')
-        } catch (webhookError) {
-          log('error', requestId, 'Webhook emit failed (non-critical)', { error: webhookError })
-        }
       }
     }
 
@@ -368,52 +311,62 @@ ${message ? `Mensagem: ${message}` : ''}
 Nome: ${resolvedLead.name}
 ${normalizedPhone ? `Telefone: ${normalizedPhone}` : ''}`
 
-    // 7. Webhooks (best-effort)
-    const webhookPayload = {
-      event_type: 'opportunity.created',
-      lead: resolvedLead,
-      opportunity,
-      product: { id: product.id, name: product.name },
-      message_to_agent,
-      context: { source, page_url, timestamp: new Date().toISOString() },
-    }
-
-    const { data: endpoints } = await supabase
-      .from('webhook_endpoints')
-      .select('*')
-      .contains('events', ['opportunity.created'])
-      .eq('active', true)
-
-    if (endpoints && endpoints.length > 0) {
-      log('info', requestId, 'Sending webhooks', { count: endpoints.length })
-      for (const endpoint of endpoints) {
-        let statusCode = 500
-        let success = false
-        try {
-          const response = await fetch(endpoint.url, {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              ...(endpoint.secret ? { 'X-Webhook-Secret': endpoint.secret } : {}),
-            },
-            body: JSON.stringify(webhookPayload),
-          })
-          statusCode = response.status
-          success = response.ok
-        } catch (error) {
-          log('error', requestId, 'Webhook failed', { endpoint_id: endpoint.id, error })
-          statusCode = 0
-        }
-        // Log attempt
-        await supabase.from('webhook_logs').insert({
-          endpoint_id: endpoint.id,
-          event_type: 'opportunity.created',
-          payload: webhookPayload,
-          status_code: statusCode,
-          success,
-          error: success ? null : 'Failed',
-        })
+    // PATCH FINAL: Bloco de webhooks/logs envolvido em try/catch para garantir que não derrube a resposta
+    try {
+      // 7. Webhooks (best-effort)
+      const webhookPayload = {
+        event_type: 'opportunity.created',
+        lead: resolvedLead,
+        opportunity,
+        product: { id: product.id, name: product.name },
+        message_to_agent,
+        context: { source, page_url, timestamp: new Date().toISOString() },
       }
+
+      const { data: endpoints } = await supabase
+        .from('webhook_endpoints')
+        .select('*')
+        .contains('events', ['opportunity.created'])
+        .eq('active', true)
+
+      if (endpoints && endpoints.length > 0) {
+        log('info', requestId, 'Sending webhooks', { count: endpoints.length })
+        for (const endpoint of endpoints) {
+          let statusCode = 500
+          let success = false
+          try {
+            const response = await fetch(endpoint.url, {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+                ...(endpoint.secret ? { 'X-Webhook-Secret': endpoint.secret } : {}),
+              },
+              body: JSON.stringify(webhookPayload),
+            })
+            statusCode = response.status
+            success = response.ok
+          } catch (error) {
+            log('error', requestId, 'Webhook failed', { endpoint_id: endpoint.id, error })
+            statusCode = 0
+          }
+          // Log attempt (best-effort)
+          try {
+            await supabase.from('webhook_logs').insert({
+              endpoint_id: endpoint.id,
+              event_type: 'opportunity.created',
+              payload: webhookPayload,
+              status_code: statusCode,
+              success,
+              error: success ? null : 'Failed',
+            })
+          } catch (logError) {
+            log('error', requestId, 'Failed to log webhook attempt', { endpoint_id: endpoint.id, error: logError })
+          }
+        }
+      }
+    } catch (webhookError) {
+      // Webhook failure não deve derrubar a resposta principal
+      log('error', requestId, 'Webhook processing failed (non-critical)', { error: webhookError })
     }
 
     log('info', requestId, 'Request completed successfully', {

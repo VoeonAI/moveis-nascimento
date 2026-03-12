@@ -537,7 +537,7 @@ const ProductDetail = () => {
                     Enviando...
                   </>
                 ) : (
-                  'Enviar Interesse'
+                  'Qual é o Valor?'
                 )}
               </Button>
             </div>

@@ -141,9 +141,10 @@ serve(async (req) => {
     }
 
     // Create Lead if not found
+    let newLead = null
     if (!lead) {
       log('info', requestId, 'Creating new lead')
-      const { data: newLead, error: leadError } = await supabase
+      const { data: newLeadData, error: leadError } = await supabase
         .from('leads')
         .insert({
           name: name || 'Cliente Interessado',
@@ -163,6 +164,7 @@ serve(async (req) => {
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
+      newLead = newLeadData
       lead = newLead
       log('info', requestId, 'Lead created', { lead_id: lead.id })
 
@@ -178,11 +180,20 @@ serve(async (req) => {
       log('info', requestId, 'Using existing lead', { lead_id: lead.id })
     }
 
+    // Resolve the lead to use (existing or newly created)
+    const resolvedLead = lead ?? newLead
+    if (!resolvedLead?.id) {
+      log('error', requestId, 'Lead is invalid', { lead, newLead })
+      return new Response(
+        JSON.stringify({ ok: false, code: 'lead_invalid', message: 'Lead is invalid' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+
     // 3. Check/Create Opportunity with time-based deduplication
     const { data: existingOpp } = await supabase
       .from('opportunities')
       .select('*')
-      .eq('lead_id', lead.id)
+      .eq('lead_id', resolvedLead.id)
       .eq('product_id', product_id)
       .in('stage', ['talking_ai', 'new_interest'])
       .order('created_at', { ascending: false })
@@ -196,7 +207,7 @@ serve(async (req) => {
       const { data: newOpp, error: oppError } = await supabase
         .from('opportunities')
         .insert({
-          lead_id: lead.id,
+          lead_id: resolvedLead.id,
           product_id,
           stage: 'talking_ai',
         })
@@ -208,14 +219,13 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ ok: false, code: 'opportunity_creation_failed', message: 'Failed to create opportunity' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
+      )
       opportunity = newOpp
       log('info', requestId, 'Opportunity created', { opportunity_id: opportunity.id })
 
       // 4. Create Timeline Event
       await supabase.from('lead_timeline').insert({
-        lead_id: lead.id,
+        lead_id: resolvedLead.id,
         type: 'opportunity_created',
         message: null,
         meta: {
@@ -231,7 +241,7 @@ serve(async (req) => {
       const { data: freshLead } = await supabase
         .from('leads')
         .select('unread_interest_count')
-        .eq('id', lead.id)
+        .eq('id', resolvedLead.id)
         .single()
 
       const currentCount = freshLead?.unread_interest_count || 0
@@ -242,14 +252,14 @@ serve(async (req) => {
           unread_interest_count: currentCount + 1,
           last_activity_at: new Date().toISOString(),
         })
-        .eq('id', lead.id)
+        .eq('id', resolvedLead.id)
 
       log('info', requestId, 'Timeline and lead stats updated', { unread_interest_count: currentCount + 1 })
 
       // Emit opportunity.created webhook (server-side)
       await emitWebhook(supabase, 'opportunity.created', {
         opportunity_id: opportunity.id,
-        lead_id: lead.id,
+        lead_id: resolvedLead.id,
         product_id: product.id,
         product_name: product.name,
         stage: opportunity.stage,
@@ -279,7 +289,7 @@ serve(async (req) => {
         const { data: newOpp, error: oppError } = await supabase
           .from('opportunities')
           .insert({
-            lead_id: lead.id,
+            lead_id: resolvedLead.id,
             product_id,
             stage: 'talking_ai',
           })
@@ -298,7 +308,7 @@ serve(async (req) => {
 
         // Create Timeline Event
         await supabase.from('lead_timeline').insert({
-          lead_id: lead.id,
+          lead_id: resolvedLead.id,
           type: 'opportunity_created',
           message: null,
           meta: {
@@ -315,7 +325,7 @@ serve(async (req) => {
         const { data: freshLead } = await supabase
           .from('leads')
           .select('unread_interest_count')
-          .eq('id', lead.id)
+          .eq('id', resolvedLead.id)
           .single()
 
         const currentCount = freshLead?.unread_interest_count || 0
@@ -326,14 +336,14 @@ serve(async (req) => {
             unread_interest_count: currentCount + 1,
             last_activity_at: new Date().toISOString(),
           })
-          .eq('id', lead.id)
+          .eq('id', resolvedLead.id)
 
         log('info', requestId, 'Timeline and lead stats updated', { unread_interest_count: currentCount + 1 })
 
         // Emit opportunity.created webhook
         await emitWebhook(supabase, 'opportunity.created', {
           opportunity_id: opportunity.id,
-          lead_id: lead.id,
+          lead_id: resolvedLead.id,
           product_id: product.id,
           product_name: product.name,
           stage: opportunity.stage,
@@ -356,13 +366,13 @@ Produto ID: ${product.id}
 Link: ${page_url || `/product/${product.id}`}
 ${message ? `Mensagem: ${message}` : ''}
 
-Nome: ${lead.name}
+Nome: ${resolvedLead.name}
 ${normalizedPhone ? `Telefone: ${normalizedPhone}` : ''}`
 
     // 7. Webhooks (best-effort)
     const webhookPayload = {
       event_type: 'opportunity.created_from_interest',
-      lead,
+      lead: resolvedLead,
       opportunity,
       product: { id: product.id, name: product.name },
       message_to_agent,
@@ -408,7 +418,7 @@ ${normalizedPhone ? `Telefone: ${normalizedPhone}` : ''}`
     }
 
     log('info', requestId, 'Request completed successfully', {
-      lead_id: lead.id,
+      lead_id: resolvedLead.id,
       opportunity_id: opportunity.id,
       is_duplicate: diffMinutes < DUPLICATE_WINDOW_MINUTES,
     })
@@ -416,7 +426,7 @@ ${normalizedPhone ? `Telefone: ${normalizedPhone}` : ''}`
     return new Response(
       JSON.stringify({
         ok: true,
-        lead_id: lead.id,
+        lead_id: resolvedLead.id,
         opportunity_id: opportunity.id,
         message: 'Interesse registrado com sucesso',
       }),

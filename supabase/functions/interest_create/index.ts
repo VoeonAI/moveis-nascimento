@@ -47,6 +47,9 @@ async function emitWebhook(supabase: any, eventType: string, payload: any, chann
   }
 }
 
+// Time window for duplicate detection (10 minutes)
+const DUPLICATE_WINDOW_MINUTES = 10;
+
 serve(async (req) => {
   const requestId = generateRequestId()
   
@@ -175,13 +178,15 @@ serve(async (req) => {
       log('info', requestId, 'Using existing lead', { lead_id: lead.id })
     }
 
-    // 3. Check/Create Opportunity
+    // 3. Check/Create Opportunity with time-based deduplication
     const { data: existingOpp } = await supabase
       .from('opportunities')
       .select('*')
       .eq('lead_id', lead.id)
       .eq('product_id', product_id)
       .in('stage', ['talking_ai', 'new_interest'])
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle()
 
     let opportunity = existingOpp
@@ -251,7 +256,91 @@ serve(async (req) => {
         source,
       }, 'site')
     } else {
-      log('info', requestId, 'Using existing opportunity', { opportunity_id: opportunity.id })
+      // Existing opportunity found - check time window
+      const now = new Date()
+      const oppCreatedAt = new Date(opportunity.created_at)
+      const diffMinutes = (now.getTime() - oppCreatedAt.getTime()) / (1000 * 60)
+      
+      if (diffMinutes < DUPLICATE_WINDOW_MINUTES) {
+        log('info', requestId, 'Duplicate interest detected (within time window)', {
+          opportunity_id: opportunity.id,
+          minutes_ago: diffMinutes.toFixed(2),
+          window_minutes: DUPLICATE_WINDOW_MINUTES,
+        })
+        // Use existing opportunity - treat as accidental duplicate
+      } else {
+        log('info', requestId, 'New legitimate interest after time window', {
+          existing_opportunity_id: opportunity.id,
+          minutes_ago: diffMinutes.toFixed(2),
+          window_minutes: DUPLICATE_WINDOW_MINUTES,
+        })
+        
+        // Create new opportunity for legitimate repeat interest
+        const { data: newOpp, error: oppError } = await supabase
+          .from('opportunities')
+          .insert({
+            lead_id: lead.id,
+            product_id,
+            stage: 'talking_ai',
+          })
+          .select()
+          .single()
+
+        if (oppError) {
+          log('error', requestId, 'Failed to create new opportunity', { error: oppError.message })
+          return new Response(
+            JSON.stringify({ ok: false, code: 'opportunity_creation_failed', message: 'Failed to create opportunity' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+        opportunity = newOpp
+        log('info', requestId, 'New opportunity created for repeat interest', { opportunity_id: opportunity.id })
+
+        // Create Timeline Event
+        await supabase.from('lead_timeline').insert({
+          lead_id: lead.id,
+          type: 'opportunity_created',
+          message: null,
+          meta: {
+            opportunity_id: opportunity.id,
+            product_id: product.id,
+            product_name: product.name,
+            source,
+            is_repeat_interest: true,
+            previous_opportunity_id: existingOpp.id,
+          },
+        })
+
+        // Increment unread count and update activity
+        const { data: freshLead } = await supabase
+          .from('leads')
+          .select('unread_interest_count')
+          .eq('id', lead.id)
+          .single()
+
+        const currentCount = freshLead?.unread_interest_count || 0
+
+        await supabase
+          .from('leads')
+          .update({
+            unread_interest_count: currentCount + 1,
+            last_activity_at: new Date().toISOString(),
+          })
+          .eq('id', lead.id)
+
+        log('info', requestId, 'Timeline and lead stats updated', { unread_interest_count: currentCount + 1 })
+
+        // Emit opportunity.created webhook
+        await emitWebhook(supabase, 'opportunity.created', {
+          opportunity_id: opportunity.id,
+          lead_id: lead.id,
+          product_id: product.id,
+          product_name: product.name,
+          stage: opportunity.stage,
+          source,
+          is_repeat_interest: true,
+        }, 'site')
+      }
     }
 
     // 6. Build message for agent
@@ -321,6 +410,7 @@ ${normalizedPhone ? `Telefone: ${normalizedPhone}` : ''}`
     log('info', requestId, 'Request completed successfully', {
       lead_id: lead.id,
       opportunity_id: opportunity.id,
+      is_duplicate: diffMinutes < DUPLICATE_WINDOW_MINUTES,
     })
 
     return new Response(

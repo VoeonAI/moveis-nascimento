@@ -342,63 +342,6 @@ serve(async (req) => {
     // Flag segura para is_duplicate
     const isDuplicate = !!existingOpp && opportunity?.id === existingOpp.id;
 
-    // 6. Build message for agent
-    const message_to_agent = 
-`Tenho interesse neste móvel: ${product.name}
-Produto ID: ${product.id}
-Link: ${page_url || `/product/${product.id}`}
-${message ? `Mensagem: ${message}` : ''}
-
-Nome: ${resolvedLead.name}
-${normalizedPhone ? `Telefone: ${normalizedPhone}` : ''}`
-
-    // 7. Webhooks (best-effort)
-    const webhookPayload = {
-      event_type: 'opportunity.created_from_interest',
-      lead: resolvedLead,
-      opportunity,
-      product: { id: product.id, name: product.name },
-      message_to_agent,
-      context: { source, page_url, timestamp: new Date().toISOString() },
-    }
-
-    const { data: endpoints } = await supabase
-      .from('webhook_endpoints')
-      .select('*')
-      .contains('events', ['opportunity.created_from_interest'])
-      .eq('active', true)
-
-    if (endpoints && endpoints.length > 0) {
-      log('info', requestId, 'Sending webhooks', { count: endpoints.length })
-      for (const endpoint of endpoints) {
-        let statusCode = 500
-        let success = false
-        try {
-          const response = await fetch(endpoint.url, {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              ...(endpoint.secret ? { 'X-Webhook-Secret': endpoint.secret } : {}),
-            },
-            body: JSON.stringify(webhookPayload),
-          })
-          statusCode = response.status
-          success = response.ok
-        } catch (error) {
-          log('error', requestId, 'Webhook failed', { endpoint_id: endpoint.id, error })
-          statusCode = 0
-        }
-        await supabase.from('webhook_logs').insert({
-          endpoint_id: endpoint.id,
-          event_type: 'opportunity.created_from_interest',
-          payload: webhookPayload,
-          status_code: statusCode,
-          success,
-          error: success ? null : 'Failed',
-        })
-      }
-    }
-
     log('info', requestId, 'Request completed successfully', {
       lead_id: resolvedLead.id,
       opportunity_id: opportunity.id,
@@ -410,7 +353,6 @@ ${normalizedPhone ? `Telefone: ${normalizedPhone}` : ''}`
         ok: true,
         lead_id: resolvedLead.id,
         opportunity_id: opportunity.id,
-        whatsapp_message: message_to_agent,
         message: 'Interesse registrado com sucesso',
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

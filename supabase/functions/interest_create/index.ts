@@ -23,18 +23,15 @@ function log(level: 'info' | 'error', requestId: string, message: string, data?:
   console.log(JSON.stringify(logEntry))
 }
 
-// Helper to normalize phone numbers
 function normalizePhone(phone: string): string {
   return phone.replace(/\D/g, '');
 }
 
-// Helper to emit webhooks (best-effort)
 async function emitWebhook(supabase: any, eventType: string, payload: any, channel: string) {
   try {
     const { error } = await supabase.functions.invoke('webhooks_dispatch', {
       body: { eventType, payload, channel },
     });
-
     if (error) {
       console.warn('[interest_create] Webhook emit failed:', eventType, error);
     } else {
@@ -45,7 +42,6 @@ async function emitWebhook(supabase: any, eventType: string, payload: any, chann
   }
 }
 
-// Time window for duplicate detection (10 minutes)
 const DUPLICATE_WINDOW_MINUTES = 10;
 
 serve(async (req) => {
@@ -71,8 +67,6 @@ serve(async (req) => {
     }
 
     const { product_id, name, phone, message, source = 'site', page_url } = body
-
-    // Normalize phone if provided
     const normalizedPhone = phone ? normalizePhone(phone) : null;
 
     log('info', requestId, 'Request received', {
@@ -82,7 +76,6 @@ serve(async (req) => {
       has_message: !!message,
       source,
       page_url,
-      normalizedPhone: normalizedPhone ? normalizedPhone.substring(0, 4) + '***' : null,
     })
 
     if (!product_id) {
@@ -102,14 +95,7 @@ serve(async (req) => {
     
     const { data: product, error: productError } = await supabase
       .from('products')
-      .select(`
-        id,
-        name,
-        active,
-        product_categories (
-          categories (name)
-        )
-      `)
+      .select('id, name, active')
       .eq('id', product_id)
       .eq('active', true)
       .single()
@@ -124,10 +110,10 @@ serve(async (req) => {
 
     log('info', requestId, 'Product found', { product_id, product_name: product.name })
 
-    // 2. Deduplicate/Find Lead (using normalized phone)
+    // 2. Find/Create Lead
     let lead = null
     if (normalizedPhone) {
-      log('info', requestId, 'Searching for existing lead', { normalizedPhone: normalizedPhone.substring(0, 4) + '***' })
+      log('info', requestId, 'Searching for existing lead')
       const { data: existingLead } = await supabase
         .from('leads')
         .select('*')
@@ -138,7 +124,6 @@ serve(async (req) => {
       lead = existingLead
     }
 
-    // Create Lead if not found
     let newLead = null
     if (!lead) {
       log('info', requestId, 'Creating new lead')
@@ -166,29 +151,31 @@ serve(async (req) => {
       lead = newLead
       log('info', requestId, 'Lead created', { lead_id: lead.id })
 
-      // Emit lead.created webhook (server-side)
-      await emitWebhook(supabase, 'lead.created', {
-        lead_id: lead.id,
-        name: lead.name,
-        phone: lead.phone,
-        channel: lead.channel,
-        source,
-      }, 'site')
+      try {
+        await emitWebhook(supabase, 'lead.created', {
+          lead_id: lead.id,
+          name: lead.name,
+          phone: lead.phone,
+          channel: lead.channel,
+          source,
+        }, 'site')
+      } catch (webhookError) {
+        log('error', requestId, 'Webhook emit failed (non-critical)', { error: webhookError })
+      }
     } else {
       log('info', requestId, 'Using existing lead', { lead_id: lead.id })
     }
 
-    // Resolve the lead to use (existing or newly created)
     const resolvedLead = lead ?? newLead
     if (!resolvedLead?.id) {
-      log('error', requestId, 'Lead is invalid', { lead, newLead })
+      log('error', requestId, 'Lead is invalid')
       return new Response(
         JSON.stringify({ ok: false, code: 'lead_invalid', message: 'Lead is invalid' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // 3. Check/Create Opportunity with time-based deduplication
+    // 3. Check/Create Opportunity
     const { data: existingOpp } = await supabase
       .from('opportunities')
       .select('*')
@@ -223,7 +210,7 @@ serve(async (req) => {
       opportunity = newOpp
       log('info', requestId, 'Opportunity created', { opportunity_id: opportunity.id })
 
-      // 4. Create Timeline Event
+      // Timeline
       await supabase.from('lead_timeline').insert({
         lead_id: resolvedLead.id,
         type: 'opportunity_created',
@@ -236,8 +223,7 @@ serve(async (req) => {
         },
       })
 
-      // 5. Increment unread count and update activity
-      // FIX: Fetch fresh value to avoid race condition
+      // Update unread count
       const { data: freshLead } = await supabase
         .from('leads')
         .select('unread_interest_count')
@@ -256,7 +242,6 @@ serve(async (req) => {
 
       log('info', requestId, 'Timeline and lead stats updated', { unread_interest_count: currentCount + 1 })
 
-      // Emit opportunity.created webhook (server-side)
       try {
         await emitWebhook(supabase, 'opportunity.created', {
           opportunity_id: opportunity.id,
@@ -270,7 +255,7 @@ serve(async (req) => {
         log('error', requestId, 'Webhook emit failed (non-critical)', { error: webhookError })
       }
     } else {
-      // Existing opportunity found - check time window
+      // Existing opportunity - check time window
       const now = new Date()
       const oppCreatedAt = new Date(opportunity.created_at)
       const diffMinutes = (now.getTime() - oppCreatedAt.getTime()) / (1000 * 60)
@@ -279,17 +264,13 @@ serve(async (req) => {
         log('info', requestId, 'Duplicate interest detected (within time window)', {
           opportunity_id: opportunity.id,
           minutes_ago: diffMinutes.toFixed(2),
-          window_minutes: DUPLICATE_WINDOW_MINUTES,
         })
-        // Use existing opportunity - treat as accidental duplicate
       } else {
         log('info', requestId, 'New legitimate interest after time window', {
           existing_opportunity_id: opportunity.id,
           minutes_ago: diffMinutes.toFixed(2),
-          window_minutes: DUPLICATE_WINDOW_MINUTES,
         })
         
-        // Create new opportunity for legitimate repeat interest
         const { data: newOpp, error: oppError } = await supabase
           .from('opportunities')
           .insert({
@@ -310,7 +291,6 @@ serve(async (req) => {
         opportunity = newOpp
         log('info', requestId, 'New opportunity created for repeat interest', { opportunity_id: opportunity.id })
 
-        // Create Timeline Event
         await supabase.from('lead_timeline').insert({
           lead_id: resolvedLead.id,
           type: 'opportunity_created',
@@ -325,7 +305,6 @@ serve(async (req) => {
           },
         })
 
-        // Increment unread count
         const { data: freshLead } = await supabase
           .from('leads')
           .select('unread_interest_count')
@@ -344,7 +323,6 @@ serve(async (req) => {
 
         log('info', requestId, 'Timeline and lead stats updated', { unread_interest_count: currentCount + 1 })
 
-        // Emit opportunity.created webhook
         try {
           await emitWebhook(supabase, 'opportunity.created', {
             opportunity_id: opportunity.id,
@@ -361,15 +339,12 @@ serve(async (req) => {
       }
     }
 
-    // 6. Build message for agent
-    const categoryNames = product.product_categories
-      ?.map((pc: any) => pc.categories?.name)
-      .filter(Boolean)
-      .join(', ') || ''
+    // Flag segura para is_duplicate
+    const isDuplicate = !!existingOpp && opportunity?.id === existingOpp.id;
 
+    // 6. Build message for agent
     const message_to_agent = 
 `Tenho interesse neste móvel: ${product.name}
-${categoryNames ? `Categoria: ${categoryNames}` : ''}
 Produto ID: ${product.id}
 Link: ${page_url || `/product/${product.id}`}
 ${message ? `Mensagem: ${message}` : ''}
@@ -413,7 +388,6 @@ ${normalizedPhone ? `Telefone: ${normalizedPhone}` : ''}`
           log('error', requestId, 'Webhook failed', { endpoint_id: endpoint.id, error })
           statusCode = 0
         }
-        // Log attempt
         await supabase.from('webhook_logs').insert({
           endpoint_id: endpoint.id,
           event_type: 'opportunity.created_from_interest',
@@ -428,7 +402,7 @@ ${normalizedPhone ? `Telefone: ${normalizedPhone}` : ''}`
     log('info', requestId, 'Request completed successfully', {
       lead_id: resolvedLead.id,
       opportunity_id: opportunity.id,
-      is_duplicate: diffMinutes < DUPLICATE_WINDOW_MINUTES,
+      is_duplicate,
     })
 
     return new Response(
@@ -436,6 +410,7 @@ ${normalizedPhone ? `Telefone: ${normalizedPhone}` : ''}`
         ok: true,
         lead_id: resolvedLead.id,
         opportunity_id: opportunity.id,
+        whatsapp_message: message_to_agent,
         message: 'Interesse registrado com sucesso',
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

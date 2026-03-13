@@ -44,7 +44,7 @@ import { Label } from '@/components/ui/label';
 import { 
   ArrowLeft, CheckCircle, Clock, User, Phone, MessageSquare, Package, 
   Calendar as CalendarIcon, RefreshCw, Plus, Bell, AlertCircle,
-  Archive, ArchiveRestore, Trash2, MoreHorizontal, X, Info, WhatsApp
+  Archive, ArchiveRestore, Trash2, MoreHorizontal, X, Info, MessageCircle
 } from 'lucide-react';
 import { format, startOfDay, isBefore, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -106,7 +106,7 @@ const LeadContextCard = ({ lead, lastOpportunity, lastMessage, storeWhatsApp }: 
               className="bg-green-600 hover:bg-green-700 text-white"
               size="lg"
             >
-              <WhatsApp size={20} className="mr-2" />
+              <MessageCircle size={20} className="mr-2" />
               Abrir WhatsApp
             </Button>
           )}
@@ -1246,7 +1246,7 @@ const CRM = () => {
                                 </div>
                               ) : opp.product_id ? (
                                 <div className="flex items-center gap-2">
-                                  <Package size={16} typing="text-gray-500" />
+                                  <Package size={16} className="text-gray-500" />
                                   <span className="font-medium text-gray-600">Produto removido (ID: {opp.product_id.slice(0, 8)}...)</span>
                                 </div>
                               ) : null}

@@ -315,10 +315,16 @@ ${normalizedPhone ? `Telefone: ${normalizedPhone}` : ''}`
 
     // PATCH FINAL: Bloco de webhooks/logs envolvido em try/catch para garantir que não derrube a resposta
     try {
+      // PATCH: Criar leadPayload com a mensagem atualizada
+      const leadPayload = {
+        ...resolvedLead,
+        notes: message || resolvedLead.notes || null,
+      };
+
       // 7. Webhooks (best-effort)
       const webhookPayload = {
         event_type: 'opportunity.created',
-        lead: resolvedLead,
+        lead: leadPayload,
         opportunity,
         product: { id: product.id, name: product.name },
         message_to_agent,

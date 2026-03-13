@@ -111,6 +111,17 @@ const ProductDetail = () => {
       .finally(() => setLoading(false));
   }, [id, navigate]);
 
+  // Reset form data when modal opens (prevent stale state)
+  useEffect(() => {
+    if (modalOpen) {
+      setFormData({
+        name: '',
+        phone: '',
+        message: '',
+      });
+    }
+  }, [modalOpen]);
+
   const handleInterestClick = () => {
     setModalOpen(true);
   };
@@ -120,15 +131,18 @@ const ProductDetail = () => {
     setFormData({ name: '', phone: '', message: '' });
   };
 
+  // FUNÇÃO ÚNICA: Montar mensagem do WhatsApp
   const buildWhatsAppMessage = (): string => {
+    if (!product) return '';
+
     const lines: string[] = [];
     
-    lines.push(`Tenho interesse neste produto:`);
-    lines.push(`• Produto: ${product?.name}`);
-    lines.push(`• Produto ID: ${product?.id}`);
+    lines.push(`Tenho interesse neste móvel:`);
+    lines.push(`• Produto: ${product.name}`);
+    lines.push(`• Produto ID: ${product.id}`);
     
     if (publicSiteUrl) {
-      lines.push(`• Link: ${publicSiteUrl}/product/${product?.id}`);
+      lines.push(`• Link: ${publicSiteUrl}/product/${product.id}`);
     } else {
       lines.push(`• Link: (indisponível no ambiente local)`);
     }
@@ -146,7 +160,8 @@ const ProductDetail = () => {
     return lines.join('\n');
   };
 
-  const handleOpenWhatsApp = () => {
+  // FUNÇÃO ÚNICA: Abrir WhatsApp
+  const openWhatsApp = () => {
     if (!storeWhatsApp) {
       showError('WhatsApp da loja não configurado');
       return;
@@ -157,8 +172,6 @@ const ProductDetail = () => {
     const whatsappUrl = `https://wa.me/${storeWhatsApp}?text=${encodedMessage}`;
     
     window.open(whatsappUrl, '_blank');
-    showSuccess('Abrindo WhatsApp...');
-    handleModalClose();
   };
 
   const handleCopyMessage = async () => {
@@ -186,65 +199,35 @@ const ProductDetail = () => {
       return;
     }
 
-    setSubmitting(true);
+    // 1. Abrir WhatsApp imediatamente (UX prioritária)
+    openWhatsApp();
+    
+    // 2. Fechar modal imediatamente
+    setModalOpen(false);
 
-    try {
-      console.log('[ProductDetail] Sending interest request:', {
+    // 3. Registrar interesse em background (best-effort, não bloqueia o usuário)
+    // Usamos fire-and-forget: não await, não try/catch que pare o fluxo
+    supabase.functions.invoke('interest_create', {
+      body: {
         product_id: product?.id,
         name: formData.name,
         phone: formData.phone,
         message: formData.message,
-      });
-
-      const { data, error } = await supabase.functions.invoke('interest_create', {
-        body: {
-          product_id: product?.id,
-          name: formData.name,
-          phone: formData.phone,
-          message: formData.message,
-          source: 'site',
-          page_url: publicSiteUrl ? `${publicSiteUrl}/product/${product?.id}` : window.location.href,
-        },
-      });
-
-      console.log('[ProductDetail] Response:', { data, error });
-
+        source: 'site',
+        page_url: publicSiteUrl ? `${publicSiteUrl}/product/${product?.id}` : window.location.href,
+      },
+    }).then(({ data, error }) => {
+      // Sucesso ou erro do backend é apenas logado, não afeta o usuário que já está no WhatsApp
       if (error) {
-        console.error('[ProductDetail] Supabase error:', {
-          name: error.name,
-          status: error.status,
-          message: error.message,
-          details: error.details,
-        });
-        
-        const errorMessage = error.message || error.details || 'Erro ao registrar interesse';
-        showError(errorMessage);
-        return;
+        console.error('[ProductDetail] Background interest_create failed:', error);
+      } else if (!data?.ok) {
+        console.warn('[ProductDetail] Background interest_create returned error:', data);
+      } else {
+        console.log('[ProductDetail] Background interest_create success');
       }
-
-      if (!data?.ok) {
-        console.error('[ProductDetail] Function returned error:', data);
-        const errorMessage = data.message || data.error || 'Erro ao registrar interesse';
-        showError(errorMessage);
-        return;
-      }
-
-      showSuccess('Interesse registrado com sucesso!');
-
-      if (storeWhatsApp) {
-        const message = buildWhatsAppMessage();
-        const encodedMessage = encodeURIComponent(message);
-        const whatsappUrl = `https://wa.me/${storeWhatsApp}?text=${encodedMessage}`;
-        window.open(whatsappUrl, '_blank');
-        handleModalClose();
-      } 
-      
-    } catch (error) {
-      console.error('[ProductDetail] Unexpected error:', error);
-      showError('Erro ao registrar interesse. Tente novamente.');
-    } finally {
-      setSubmitting(false);
-    }
+    }).catch((err) => {
+      console.error('[ProductDetail] Background interest_create exception:', err);
+    });
   };
 
   // Helper seguro para obter preço
@@ -549,7 +532,7 @@ const ProductDetail = () => {
               {storeWhatsApp ? (
                 <div className="space-y-3">
                   <Button
-                    onClick={handleOpenWhatsApp}
+                    onClick={openWhatsApp}
                     className="w-full bg-green-600 hover:bg-green-700"
                     size="lg"
                   >

@@ -1,4 +1,330 @@
-const filteredLeads = useMemo(() => {
+import React, { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { crmService } from '@/services/crmService';
+import { ordersService } from '@/services/ordersService';
+import { OpportunityStage } from '@/constants/domain';
+import { OPPORTUNITY_STAGE_LABELS, TIMELINE_EVENT_LABELS } from '@/constants/labels';
+import { showSuccess, showError } from '@/utils/toast';
+import { useAuth } from '@/core/auth/AuthProvider';
+import { Role } from '@/constants/domain';
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle, 
+  CardDescription 
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { HardDeleteConfirmDialog } from '@/components/HardDeleteConfirmDialog';
+import { CompleteSaleDialog, CompleteSaleData } from '@/components/CRM/CompleteSaleDialog';
+import { 
+  Phone, 
+  MessageSquare, 
+  Clock, 
+  Package, 
+  TrendingUp, 
+  Calendar,
+  Archive,
+  ArchiveRestore,
+  Trash2,
+  MoreHorizontal,
+  ChevronDown,
+  RefreshCw,
+  Search,
+  Filter,
+  Plus,
+  MessageCircle,
+  User,
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle,
+} from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import { settingsService } from '@/services/settingsService';
+import { Opportunity } from '@/types';
+
+interface Lead {
+  id: string;
+  name: string;
+  phone?: string;
+  channel: string;
+  status: string;
+  notes?: string;
+  archived: boolean;
+  follow_up_needed: boolean;
+  follow_up_at?: string;
+  last_activity_at: string;
+  created_at: string;
+}
+
+interface OpportunityWithProduct extends Opportunity {
+  products?: { id: string; name: string };
+}
+
+const CRM = () => {
+  const navigate = useNavigate();
+  const { user, profile } = useAuth();
+  const isMaster = profile?.role === Role.MASTER;
+
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [selectedLeadData, setSelectedLeadData] = useState<{
+    lead: Lead;
+    opportunities: OpportunityWithProduct[];
+    timeline: any[];
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
+
+  // Filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [archivedFilter, setArchivedFilter] = useState<boolean>(false);
+
+  // Modals
+  const [addLeadModalOpen, setAddLeadModalOpen] = useState(false);
+  const [completeSaleModalOpen, setCompleteSaleModalOpen] = useState(false);
+  const [opportunityToComplete, setOpportunityToComplete] = useState<OpportunityWithProduct | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [leadToAction, setLeadToAction] = useState<Lead | null>(null);
+
+  // Add lead form
+  const [addLeadForm, setAddLeadForm] = useState({
+    name: '',
+    phone: '',
+    channel: 'manual',
+    notes: '',
+    createOpportunity: false,
+  });
+
+  // WhatsApp config
+  const [storeWhatsApp, setStoreWhatsApp] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadLeads();
+    loadStoreWhatsApp();
+  }, [archivedFilter]);
+
+  const loadStoreWhatsApp = async () => {
+    try {
+      const wa = await settingsService.getStoreWhatsApp();
+      setStoreWhatsApp(wa);
+    } catch (error) {
+      console.error('[CRM] Failed to load store WhatsApp:', error);
+    }
+  };
+
+  const loadLeads = async () => {
+    setLoading(true);
+    try {
+      const data = await crmService.listLeads(archivedFilter);
+      setLeads(data);
+    } catch (error) {
+      console.error('[CRM] Failed to load leads:', error);
+      showError('Erro ao carregar leads');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadLeadDetail = async (leadId: string) => {
+    try {
+      const data = await crmService.getLeadDetail(leadId);
+      setSelectedLeadData(data);
+    } catch (error) {
+      console.error('[CRM] Failed to load lead detail:', error);
+      showError('Erro ao carregar detalhes do lead');
+    }
+  };
+
+  const handleLeadSelect = (leadId: string) => {
+    setSelectedLeadId(leadId);
+    loadLeadDetail(leadId);
+  };
+
+  const handleAddLead = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!addLeadForm.name.trim()) {
+      showError('Nome é obrigatório');
+      return;
+    }
+
+    setUpdating(true);
+    try {
+      await crmService.createManualLead({
+        name: addLeadForm.name,
+        phone: addLeadForm.phone,
+        channel: addLeadForm.channel,
+        notes: addLeadForm.notes,
+        createOpportunity: addLeadForm.createOpportunity,
+        userId: user?.id || '',
+      });
+      
+      showSuccess('Lead criado com sucesso');
+      setAddLeadModalOpen(false);
+      setAddLeadForm({
+        name: '',
+        phone: '',
+        channel: 'manual',
+        notes: '',
+        createOpportunity: false,
+      });
+      await loadLeads();
+    } catch (error: any) {
+      console.error('[CRM] Failed to create lead:', error);
+      showError(error.message || 'Erro ao criar lead');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleCompleteSale = async (data: CompleteSaleData) => {
+    if (!opportunityToComplete || !selectedLeadData) return;
+
+    setUpdating(true);
+    try {
+      await ordersService.createOrderFromSale(
+        opportunityToComplete.id,
+        selectedLeadData.lead.id,
+        {
+          delivery_address: data.delivery_address,
+          internal_code: data.internal_code,
+          notes: data.notes,
+          customer_name: selectedLeadData.lead.name,
+          customer_phone: selectedLeadData.lead.phone,
+        },
+        user?.id
+      );
+
+      showSuccess('Venda finalizada com sucesso');
+      setCompleteSaleModalOpen(false);
+      setOpportunityToComplete(null);
+      await loadLeads();
+      if (selectedLeadId) {
+        await loadLeadDetail(selectedLeadId);
+      }
+    } catch (error: any) {
+      console.error('[CRM] Failed to complete sale:', error);
+      showError(error.message || 'Erro ao finalizar venda');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleArchiveLead = async (lead: Lead, archived: boolean) => {
+    try {
+      await crmService.archiveLead(lead.id, archived, user?.id);
+      showSuccess(archived ? 'Lead arquivado' : 'Lead restaurado');
+      setArchiveDialogOpen(false);
+      setLeadToAction(null);
+      await loadLeads();
+      if (selectedLeadId === lead.id) {
+        setSelectedLeadId(null);
+        setSelectedLeadData(null);
+      }
+    } catch (error: any) {
+      console.error('[CRM] Failed to archive lead:', error);
+      showError(error.message || 'Erro ao arquivar lead');
+    }
+  };
+
+  const handleDeleteLead = async (lead: Lead) => {
+    if (!isMaster) return;
+
+    try {
+      await crmService.deleteLead(lead.id);
+      showSuccess('Lead excluído com sucesso');
+      setDeleteDialogOpen(false);
+      setLeadToAction(null);
+      await loadLeads();
+      if (selectedLeadId === lead.id) {
+        setSelectedLeadId(null);
+        setSelectedLeadData(null);
+      }
+    } catch (error: any) {
+      console.error('[CRM] Failed to delete lead:', error);
+      showError(error.message || 'Erro ao excluir lead');
+    }
+  };
+
+  const handleHardDeleteLead = async (leadId: string) => {
+    if (!isMaster) return;
+
+    try {
+      const { adminService } = await import('@/services/adminService');
+      await adminService.hardDeleteLead(leadId);
+      showSuccess('Lead excluído definitivamente com sucesso');
+      setDeleteDialogOpen(false);
+      setLeadToAction(null);
+      await loadLeads();
+      if (selectedLeadId === leadId) {
+        setSelectedLeadId(null);
+        setSelectedLeadData(null);
+      }
+    } catch (error: any) {
+      console.error('[CRM] Failed to hard delete lead:', error);
+      showError(error.message || 'Erro ao excluir lead');
+    }
+  };
+
+  const handleAddNote = async (message: string) => {
+    if (!selectedLeadId || !user?.id) return;
+
+    try {
+      await crmService.addLeadNote(selectedLeadId, message, user.id);
+      showSuccess('Nota adicionada');
+      await loadLeadDetail(selectedLeadId);
+    } catch (error: any) {
+      console.error('[CRM] Failed to add note:', error);
+      showError(error.message || 'Erro ao adicionar nota');
+    }
+  };
+
+  const handleUpdateOpportunityStage = async (oppId: string, newStage: OpportunityStage) => {
+    if (!selectedLeadId) return;
+
+    try {
+      await crmService.updateOpportunityStage(oppId, newStage, selectedLeadId);
+      showSuccess('Estágio atualizado');
+      await loadLeadDetail(selectedLeadId);
+    } catch (error: any) {
+      console.error('[CRM] Failed to update stage:', error);
+      showError(error.message || 'Erro ao atualizar estágio');
+    }
+  };
+
+  const filteredLeads = useMemo(() => {
     return leads.filter(lead => {
       const matchesSearch = !searchQuery || 
         lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -31,12 +357,6 @@ const filteredLeads = useMemo(() => {
       case 'closed': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
     }
-  };
-
-  const isFollowUpOverdue = (lead: Lead) => {
-    return lead.follow_up_needed && lead.follow_up_at 
-      ? new Date(lead.follow_up_at) < new Date()
-      : false;
   };
 
   return (
@@ -94,7 +414,7 @@ const filteredLeads = useMemo(() => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Leads List - FORMATO COMPACTO RESTAURADO */}
+        {/* Leads List */}
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -119,38 +439,31 @@ const filteredLeads = useMemo(() => {
                   <div
                     key={lead.id}
                     onClick={() => handleLeadSelect(lead.id)}
-                    className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                    className={`p-4 rounded-lg border cursor-pointer transition-all ${
                       selectedLeadId === lead.id
                         ? 'bg-green-50 border-green-500'
                         : 'hover:bg-gray-50'
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <p className="font-medium text-sm truncate">{lead.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold truncate">{lead.name}</p>
                           {lead.archived && (
-                            <Archive size={12} className="text-gray-400 flex-shrink-0" />
-                          )}
-                          {lead.follow_up_needed && (
-                            <Clock size={12} className={isFollowUpOverdue(lead) ? "text-red-500" : "text-orange-500"} />
+                            <Archive size={14} className="text-gray-400 flex-shrink-0" />
                           )}
                         </div>
                         {lead.phone && (
-                          <p className="text-xs text-gray-600 flex items-center gap-1">
-                            <Phone size={10} />
+                          <p className="text-sm text-gray-600 flex items-center gap-1">
+                            <Phone size={12} />
                             {lead.phone}
                           </p>
                         )}
-                        <div className="flex items-center gap-1.5 mt-1.5">
-                          <Badge className={getStatusColor(lead.status)} variant="secondary" className="text-xs px-2 py-0">
-                            {lead.status === 'new_interest' ? 'Novo' : 
-                             lead.status === 'talking' ? 'Conversa' :
-                             lead.status === 'proposal' ? 'Proposta' :
-                             lead.status === 'negotiation' ? 'Negociação' :
-                             lead.status === 'closed' ? 'Fechado' : lead.status}
+                        <div className="flex items-center gap-2 mt-2">
+                          <Badge className={getStatusColor(lead.status)} variant="secondary">
+                            {lead.status}
                           </Badge>
-                          <Badge variant="outline" className="text-xs px-1.5 py-0">
+                          <Badge variant="outline" className="text-xs">
                             {format(new Date(lead.created_at), 'dd/MM')}
                           </Badge>
                         </div>
@@ -163,7 +476,7 @@ const filteredLeads = useMemo(() => {
           </CardContent>
         </Card>
 
-        {/* Lead Detail - MANTENDO MELHORIAS */}
+        {/* Lead Detail */}
         <Card className="lg:col-span-2">
           {selectedLeadData ? (
             <>
@@ -183,11 +496,7 @@ const filteredLeads = useMemo(() => {
                         Criado em {format(new Date(selectedLeadData.lead.created_at), 'dd/MM/yyyy')}
                       </span>
                       <Badge className={getStatusColor(selectedLeadData.lead.status)}>
-                        {selectedLeadData.lead.status === 'new_interest' ? 'Novo Interesse' : 
-                         selectedLeadData.lead.status === 'talking' ? 'Em Conversa' :
-                         selectedLeadData.lead.status === 'proposal' ? 'Proposta Enviada' :
-                         selectedLeadData.lead.status === 'negotiation' ? 'Negociação' :
-                         selectedLeadData.lead.status === 'closed' ? 'Fechado' : selectedLeadData.lead.status}
+                        {selectedLeadData.lead.status}
                       </Badge>
                     </CardDescription>
                   </div>
@@ -223,7 +532,7 @@ const filteredLeads = useMemo(() => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Lead Context Card with WhatsApp - MANTIDO */}
+                {/* Lead Context Card with WhatsApp */}
                 <LeadContextCard 
                   lead={selectedLeadData.lead}
                   lastOpportunity={selectedLeadData.opportunities[0]}
@@ -531,7 +840,7 @@ const filteredLeads = useMemo(() => {
   );
 };
 
-// LeadContextCard component - MANTIDO COM MELHORIAS
+// LeadContextCard component
 const LeadContextCard = ({ lead, lastOpportunity, lastMessage, storeWhatsApp }: {
   lead: Lead;
   lastOpportunity?: OpportunityWithProduct;

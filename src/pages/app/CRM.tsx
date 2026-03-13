@@ -49,6 +49,7 @@ import {
 import { format, startOfDay, isBefore, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { showSuccess, showError } from '@/utils/toast';
+import { supabase } from '@/core/supabaseClient';
 
 type FilterType = 'all' | 'new' | 'followup' | 'status';
 
@@ -186,7 +187,7 @@ const CRM = () => {
   // Load store WhatsApp
   const loadStoreWhatsApp = async () => {
     try {
-      const { data, error } = await crmService.supabase
+      const { data, error } = await supabase
         .from('app_settings')
         .select('value')
         .eq('key', 'store_whatsapp_e164')
@@ -199,6 +200,8 @@ const CRM = () => {
 
       if (data?.value && /^\d{10,15}$/.test(data.value)) {
         setStoreWhatsApp(data.value);
+      } else {
+        setStoreWhatsApp(null);
       }
     } catch (error) {
       console.warn('[CRM] Error loading store WhatsApp:', error);
@@ -316,7 +319,7 @@ const CRM = () => {
       const leadsWithContext = await Promise.all(
         data.map(async (lead) => {
           // Fetch last opportunity with product
-          const { data: opportunities } = await crmService.supabase
+          const { data: opportunities } = await supabase
             .from('opportunities')
             .select(`
               id,
@@ -382,12 +385,22 @@ const CRM = () => {
       
       await crmService.markLeadAsSeen(leadId);
       
-      setLeads(prev => prev.map(l => 
-        l.id === leadId ? { ...l, unread_interest_count: 0, last_timeline_event_type: null } : l)
-      ));
+      setLeads((prev) =>
+        prev.map((l) =>
+          l.id === leadId
+            ? {
+                ...l,
+                unread_interest_count: 0,
+                last_timeline_event_type: null,
+              }
+            : l
+        )
+      );
 
       setFollowUpNeeded(details.lead.follow_up_needed || false);
-      setFollowUpDate(details.lead.follow_up_at ? new Date(details.lead.follow_up_at) : undefined);
+      setFollowUpDate(
+        details.lead.follow_up_at ? new Date(details.lead.follow_up_at) : undefined
+      );
 
       // Check which opportunities have linked orders
       const oppIds = details.opportunities.map(o => o.id);

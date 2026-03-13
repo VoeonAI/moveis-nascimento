@@ -44,7 +44,7 @@ import { Label } from '@/components/ui/label';
 import { 
   ArrowLeft, CheckCircle, Clock, User, Phone, MessageSquare, Package, 
   Calendar as CalendarIcon, RefreshCw, Plus, Bell, AlertCircle,
-  Archive, ArchiveRestore, Trash2, MoreHorizontal, X, Info
+  Archive, ArchiveRestore, Trash2, MoreHorizontal, X, Info, WhatsApp
 } from 'lucide-react';
 import { format, startOfDay, isBefore, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -52,11 +52,74 @@ import { showSuccess, showError } from '@/utils/toast';
 
 type FilterType = 'all' | 'new' | 'followup' | 'status';
 
+// Componente para exibir contexto do topo do detalhe
+const LeadContextCard = ({ lead, lastOpportunity, lastMessage, storeWhatsApp }: {
+  lead: Lead;
+  lastOpportunity?: Opportunity & { products?: { id: string; name: string } };
+  lastMessage?: string;
+  storeWhatsApp: string | null;
+}) => {
+  const openWhatsApp = () => {
+    if (!storeWhatsApp || !lead.phone) return;
+    const message = `Olá, sou ${lead.name}. Tenho interesse no produto: ${lastOpportunity?.products?.name || 'Móveis Nascimento'}`;
+    const encodedMessage = encodeURIComponent(message);
+    window.open(`https://wa.me/${storeWhatsApp}?text=${encodedMessage}`, '_blank');
+  };
+
+  return (
+    <Card className="bg-gradient-to-br from-green-50 to-white border-green-200">
+      <CardContent className="p-6">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+          <div className="space-y-2 flex-1">
+            {lastOpportunity?.products && (
+              <div className="flex items-center gap-2">
+                <Package size={16} className="text-green-600" />
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Último Interesse</p>
+                  <p className="font-semibold text-gray-900">{lastOpportunity.products.name}</p>
+                </div>
+              </div>
+            )}
+            
+            {lastMessage && (
+              <div className="flex items-start gap-2">
+                <MessageSquare size={16} className="text-blue-600 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Última Mensagem</p>
+                  <p className="text-sm text-gray-700 line-clamp-2">{lastMessage}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <Clock size={16} className="text-gray-500" />
+              <p className="text-xs text-gray-500">
+                Interesse em {lastOpportunity ? format(new Date(lastOpportunity.created_at), 'dd/MM/yyyy') : '-'}
+              </p>
+            </div>
+          </div>
+
+          {storeWhatsApp && lead.phone && (
+            <Button
+              onClick={openWhatsApp}
+              className="bg-green-600 hover:bg-green-700 text-white"
+              size="lg"
+            >
+              <WhatsApp size={20} className="mr-2" />
+              Abrir WhatsApp
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 const CRM = () => {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
-  const [leads, setLeads] = useState<(Lead & { last_timeline_event_type?: string | null })[]>([]);
-  const [filteredLeads, setFilteredLeads] = useState<(Lead & { last_timeline_event_type?: string | null })[]>([]);
+  const [leads, setLeads] = useState<(Lead & { last_timeline_event_type?: string | null, last_opportunity?: Opportunity & { products?: { id: string; name: string } }, last_message?: string })[]>([]);
+  const [filteredLeads, setFilteredLeads] = useState<(Lead & { last_timeline_event_type?: string | null, last_opportunity?: Opportunity & { products?: { id: string; name: string } }, last_message?: string })[]>([]);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [leadDetails, setLeadDetails] = useState<{ lead: Lead; opportunities: (Opportunity & { products?: { id: string; name: string } })[]; timeline: TimelineEvent[] } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -99,11 +162,15 @@ const CRM = () => {
   const [creatingLead, setCreatingLead] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
 
+  // WhatsApp configuration
+  const [storeWhatsApp, setStoreWhatsApp] = useState<string | null>(null);
+
   // Check if user is master
   const isMaster = profile?.role === 'master';
 
   useEffect(() => {
     loadLeads();
+    loadStoreWhatsApp();
   }, [showArchived]);
 
   // Load products for manual lead modal
@@ -115,6 +182,28 @@ const CRM = () => {
       });
     }
   }, [newLeadModalOpen]);
+
+  // Load store WhatsApp
+  const loadStoreWhatsApp = async () => {
+    try {
+      const { data, error } = await crmService.supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'store_whatsapp_e164')
+        .maybeSingle();
+
+      if (error) {
+        console.warn('[CRM] Failed to load store WhatsApp:', error.message);
+        return;
+      }
+
+      if (data?.value && /^\d{10,15}$/.test(data.value)) {
+        setStoreWhatsApp(data.value);
+      }
+    } catch (error) {
+      console.warn('[CRM] Error loading store WhatsApp:', error);
+    }
+  };
 
   // Helper: Check if lead is considered "New" based on business rule
   const isNewLead = (lead: Lead) => {
@@ -223,19 +312,39 @@ const CRM = () => {
     try {
       const data = await crmService.listLeads(showArchived);
       
-      // Fetch last timeline event type for each lead
-      const leadsWithLastEvent = await Promise.all(
+      // Fetch last opportunity and last message for each lead
+      const leadsWithContext = await Promise.all(
         data.map(async (lead) => {
+          // Fetch last opportunity with product
+          const { data: opportunities } = await crmService.supabase
+            .from('opportunities')
+            .select(`
+              id,
+              lead_id,
+              product_id,
+              stage,
+              created_at,
+              products (id, name)
+            `)
+            .eq('lead_id', lead.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          // Fetch last timeline event
           const timeline = await crmService.listLeadTimeline(lead.id);
-          const lastEvent = timeline.length >0 ? timeline[0] : null;
+          const lastEvent = timeline.length > 0 ? timeline[0] : null;
+
           return {
             ...lead,
+            last_opportunity: opportunities || undefined,
             last_timeline_event_type: lastEvent?.type || null,
+            last_message: lastEvent?.type === 'note' ? lastEvent.message : null,
           };
         })
       );
       
-      setLeads(leadsWithLastEvent);
+      setLeads(leadsWithContext);
 
       // Check which leads have linked orders
       const leadIds = data.map(l => l.id);
@@ -274,7 +383,7 @@ const CRM = () => {
       await crmService.markLeadAsSeen(leadId);
       
       setLeads(prev => prev.map(l => 
-        l.id === leadId ? { ...l, unread_interest_count: 0, last_timeline_event_type: null } : l
+        l.id === leadId ? { ...l, unread_interest_count: 0, last_timeline_event_type: null } : l)
       ));
 
       setFollowUpNeeded(details.lead.follow_up_needed || false);
@@ -782,7 +891,7 @@ const CRM = () => {
             <div className="mb-4">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-64">
-                  <selectValue placeholder="Selecione o status" />
+                  <SelectValue placeholder="Selecione o status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os status</SelectItem>
@@ -858,6 +967,30 @@ const CRM = () => {
                       )}
                     </CardHeader>
                     <CardContent className="space-y-3">
+                      {/* Último Produto e Data */}
+                      {lead.last_opportunity?.products && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Package size={14} className="text-green-600" />
+                          <span className="font-medium text-gray-900 truncate flex-1">
+                            {lead.last_opportunity.products.name}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {format(new Date(lead.last_opportunity.created_at), 'dd/MM')}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Última Mensagem */}
+                      {lead.last_message && (
+                        <div className="flex items-start gap-2 text-sm">
+                          <MessageSquare size={14} className="text-blue-500 mt-0.5" />
+                          <p className="text-gray-700 line-clamp-2 flex-1">
+                            {lead.last_message}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Status e Data */}
                       <div className="flex items-center justify-between">
                         <Badge variant="outline" className="capitalize">
                           {OPPORTUNITY_STAGE_LABELS[lead.status as OpportunityStage] || lead.status.replace(/_/g, ' ')}
@@ -867,19 +1000,7 @@ const CRM = () => {
                         </span>
                       </div>
 
-                      {/* Latest Message */}
-                      {lead.notes && (
-                        <div className="text-xs text-gray-600 mt-2 line-clamp-2 bg-gray-50 p-2 rounded">
-                          <MessageSquare size={12} className="inline mr-1 text-gray-500" />
-                          {lead.notes}
-                        </div>
-                      )}
-
-                      <div className="text-xs text-gray-600 flex items-center gap-1">
-                        <Clock size={12} />
-                        Criado em: {format(new Date(lead.created_at), 'dd/MM/yyyy')}
-                      </div>
-
+                      {/* Follow-up Info */}
                       {lead.follow_up_needed && (
                         <div className="text-xs text-orange-600 flex items-center gap-1 font-medium">
                           <AlertCircle size={12} />
@@ -966,6 +1087,14 @@ const CRM = () => {
 
           {leadDetails && (
             <div className="space-y-6">
+              {/* Lead Context Card (NOVO) */}
+              <LeadContextCard
+                lead={leadDetails.lead}
+                lastOpportunity={leadDetails.opportunities[0]}
+                lastMessage={leadDetails.timeline.find(t => t.type === 'note')?.message}
+                storeWhatsApp={storeWhatsApp}
+              />
+
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -1070,7 +1199,7 @@ const CRM = () => {
                           </div>
                           <div className="flex-1">
                             <p className="text-sm text-gray-900">{getTimelineMessage(event)}</p>
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="x text-xs text-gray-500 mt-1">
                               {format(new Date(event.created_at), "dd/MM/yyyy 'às' HH:mm")}
                             </p>
                           </div>
@@ -1104,7 +1233,7 @@ const CRM = () => {
                                 </div>
                               ) : opp.product_id ? (
                                 <div className="flex items-center gap-2">
-                                  <Package size={16} className="text-gray-500" />
+                                  <Package size={16} typing="text-gray-500" />
                                   <span className="font-medium text-gray-600">Produto removido (ID: {opp.product_id.slice(0, 8)}...)</span>
                                 </div>
                               ) : null}

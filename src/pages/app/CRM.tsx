@@ -99,7 +99,7 @@ const getLeadPriorityStatus = (lead: Lead, hasActiveOpportunity: boolean): LeadP
   today.setHours(0, 0, 0, 0);
   const sevenDaysAgo = subDays(today, 7);
 
-  // 1. Atrasado
+  // 1. Atrasado (follow-up passou da data)
   if (lead.follow_up_needed && lead.follow_up_at) {
     const followUpDate = new Date(lead.follow_up_at);
     followUpDate.setHours(0, 0, 0, 0);
@@ -108,7 +108,7 @@ const getLeadPriorityStatus = (lead: Lead, hasActiveOpportunity: boolean): LeadP
     }
   }
 
-  // 2. Follow Hoje
+  // 2. Follow Hoje (follow-up é hoje)
   if (lead.follow_up_needed && lead.follow_up_at) {
     const followUpDate = new Date(lead.follow_up_at);
     followUpDate.setHours(0, 0, 0, 0);
@@ -117,7 +117,7 @@ const getLeadPriorityStatus = (lead: Lead, hasActiveOpportunity: boolean): LeadP
     }
   }
 
-  // 3. Follow-up
+  // 3. Follow-up (follow futuro)
   if (lead.follow_up_needed && lead.follow_up_at) {
     const followUpDate = new Date(lead.follow_up_at);
     followUpDate.setHours(0, 0, 0, 0);
@@ -126,22 +126,24 @@ const getLeadPriorityStatus = (lead: Lead, hasActiveOpportunity: boolean): LeadP
     }
   }
 
-  // 4. Novo Interesse (não lido)
+  // 4. Novo Interesse (interesse não visualizado)
   if (lead.unread_interest_count && lead.unread_interest_count > 0) {
     return 'new';
   }
 
-  // 5. Novo Lead (criado nos últimos 7 dias)
+  // 5. Novo Lead (criado manualmente/recém-criado, até 7 dias)
   const createdAt = new Date(lead.created_at);
   if (createdAt >= sevenDaysAgo) {
     return 'new_lead';
   }
 
-  // 6. Aberto (tem oportunidade ativa)
+  // 6. Aberto (tem oportunidades abertas, não Ganho nem Perdido)
+  // Só mostra se não estiver em Follow ou Novo Interesse
   if (hasActiveOpportunity) {
     return 'open';
   }
 
+  // 7. sem badge (Ganho/Perdido ou sem oportunidades)
   return 'normal';
 };
 
@@ -449,7 +451,10 @@ const CRM = () => {
       
       const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
       
-      const matchesPriority = priorityFilter === 'all' || priorityStatus === priorityFilter;
+      // Filtro "Novos": inclui tanto Novo Lead quanto Novo Interesse
+      const matchesPriority = priorityFilter === 'all' || 
+        (priorityFilter === 'new' && (priorityStatus === 'new' || priorityStatus === 'new_lead')) ||
+        priorityStatus === priorityFilter;
       
       return matchesSearch && matchesStatus && matchesPriority;
     }).map(({ lead, priorityStatus }) => lead);

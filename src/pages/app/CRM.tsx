@@ -85,33 +85,54 @@ interface Lead {
   follow_up_at?: string;
   last_activity_at: string;
   created_at: string;
+  unread_interest_count?: number;
 }
 
 interface OpportunityWithProduct extends Opportunity {
   products?: { id: string; name: string };
 }
 
-type LeadPriorityStatus = 'new' | 'today' | 'overdue' | 'normal';
+type LeadPriorityStatus = 'overdue' | 'today' | 'followup' | 'new' | 'open' | 'normal';
 
-const getLeadPriorityStatus = (lead: Lead): LeadPriorityStatus => {
-  // Check for "new" status
-  if (lead.status === 'new_interest') {
+const getLeadPriorityStatus = (lead: Lead, hasActiveOpportunity: boolean): LeadPriorityStatus => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // 1. Atrasado
+  if (lead.follow_up_needed && lead.follow_up_at) {
+    const followUpDate = new Date(lead.follow_up_at);
+    followUpDate.setHours(0, 0, 0, 0);
+    if (followUpDate < today) {
+      return 'overdue';
+    }
+  }
+
+  // 2. Follow Hoje
+  if (lead.follow_up_needed && lead.follow_up_at) {
+    const followUpDate = new Date(lead.follow_up_at);
+    followUpDate.setHours(0, 0, 0, 0);
+    if (followUpDate.getTime() === today.getTime()) {
+      return 'today';
+    }
+  }
+
+  // 3. Follow-up
+  if (lead.follow_up_needed && lead.follow_up_at) {
+    const followUpDate = new Date(lead.follow_up_at);
+    followUpDate.setHours(0, 0, 0, 0);
+    if (followUpDate > today) {
+      return 'followup';
+    }
+  }
+
+  // 4. Novo Interesse (não lido)
+  if (lead.unread_interest_count && lead.unread_interest_count > 0) {
     return 'new';
   }
 
-  // Check for follow-up
-  if (lead.follow_up_needed && lead.follow_up_at) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const followUpDate = new Date(lead.follow_up_at);
-    followUpDate.setHours(0, 0, 0, 0);
-
-    if (followUpDate < today) {
-      return 'overdue';
-    } else if (followUpDate.getTime() === today.getTime()) {
-      return 'today';
-    }
+  // 5. Aberto (tem oportunidade ativa)
+  if (hasActiveOpportunity) {
+    return 'open';
   }
 
   return 'normal';
@@ -119,20 +140,30 @@ const getLeadPriorityStatus = (lead: Lead): LeadPriorityStatus => {
 
 const getPriorityBadgeInfo = (status: LeadPriorityStatus) => {
   switch (status) {
+    case 'overdue':
+      return {
+        label: 'Atrasado',
+        className: 'bg-red-100 text-red-800 border-red-200',
+      };
+    case 'today':
+      return {
+        label: 'Follow Hoje',
+        className: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      };
+    case 'followup':
+      return {
+        label: 'Follow-up',
+        className: 'bg-purple-100 text-purple-800 border-purple-200',
+      };
     case 'new':
       return {
         label: 'Novo Interesse',
         className: 'bg-blue-100 text-blue-800 border-blue-200',
       };
-    case 'today':
+    case 'open':
       return {
-        label: 'Follow-up Hoje',
-        className: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      };
-    case 'overdue':
-      return {
-        label: 'Atrasado',
-        className: 'bg-red-100 text-red-800 border-red-200',
+        label: 'Aberto',
+        className: 'bg-green-100 text-green-800 border-green-200',
       };
     default:
       return null;
@@ -388,19 +419,29 @@ const CRM = () => {
   };
 
   const filteredLeads = useMemo(() => {
-    return leads.filter(lead => {
+    return leads.map(lead => {
+      const hasActiveOpportunity = selectedLeadData?.lead.id === lead.id 
+        ? selectedLeadData.opportunities.some(opp => 
+            opp.stage !== OpportunityStage.WON && opp.stage !== OpportunityStage.LOST
+          )
+        : false;
+
+      return {
+        lead,
+        priorityStatus: getLeadPriorityStatus(lead, hasActiveOpportunity),
+      };
+    }).filter(({ lead, priorityStatus }) => {
       const matchesSearch = !searchQuery || 
         lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         lead.phone?.includes(searchQuery);
       
       const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
       
-      const priorityStatus = getLeadPriorityStatus(lead);
       const matchesPriority = priorityFilter === 'all' || priorityStatus === priorityFilter;
       
       return matchesSearch && matchesStatus && matchesPriority;
-    });
-  }, [leads, searchQuery, statusFilter, priorityFilter]);
+    }).map(({ lead, priorityStatus }) => lead);
+  }, [leads, searchQuery, statusFilter, priorityFilter, selectedLeadData]);
 
   const getStageColor = (stage: string) => {
     switch (stage) {
@@ -509,6 +550,14 @@ const CRM = () => {
                 </Button>
                 <Button
                   size="sm"
+                  variant={priorityFilter === 'followup' ? 'default' : 'outline'}
+                  onClick={() => setPriorityFilter('followup')}
+                  className="text-xs"
+                >
+                  Follow
+                </Button>
+                <Button
+                  size="sm"
                   variant={priorityFilter === 'today' ? 'default' : 'outline'}
                   onClick={() => setPriorityFilter('today')}
                   className="text-xs"
@@ -522,6 +571,14 @@ const CRM = () => {
                   className="text-xs"
                 >
                   Atrasados
+                </Button>
+                <Button
+                  size="sm"
+                  variant={priorityFilter === 'open' ? 'default' : 'outline'}
+                  onClick={() => setPriorityFilter('open')}
+                  className="text-xs"
+                >
+                  Abertos
                 </Button>
               </div>
             </div>
@@ -540,7 +597,13 @@ const CRM = () => {
             ) : (
               <div className="space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto">
                 {filteredLeads.map((lead) => {
-                  const priorityStatus = getLeadPriorityStatus(lead);
+                  const hasActiveOpportunity = selectedLeadData?.lead.id === lead.id
+                    ? selectedLeadData.opportunities.some(opp => 
+                        opp.stage !== OpportunityStage.WON && opp.stage !== OpportunityStage.LOST
+                      )
+                    : false;
+
+                  const priorityStatus = getLeadPriorityStatus(lead, hasActiveOpportunity);
                   const priorityBadge = getPriorityBadgeInfo(priorityStatus);
                   
                   return (
@@ -562,7 +625,7 @@ const CRM = () => {
                             )}
                           </div>
                           
-                          {/* Priority Badges */}
+                          {/* Priority Badge */}
                           {priorityBadge && (
                             <Badge className={priorityBadge.className} variant="secondary" className="text-xs">
                               {priorityBadge.label}

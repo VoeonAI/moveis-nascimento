@@ -91,6 +91,54 @@ interface OpportunityWithProduct extends Opportunity {
   products?: { id: string; name: string };
 }
 
+type LeadPriorityStatus = 'new' | 'today' | 'overdue' | 'normal';
+
+const getLeadPriorityStatus = (lead: Lead): LeadPriorityStatus => {
+  // Check for "new" status
+  if (lead.status === 'new_interest') {
+    return 'new';
+  }
+
+  // Check for follow-up
+  if (lead.follow_up_needed && lead.follow_up_at) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const followUpDate = new Date(lead.follow_up_at);
+    followUpDate.setHours(0, 0, 0, 0);
+
+    if (followUpDate < today) {
+      return 'overdue';
+    } else if (followUpDate.getTime() === today.getTime()) {
+      return 'today';
+    }
+  }
+
+  return 'normal';
+};
+
+const getPriorityBadgeInfo = (status: LeadPriorityStatus) => {
+  switch (status) {
+    case 'new':
+      return {
+        label: 'Novo Interesse',
+        className: 'bg-blue-100 text-blue-800 border-blue-200',
+      };
+    case 'today':
+      return {
+        label: 'Follow-up Hoje',
+        className: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      };
+    case 'overdue':
+      return {
+        label: 'Atrasado',
+        className: 'bg-red-100 text-red-800 border-red-200',
+      };
+    default:
+      return null;
+  }
+};
+
 const CRM = () => {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
@@ -110,6 +158,7 @@ const CRM = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [archivedFilter, setArchivedFilter] = useState<boolean>(false);
+  const [priorityFilter, setPriorityFilter] = useState<string>('all');
 
   // Modals
   const [addLeadModalOpen, setAddLeadModalOpen] = useState(false);
@@ -289,7 +338,7 @@ const CRM = () => {
       setDeleteDialogOpen(false);
       setLeadToAction(null);
       await loadLeads();
-      if (selectedLeadId === leadId) {
+      if (selectedLeadId === lead.id) {
         setSelectedLeadId(null);
         setSelectedLeadData(null);
       }
@@ -346,9 +395,12 @@ const CRM = () => {
       
       const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
       
-      return matchesSearch && matchesStatus;
+      const priorityStatus = getLeadPriorityStatus(lead);
+      const matchesPriority = priorityFilter === 'all' || priorityStatus === priorityFilter;
+      
+      return matchesSearch && matchesStatus && matchesPriority;
     });
-  }, [leads, searchQuery, statusFilter]);
+  }, [leads, searchQuery, statusFilter, priorityFilter]);
 
   const getStageColor = (stage: string) => {
     switch (stage) {
@@ -431,10 +483,48 @@ const CRM = () => {
         {/* Leads List */}
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User size={20} />
-              Leads ({filteredLeads.length})
-            </CardTitle>
+            <div className="space-y-3">
+              <CardTitle className="flex items-center gap-2">
+                <User size={20} />
+                Leads ({filteredLeads.length})
+              </CardTitle>
+              
+              {/* Priority Filters */}
+              <div className="flex gap-2 pt-2">
+                <Button
+                  size="sm"
+                  variant={priorityFilter === 'all' ? 'default' : 'outline'}
+                  onClick={() => setPriorityFilter('all')}
+                  className="text-xs"
+                >
+                  Todos
+                </Button>
+                <Button
+                  size="sm"
+                  variant={priorityFilter === 'new' ? 'default' : 'outline'}
+                  onClick={() => setPriorityFilter('new')}
+                  className="text-xs"
+                >
+                  Novos
+                </Button>
+                <Button
+                  size="sm"
+                  variant={priorityFilter === 'today' ? 'default' : 'outline'}
+                  onClick={() => setPriorityFilter('today')}
+                  className="text-xs"
+                >
+                  Follow Hoje
+                </Button>
+                <Button
+                  size="sm"
+                  variant={priorityFilter === 'overdue' ? 'default' : 'outline'}
+                  onClick={() => setPriorityFilter('overdue')}
+                  className="text-xs"
+                >
+                  Atrasados
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -449,42 +539,55 @@ const CRM = () => {
               </div>
             ) : (
               <div className="space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto">
-                {filteredLeads.map((lead) => (
-                  <div
-                    key={lead.id}
-                    onClick={() => handleLeadSelect(lead.id)}
-                    className={`p-4 rounded-lg border cursor-pointer transition-all ${
-                      selectedLeadId === lead.id
-                        ? 'bg-green-50 border-green-500'
-                        : 'hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold truncate">{lead.name}</p>
-                          {lead.archived && (
-                            <Archive size={14} className="text-gray-400 flex-shrink-0" />
+                {filteredLeads.map((lead) => {
+                  const priorityStatus = getLeadPriorityStatus(lead);
+                  const priorityBadge = getPriorityBadgeInfo(priorityStatus);
+                  
+                  return (
+                    <div
+                      key={lead.id}
+                      onClick={() => handleLeadSelect(lead.id)}
+                      className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                        selectedLeadId === lead.id
+                          ? 'bg-green-50 border-green-500'
+                          : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <p className="font-semibold truncate">{lead.name}</p>
+                            {lead.archived && (
+                              <Archive size={14} className="text-gray-400 flex-shrink-0" />
+                            )}
+                          </div>
+                          
+                          {/* Priority Badges */}
+                          {priorityBadge && (
+                            <Badge className={priorityBadge.className} variant="secondary" className="text-xs">
+                              {priorityBadge.label}
+                            </Badge>
                           )}
-                        </div>
-                        {lead.phone && (
-                          <p className="text-sm text-gray-600 flex items-center gap-1">
-                            <Phone size={12} />
-                            {lead.phone}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-2 mt-2">
-                          <Badge className={getStatusColor(lead.status)} variant="secondary">
-                            {lead.status}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs">
-                            {format(new Date(lead.created_at), 'dd/MM')}
-                          </Badge>
+                          
+                          {lead.phone && (
+                            <p className="text-sm text-gray-600 flex items-center gap-1">
+                              <Phone size={12} />
+                              {lead.phone}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-2 mt-2">
+                            <Badge className={getStatusColor(lead.status)} variant="secondary">
+                              {lead.status}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {format(new Date(lead.created_at), 'dd/MM')}
+                            </Badge>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>

@@ -62,7 +62,7 @@ import {
   CheckCircle,
   Save,
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
   DropdownMenu, 
@@ -92,11 +92,12 @@ interface OpportunityWithProduct extends Opportunity {
   products?: { id: string; name: string };
 }
 
-type LeadPriorityStatus = 'overdue' | 'today' | 'followup' | 'new' | 'open' | 'normal';
+type LeadPriorityStatus = 'overdue' | 'today' | 'followup' | 'new' | 'new_lead' | 'open' | 'normal';
 
 const getLeadPriorityStatus = (lead: Lead, hasActiveOpportunity: boolean): LeadPriorityStatus => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const sevenDaysAgo = subDays(today, 7);
 
   // 1. Atrasado
   if (lead.follow_up_needed && lead.follow_up_at) {
@@ -130,7 +131,13 @@ const getLeadPriorityStatus = (lead: Lead, hasActiveOpportunity: boolean): LeadP
     return 'new';
   }
 
-  // 5. Aberto (tem oportunidade ativa)
+  // 5. Novo Lead (criado nos últimos 7 dias)
+  const createdAt = new Date(lead.created_at);
+  if (createdAt >= sevenDaysAgo) {
+    return 'new_lead';
+  }
+
+  // 6. Aberto (tem oportunidade ativa)
   if (hasActiveOpportunity) {
     return 'open';
   }
@@ -159,6 +166,11 @@ const getPriorityBadgeInfo = (status: LeadPriorityStatus) => {
       return {
         label: 'Novo Interesse',
         className: 'bg-blue-100 text-blue-800 border-blue-200',
+      };
+    case 'new_lead':
+      return {
+        label: 'Novo Lead',
+        className: 'bg-cyan-100 text-cyan-800 border-cyan-200',
       };
     case 'open':
       return {
@@ -457,7 +469,6 @@ const CRM = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'new_interest': return 'bg-blue-100 text-blue-800';
       case 'talking': return 'bg-purple-100 text-purple-800';
       case 'proposal': return 'bg-yellow-100 text-yellow-800';
       case 'negotiation': return 'bg-orange-100 text-orange-800';
@@ -504,7 +515,6 @@ const CRM = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os status</SelectItem>
-            <SelectItem value="new_interest">Novo Interesse</SelectItem>
             <SelectItem value="talking">Em Conversa</SelectItem>
             <SelectItem value="proposal">Proposta Enviada</SelectItem>
             <SelectItem value="negotiation">Negociação</SelectItem>

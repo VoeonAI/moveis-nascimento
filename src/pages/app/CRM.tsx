@@ -60,6 +60,7 @@ import {
   AlertTriangle,
   ArrowRight,
   CheckCircle,
+  Save,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -324,6 +325,19 @@ const CRM = () => {
     }
   };
 
+  const handleSaveFollowUp = async (leadId: string, needed: boolean, date: string | null) => {
+    try {
+      await crmService.setFollowUp(leadId, needed, date);
+      showSuccess('Follow-up atualizado');
+      if (selectedLeadId) {
+        await loadLeadDetail(selectedLeadId);
+      }
+    } catch (error: any) {
+      console.error('[CRM] Failed to save follow-up:', error);
+      showError(error.message || 'Erro ao salvar follow-up');
+    }
+  };
+
   const filteredLeads = useMemo(() => {
     return leads.filter(lead => {
       const matchesSearch = !searchQuery || 
@@ -541,7 +555,11 @@ const CRM = () => {
                 />
 
                 {/* Follow-up Summary */}
-                <FollowUpSummary lead={selectedLeadData.lead} />
+                <FollowUpSummary 
+                  lead={selectedLeadData.lead} 
+                  onSave={handleSaveFollowUp}
+                  isSaving={updating}
+                />
 
                 {/* Notes */}
                 {selectedLeadData.lead.notes && (
@@ -920,7 +938,17 @@ Posso te ajudar com valores ou condições?`;
 };
 
 // FollowUpSummary component
-const FollowUpSummary = ({ lead }: { lead: Lead }) => {
+const FollowUpSummary = ({ lead, onSave, isSaving }: {
+  lead: Lead;
+  onSave: (leadId: string, needed: boolean, date: string | null) => void;
+  isSaving: boolean;
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [localNeeded, setLocalNeeded] = useState(lead.follow_up_needed);
+  const [localDate, setLocalDate] = useState(
+    lead.follow_up_at ? new Date(lead.follow_up_at).toISOString().split('T')[0] : ''
+  );
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
@@ -940,6 +968,78 @@ const FollowUpSummary = ({ lead }: { lead: Lead }) => {
     return 'text-gray-500';
   };
 
+  const handleSave = () => {
+    const dateToSave = localNeeded && localDate ? localDate : null;
+    onSave(lead.id, localNeeded, dateToSave);
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setLocalNeeded(lead.follow_up_needed);
+    setLocalDate(lead.follow_up_at ? new Date(lead.follow_up_at).toISOString().split('T')[0] : '');
+    setIsEditing(false);
+  };
+
+  if (isEditing) {
+    return (
+      <Card className="bg-white border-2 border-blue-200">
+        <CardContent className="p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Calendar size={16} className="text-blue-600" />
+              <span className="text-sm font-medium text-gray-700">Follow-up</span>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={localNeeded}
+              onChange={(e) => setLocalNeeded(e.target.checked)}
+              className="w-4 h-4"
+            />
+            <label className="text-sm text-gray-700">Precisa de follow-up?</label>
+          </div>
+
+          {localNeeded && (
+            <div>
+              <label className="text-xs text-gray-600 block mb-1">Próximo follow-up:</label>
+              <Input
+                type="date"
+                value={localDate}
+                onChange={(e) => setLocalDate(e.target.value)}
+                className="w-full"
+              />
+            </div>
+          )}
+
+          <div className="flex gap-2 justify-end pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCancel}
+              disabled={isSaving}
+            >
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={isSaving || (localNeeded && !localDate)}
+            >
+              {isSaving ? 'Salvando...' : (
+                <>
+                  <Save size={14} className="mr-1" />
+                  Salvar
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className={getBackgroundColor()}>
       <CardContent className="p-4">
@@ -948,6 +1048,17 @@ const FollowUpSummary = ({ lead }: { lead: Lead }) => {
             <Calendar size={16} className={getIconColor()} />
             <span className="text-sm font-medium text-gray-700">Follow-up</span>
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsEditing(true)}
+            className="h-6 px-2 text-xs"
+          >
+            Editar
+          </Button>
+        </div>
+        
+        <div className="flex items-center gap-2 mt-2">
           {lead.follow_up_needed ? (
             <Badge variant="outline" className="text-xs bg-white">
               Necessário

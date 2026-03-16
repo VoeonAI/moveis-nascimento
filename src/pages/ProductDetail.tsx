@@ -500,7 +500,7 @@ const ProductDetail = () => {
                   Fale com o Nas no WhatsApp e tire todas as suas dúvidas agora mesmo.
                 </p>
                 <Button
-                  onClick={() => window.open('https://wa.me/5511999999999', '_blank')}
+                  onClick={handleInterestClick}
                   size="lg"
                   className="bg-green-600 hover:bg-green-700 text-white"
                 >

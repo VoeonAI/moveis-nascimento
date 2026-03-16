@@ -188,8 +188,8 @@ const Index = () => {
                   selectedCategory === cat.slug
                     ? 'bg-green-600 text-white shadow-md'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
+                }`}
+              >
                 {cat.name}
               </button>
             ))}

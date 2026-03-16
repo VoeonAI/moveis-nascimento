@@ -699,8 +699,8 @@ const CRM = () => {
   const getStageColor = (stage: string) => {
     switch (stage) {
       case OpportunityStage.NEW_INTEREST: return 'bg-blue-100 text-blue-800';
-      case OpportunityStage.TALK_ING_AI: return 'bg-purple-100 text-purple-800';
-      case OpportunityStage.TALK_ING_HUMAN: return 'bg-orange-100 text-orange-800';
+      case OpportunityStage.TALKING_AI: return 'bg-purple-100 text-purple-800';
+      case OpportunityStage.TALKING_HUMAN: return 'bg-orange-100 text-orange-800';
       case OpportunityStage.PROPOSAL_SENT: return 'bg-yellow-100 text-yellow-800';
       case OpportunityStage.WON: return 'bg-green-100 text-green-800';
       case OpportunityStage.LOST: return 'bg-red-100 text-red-800';
@@ -1305,8 +1305,8 @@ const CRM = () => {
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value={OpportunityStage.NEW_INTEREST}>Primeiro contato</SelectItem>
-                                  <SelectItem value={OpportunityStage.TALK_ING_AI}>Falando com IA</SelectItem>
-                                  <SelectItem value={OpportunityStage.TALK_ING_HUMAN}>Falando com Humano</SelectItem>
+                                  <SelectItem value={OpportunityStage.TALKING_AI}>Falando com IA</SelectItem>
+                                  <SelectItem value={OpportunityStage.TALKING_HUMAN}>Falando com Humano</SelectItem>
                                   <SelectItem value={OpportunityStage.PROPOSAL_SENT}>Proposta Enviada</SelectItem>
                                   <SelectItem value={OpportunityStage.WON}>Ganho</SelectItem>
                                   <SelectItem value={OpportunityStage.LOST}>Perdido</SelectItem>

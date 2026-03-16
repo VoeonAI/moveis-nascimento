@@ -6,18 +6,15 @@ import { Button } from '@/components/ui/button';
 const HeroBanner = () => {
   return (
     <section className="relative h-[600px] md:h-[700px] overflow-hidden">
-      {/* Background Image */}
       <div 
         className="absolute inset-0 bg-cover bg-center"
         style={{
           backgroundImage: "url('https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=1920&q=80')",
         }}
       >
-        {/* Overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/30"></div>
       </div>
 
-      {/* Content */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 h-full flex items-center">
         <div className="max-w-2xl space-y-6">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
@@ -60,7 +57,6 @@ const HeroBanner = () => {
             </Button>
           </div>
 
-          {/* Trust Indicators */}
           <div className="flex items-center gap-6 pt-8">
             <div className="flex items-center gap-2 text-white">
               <Phone size={20} className="text-green-400" />

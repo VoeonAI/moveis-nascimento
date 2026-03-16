@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/core/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -17,14 +17,196 @@ import {
   Award,
   ArrowRight,
   CheckCircle,
-  Sparkles
+  Sparkles,
+  Car,
+  Store,
+  RefreshCw,
+  MapPin,
+  Home
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 
-const About = () => {
-  const navigate = useNavigate();
+// Story Timeline Component
+const StoryTimeline = () => {
+  const [visibleItems, setVisibleItems] = useState<Set<number>>(new Set());
+  const observerRef = useRef<IntersectionObserver | null>(null);
 
-  // Modal state
+  const timelineEvents = [
+    {
+      id: 1,
+      year: 'Início dos anos 80',
+      subtitle: 'O sofá no teto do carro',
+      description: 'João Batista Nascimento morava em São Paulo quando percebeu uma oportunidade onde muitos não veriam valor. Em frente a uma pensão havia um sofá descartado. Ele lembrou que um conhecido precisava de um estofado para a guarita onde trabalhava. Com criatividade, colocou o sofá no teto de sua Brasília, amarrou com um lençol e uma corda de varal e levou até o comprador. A venda deu certo — e ali nasceu a ideia do negócio.',
+      icon: Car,
+      color: 'green',
+      image: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&q=80'
+    },
+    {
+      id: 2,
+      year: '17 de janeiro de 1983',
+      subtitle: 'Primeira loja',
+      description: 'Foi inaugurada oficialmente a primeira loja da Móveis Nascimento em Joanópolis. Um negócio familiar construído com trabalho, dedicação e proximidade com os clientes.',
+      icon: Store,
+      color: 'yellow',
+      image: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=400&q=80'
+    },
+    {
+      id: 3,
+      year: 'Período de desafios',
+      subtitle: 'Reinvenção',
+      description: 'A empresa passou por momentos difíceis e precisou se reinventar. Quando a continuidade parecia incerta, a família decidiu seguir em frente. Jonas, filho de João, assumiu a gestão e iniciou a reconstrução da confiança com clientes e parceiros.',
+      icon: RefreshCw,
+      color: 'blue',
+      image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&q=80'
+    },
+    {
+      id: 4,
+      year: '2008',
+      subtitle: 'Expansão',
+      description: 'Inauguração da filial em Extrema - MG, marcando uma nova fase de crescimento e consolidação da marca na região.',
+      icon: MapPin,
+      color: 'purple',
+      image: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=400&q=80'
+    },
+    {
+      id: 5,
+      year: 'Hoje',
+      subtitle: 'Mais de 40 anos de história',
+      description: 'Mais de quatro décadas de tradição, construídas com trabalho honesto, respeito e compromisso com os clientes. Uma história que começou com um sofá no teto de um carro — e continua sendo escrita todos os dias.',
+      icon: Home,
+      color: 'emerald',
+      image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&q=80'
+    }
+  ];
+
+  useEffect(() => {
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const id = parseInt(entry.target.getAttribute('data-id') || '0');
+            setVisibleItems((prev) => new Set([...prev, id]));
+          }
+        });
+      },
+      { threshold: 0.2 }
+    );
+
+    const elements = document.querySelectorAll('[data-timeline-item]');
+    elements.forEach((el) => observerRef.current?.observe(el));
+
+    return () => {
+      observerRef.current?.disconnect();
+    };
+  }, []);
+
+  const colorClasses = {
+    green: {
+      bg: 'bg-green-50',
+      border: 'border-green-200',
+      icon: 'bg-green-600',
+      text: 'text-green-700',
+      dot: 'bg-green-500'
+    },
+    yellow: {
+      bg: 'bg-yellow-50',
+      border: 'border-yellow-200',
+      icon: 'bg-yellow-500',
+      text: 'text-yellow-700',
+      dot: 'bg-yellow-500'
+    },
+    blue: {
+      bg: 'bg-blue-50',
+      border: 'border-blue-200',
+      icon: 'bg-blue-600',
+      text: 'text-blue-700',
+      dot: 'bg-blue-500'
+    },
+    purple: {
+      bg: 'bg-purple-50',
+      border: 'border-purple-200',
+      icon: 'bg-purple-600',
+      text: 'text-purple-700',
+      dot: 'bg-purple-500'
+    },
+    emerald: {
+      bg: 'bg-emerald-50',
+      border: 'border-emerald-200',
+      icon: 'bg-emerald-600',
+      text: 'text-emerald-700',
+      dot: 'bg-emerald-500'
+    }
+  };
+
+  return (
+    <div className="relative">
+      {/* Linha vertical central */}
+      <div className="absolute left-1/2 transform -translate-x-1/2 h-full w-[2px] bg-gradient-to-b from-green-200 via-green-300 to-green-200 hidden md:block"></div>
+
+      <div className="space-y-12 md:space-y-16">
+        {timelineEvents.map((event, index) => {
+          const isVisible = visibleItems.has(event.id);
+          const isLeft = index % 2 === 0;
+          const colors = colorClasses[event.color as keyof typeof colorClasses];
+          const Icon = event.icon;
+
+          return (
+            <div
+              key={event.id}
+              data-timeline-item
+              data-id={event.id}
+              className={`relative flex items-center w-full transition-all duration-700 ease-out ${
+                isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+              }`}
+            >
+              {/* Mobile: linha lateral esquerda */}
+              <div className="absolute left-4 top-0 bottom-0 w-[2px] bg-gradient-to-b from-green-200 via-green-300 to-green-200 md:hidden"></div>
+
+              {/* Conteúdo */}
+              <div className={`w-full md:w-1/2 ${isLeft ? 'md:pr-12 md:text-right' : 'md:pl-12 md:ml-auto'}`}>
+                <div className={`bg-white p-6 md:p-8 rounded-2xl shadow-lg border ${colors.border} hover:shadow-xl transition-shadow`}>
+                  {/* Imagem */}
+                  <div className="mb-4 overflow-hidden rounded-xl">
+                    <img 
+                      src={event.image} 
+                      alt={event.subtitle}
+                      className="w-full h-32 md:h-40 object-cover hover:scale-105 transition-transform duration-500"
+                    />
+                  </div>
+
+                  {/* Header */}
+                  <div className={`flex items-center gap-3 mb-3 ${colors.text} ${isLeft ? 'md:justify-end' : ''}`}>
+                    <div className={`w-10 h-10 ${colors.icon} rounded-xl flex items-center justify-center`}>
+                      <Icon size={20} className="text-white" />
+                    </div>
+                    <span className="font-bold text-lg">{event.year}</span>
+                  </div>
+
+                  {/* Subtítulo */}
+                  <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-3">
+                    {event.subtitle}
+                  </h3>
+
+                  {/* Descrição */}
+                  <p className="text-gray-600 leading-relaxed">
+                    {event.description}
+                  </p>
+                </div>
+              </div>
+
+              {/* Ponto na linha */}
+              <div className="absolute left-4 md:left-1/2 transform md:-translate-x-1/2 w-4 h-4 rounded-full ring-4 ring-white shadow-md">
+                <div className={`w-full h-full rounded-full ${colors.dot} ${isVisible ? 'animate-pulse' : ''}`}></div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const About = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -33,10 +215,8 @@ const About = () => {
     message: '',
   });
 
-  // WhatsApp configuration
   const [storeWhatsApp, setStoreWhatsApp] = useState<string | null>(null);
 
-  // Load store WhatsApp
   useEffect(() => {
     const loadStoreWhatsApp = async () => {
       try {
@@ -65,7 +245,6 @@ const About = () => {
     loadStoreWhatsApp();
   }, []);
 
-  // Reset form when modal opens
   useEffect(() => {
     if (modalOpen) {
       setFormData({ name: '', phone: '', message: '' });
@@ -94,7 +273,6 @@ const About = () => {
       return;
     }
 
-    // Build WhatsApp message for general contact
     const lines = [
       'Olá! Gostaria de saber mais sobre a Móveis Nascimento.',
       '',
@@ -109,7 +287,6 @@ const About = () => {
 
     const message = lines.join('\n');
 
-    // 1. Abrir WhatsApp imediatamente
     if (storeWhatsApp) {
       const encodedMessage = encodeURIComponent(message);
       const whatsappUrl = `https://wa.me/${storeWhatsApp}?text=${encodedMessage}`;
@@ -118,10 +295,8 @@ const About = () => {
       showError('WhatsApp da loja não configurado');
     }
 
-    // 2. Fechar modal
     setModalOpen(false);
 
-    // 3. Registrar lead em background (best-effort)
     supabase.functions.invoke('interest_create', {
       body: {
         product_id: null,
@@ -158,7 +333,7 @@ const About = () => {
               transformando casas em lares
             </h1>
             <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
-              Uma história de paix, amor e dedicação que começou na cidade de Extrema e conquistou o coração de milhares de famílias.
+              Uma história de paixão, amor e dedicação que começou com um sofá no teto de um carro e conquistou o coração de milhares de famílias.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
               <Link to="/catalog">
@@ -193,108 +368,7 @@ const About = () => {
             </p>
           </div>
 
-          <div className="relative">
-            {/* Linha central */}
-            <div className="absolute left-1/2 transform -translate-x-1/2 h-full w-1 bg-green-200"></div>
-
-            {/* Eventos */}
-            <div className="space-y-16">
-              {/* Década de 80 - História do Sofá */}
-              <div className="relative flex items-center">
-                <div className="w-1/2 pr-12 text-right">
-                  <div className="inline-block bg-gradient-to-br from-green-50 to-white p-8 rounded-2xl shadow-lg">
-                    <div className="flex items-center gap-3 mb-3 text-green-700">
-                      <Calendar size={24} />
-                      <span className="font-bold text-lg">Década de 80</span>
-                    </div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                      O Início: A Arte do Sofá
-                    </h3>
-                    <p className="text-gray-600 leading-relaxed">
-                      Começamos nossa jornada na arte de sofazeria, criando peças únicas que contavam histórias e traziam conforto para os lares de Extrema. Cada móvel era feito à mão com o máximo de cuidado e dedicação.
-                    </p>
-                  </div>
-                </div>
-                <div className="absolute left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-green-600 ring-4 ring-green-200"></div>
-              </div>
-
-              {/* 1983 - Inauguração */}
-              <div className="relative flex items-center">
-                <div className="w-1/2 pl-12">
-                  <div className="inline-block bg-gradient-to-br from-yellow-50 to-white p-8 rounded-2xl shadow-lg">
-                    <div className="flex items-center gap-3 mb-3 text-yellow-700">
-                      <Award size={24} />
-                      <span className="font-bold text-lg">1983</span>
-                    </div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                      Primeira Loja
-                    </h3>
-                    <p className="text-gray-600 leading-relaxed">
-                      Inauguramos nossa primeira loja física em Extrema, tornando nossos sonhos realidade. Foi o início de uma trajetória de crescimento baseada na confiança e qualidade dos nossos produtos.
-                    </p>
-                  </div>
-                </div>
-                <div className="absolute left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-yellow-500 ring-4 ring-yellow-200"></div>
-              </div>
-
-              {/* Reinvenção - Jonas assume gestão */}
-              <div className="relative flex items-center">
-                <div className="w-1/2 pr-12 text-right">
-                  <div className="inline-block bg-gradient-to-br from-blue-50 to-white p-8 rounded-2xl shadow-lg">
-                    <div className="flex items-center gap-3 mb-3 text-blue-700">
-                      <Star size={24} />
-                      <span className="font-bold text-lg">Novo Capítulo</span>
-                    </div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                      Reinvenção
-                    </h3>
-                    <p className="text-gray-600 leading-relaxed">
-                      Com a assumir a gestão, Jonas trouxe nova visão e modernização para a empresa. Investimos em design contemporâneo, novos materiais e tecnologias de produção, mantendo sempre a qualidade que nos define.
-                    </p>
-                  </div>
-                </div>
-                <div className="absolute left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-blue-600 ring-4 ring-blue-200"></div>
-              </div>
-
-              {/* 2008 - Filial Extrema */}
-              <div className="relative flex items-center">
-                <div className="w-1/2 pl-12">
-                  <div className="inline-block bg-gradient-to-br from-purple-50 to-white p-8 rounded-2xl shadow-lg">
-                    <div className="flex items-center gap-3 mb-3 text-purple-700">
-                      <Target size={24} />
-                      <span className="font-bold text-lg">2008</span>
-                    </div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                      Expansão
-                    </h3>
-                    <p className="text-gray-600 leveading-relaxed">
-                      Com o sucesso de nossa jornada, inauguramos nossa filial em Extrema, trazendo nossos produtos ainda mais perto de você. Um marco importante no crescimento da empresa.
-                    </p>
-                  </div>
-                </div>
-                <div className="absolute left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-purple-600 ring-4 ring-purple-200"></div>
-              </div>
-
-              {/* Hoje - 40+ anos */}
-              <div className="relative flex items-center">
-                <div className="w-1/2 pr-12 text-right">
-                  <div className="inline-block bg-gradient-to-br from-green-50 to-emerald-50 p-8 rounded-2xl shadow-lg">
-                    <div className="flex items-center gap-3 mb-3 text-emerald-700">
-                      <Heart size={24} />
-                      <span className="font-bold text-lg">Hoje</span>
-                    </div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                      Mais de 40 Anos de História
-                    </h3>
-                    <p className="text-gray-600 leading-relaxed">
-                      Hoje, continuamos a mesma tradição de qualidade e atendimento humanizado, combinando com a modernidade e inovação. Milhares de famílias confiaram em nós para transformar suas casas em lares.
-                    </p>
-                  </div>
-                </div>
-                <div className="absolute left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-emerald-600 ring-4 ring-emerald-200 animate-pulse"></div>
-              </div>
-            </div>
-          </div>
+          <StoryTimeline />
         </div>
       </section>
 
@@ -360,7 +434,6 @@ const About = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Missão */}
             <div className="bg-gradient-to-br from-green-50 to-white rounded-2xl p-8 shadow-lg border-t-4 border-green-500">
               <div className="w-14 h-14 bg-green-600 rounded-xl flex items-center justify-center mb-6 mx-auto">
                 <Target size={28} className="text-white" />
@@ -373,7 +446,6 @@ const About = () => {
               </p>
             </div>
 
-            {/* Visão */}
             <div className="bg-gradient-to-br from-blue-50 to-white rounded-2xl p-8 shadow-lg border-t-4 border-blue-500">
               <div className="w-14 h-14 bg-blue-600 rounded-xl flex items-center justify-center mb-6 mx-auto">
                 <Eye size={28} className="text-white" />
@@ -386,7 +458,6 @@ const About = () => {
               </p>
             </div>
 
-            {/* Valores */}
             <div className="bg-gradient-to-br from-purple-50 to-white rounded-2xl p-8 shadow-lg border-t-4 border-purple-500">
               <div className="w-14 h-14 bg-purple-600 rounded-xl flex items-center justify-center mb-6 mx-auto">
                 <Heart size={28} className="text-white" />

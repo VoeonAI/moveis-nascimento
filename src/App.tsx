@@ -75,7 +75,7 @@ const App = () => (
               } />
               
               <Route path="pipeline" element={
-                <PermissionGate allowedRoles={[Role.MASTER, PrincRole.GESTOR, Role.ESTOQUE]}>
+                <PermissionGate allowedRoles={[Role.MASTER, Role.GESTOR, Role.ESTOQUE]}>
                   <Pipeline />
                 </PermissionGate>
               } />

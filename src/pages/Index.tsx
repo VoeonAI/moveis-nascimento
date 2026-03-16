@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { productsService } from '@/services/productsService';
 import { categoriesService } from '@/services/categoriesService';
@@ -10,9 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/products/ProductCard';
+import HomeHeader from '@/components/home/HomeHeader';
 
 const Index = () => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -23,68 +25,72 @@ const Index = () => {
   // Check if user can see internal price
   const canSeeInternalPrice = [Role.MASTER, Role.GESTOR, Role.ESTOQUE].includes(profile?.role ?? "");
 
+  // Load initial data
   useEffect(() => {
     loadData();
-  }, [selectedCategory, sortBy]);
+  }, []);
 
   const loadData = async () => {
     setLoading(true);
     try {
       const [productsData, categoriesData] = await Promise.all([
-        productsService.listPublicProducts(
-          selectedCategory !== 'all' ? { categorySlug: selectedCategory } : undefined
-        ),
+        productsService.listPublicProducts(),
         categoriesService.listActiveCategories(),
       ]);
       
       // Filter to show only root categories (parent_id is null)
       const rootCategories = categoriesData.filter((cat: any) => !cat.parent_id);
       setCategories(rootCategories);
-      
-      // Apply search filter
-      let filteredProducts = productsData;
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        filteredProducts = productsData.filter(p => 
-          p.name.toLowerCase().includes(query) || 
-          (p.description && p.description.toLowerCase().includes(query))
-        );
-      }
-      
-      // Apply sorting
-      const sortedProducts = [...filteredProducts].sort((a, b) => {
-        switch (sortBy) {
-          case 'newest':
-            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-          case 'oldest':
-            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-          case 'name-asc':
-            return a.name.localeCompare(b.name);
-          case 'name-desc':
-            return b.name.localeCompare(a.name);
-          default:
-            return 0;
-        }
-      });
-      
-      setProducts(sortedProducts);
+      setAllProducts(productsData);
+      setProducts(productsData);
     } catch (error) {
       console.error('[Index] Load error:', error);
       setProducts([]);
+      setAllProducts([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Helper seguro para obter preço
-  const getPrice = (product: Product): string => {
-    const price = product.price ?? product.metadata?.price ?? null;
-    if (price === null || price === undefined) {
-      return 'Preço sob consulta';
+  // Apply filters (category + search + sort)
+  useEffect(() => {
+    let filtered = [...allProducts];
+
+    // Category filter
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(p => 
+        p.categories?.some(cat => cat.slug === selectedCategory)
+      );
     }
-    const numPrice = Number(price);
-    return isNaN(numPrice) ? 'Preço sob consulta' : `R$ ${numPrice.toFixed(2)}`;
-  };
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(p => 
+        p.name.toLowerCase().includes(query) || 
+        (p.description && p.description.toLowerCase().includes(query)) ||
+        (p.categories && p.categories.some(cat => cat.name.toLowerCase().includes(query)))
+      );
+    }
+
+    // Sort
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'oldest':
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case 'name-asc':
+          return a.name.localeCompare(b.name);
+        case 'name-desc':
+          return b.name.localeCompare(a.name);
+        default:
+          return 0;
+      }
+    });
+
+    setProducts(filtered);
+  }, [allProducts, selectedCategory, searchQuery, sortBy]);
 
   // Handle category chip click
   const handleCategoryClick = (slug: string) => {
@@ -97,8 +103,9 @@ const Index = () => {
 
   if (products.length === 0 && selectedCategory === 'all' && !searchQuery) {
     return (
-      <div className="min-h-screen bg-gray-50 p-8">
-        <div className="max-w-2xl mx-auto text-center">
+      <div className="min-h-screen bg-gray-50">
+        <HomeHeader />
+        <div className="max-w-2xl mx-auto text-center p-8">
           <div className="bg-white rounded-lg shadow-sm p-12">
             <Package size={48} className="mx-auto text-gray-400 mb-4" />
             <h1 className="text-2xl font-bold mb-2">Nenhum produto cadastrado ainda</h1>
@@ -121,6 +128,9 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Header with Logo and Menu */}
+      <HomeHeader />
+
       {/* Header Section */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 py-12">

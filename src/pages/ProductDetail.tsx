@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Loader2, Copy, MessageCircle, AlertCircle, Star, Tag, ArrowRight, X, ZoomIn, Check, Shield, Truck, Wrench, ChevronRight } from 'lucide-react';
+import { Loader2, Copy, MessageCircle, AlertCircle, Star, Tag, ArrowRight, X, ZoomIn, Check, Shield, Truck, Wrench, ChevronRight, Heart, Phone, Clock, Award, Sparkles } from 'lucide-react';
 import { productImagesService } from '@/services/productImagesService';
 import ProductCard from '@/components/products/ProductCard';
 
@@ -304,7 +304,7 @@ const ProductDetail = () => {
         </nav>
 
         {/* Main Content - 2 Columns */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mb-16">
           {/* Left Column - Images */}
           <div className="space-y-4">
             {/* Main Image with Zoom */}
@@ -316,7 +316,7 @@ const ProductDetail = () => {
                 <img
                   src={mainImageUrl}
                   alt={product.name}
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100">
@@ -382,13 +382,13 @@ const ProductDetail = () => {
             )}
 
             {/* Name */}
-            <h1 className="text-4xl font-bold text-gray-900 leading-tight">
+            <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 leading-tight">
               {product.name}
             </h1>
 
             {/* Price */}
             <div className="flex items-center justify-between">
-              <div className="text-3xl font-bold text-green-600">
+              <div className="text-3xl lg:text-4xl font-bold text-green-600">
                 {canSeePrice ? getPrice(product) : 'Preço sob consulta'}
               </div>
               
@@ -437,6 +437,7 @@ const ProductDetail = () => {
                 size="lg"
                 className="w-full bg-green-600 hover:bg-green-700 text-white py-6 text-lg font-semibold rounded-xl shadow-lg transition-all"
               >
+                <Heart size={20} className="mr-2" />
                 Gostei desse produto
               </Button>
               
@@ -468,6 +469,43 @@ const ProductDetail = () => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Trust & Support Section */}
+        <div className="mb-16">
+          <div className="bg-gradient-to-r from-green-50 to-white rounded-2xl border border-green-200 p-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                  <MessageCircle size={24} className="text-green-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-1">Atendimento Humanizado</h3>
+                  <p className="text-sm text-gray-600">Fale diretamente com o Nas e tire todas as suas dúvidas.</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Sparkles size={24} className="text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-1">Condições Personalizadas</h3>
+                  <p className="text-sm text-gray-600">Negociamos condições especiais para você.</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                  <Clock size={24} className="text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-1">Resposta Rápida</h3>
+                  <p className="text-sm text-gray-600">Respondemos em minutos, não em horas.</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -542,7 +580,7 @@ const ProductDetail = () => {
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Informar Interesse</DialogTitle>
+            <DialogTitle className="text-xl">Informar Interesse</DialogTitle>
             <DialogDescription>
               Deixe seus dados e entraremos em contato.
             </DialogDescription>

@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Loader2, Copy, MessageCircle, AlertCircle, Star, Tag, ArrowRight } from 'lucide-react';
+import { Loader2, Copy, MessageCircle, AlertCircle, Star, Tag, ArrowRight, X, ZoomIn, Check, Shield, Truck, Wrench, ChevronRight } from 'lucide-react';
 import { productImagesService } from '@/services/productImagesService';
 import ProductCard from '@/components/products/ProductCard';
 
@@ -25,6 +25,10 @@ const ProductDetail = () => {
 
   // Main image state for gallery
   const [mainImage, setMainImage] = useState<string | null>(null);
+  
+  // Image zoom modal state
+  const [zoomModalOpen, setZoomModalOpen] = useState(false);
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
 
   // WhatsApp configuration
   const [storeWhatsApp, setStoreWhatsApp] = useState<string | null>(null);
@@ -241,6 +245,12 @@ const ProductDetail = () => {
     return isNaN(numPrice) ? 'Preço sob consulta' : `R$ ${numPrice.toFixed(2)}`;
   };
 
+  // Handle image click for zoom
+  const handleImageClick = (imagePath: string) => {
+    setZoomImage(imagePath);
+    setZoomModalOpen(true);
+  };
+
   if (loading) return <div className="p-8 text-center">Carregando...</div>;
   if (!product) return <div className="p-8 text-center">Produto não encontrado.</div>;
 
@@ -266,6 +276,9 @@ const ProductDetail = () => {
   const attributes = product.metadata?.attrs || {};
   const hasAttributes = Object.keys(attributes).length > 0;
 
+  // Get category name for breadcrumb
+  const categoryName = product.categories?.[0]?.name || 'Catálogo';
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -273,14 +286,14 @@ const ProductDetail = () => {
         <nav className="mb-6">
           <ol className="flex items-center space-x-2 text-sm">
             <li>
-              <a href="/" className="text-gray-500 hover:text-gray-700">
-                Início
+              <a href="/" className="text-gray-500 hover:text-gray-700 transition-colors">
+                Home
               </a>
             </li>
             <li className="text-gray-400">/</li>
             <li>
-              <a href="/catalog" className="text-gray-500 hover:text-gray-700">
-                Catálogo
+              <a href="/catalog" className="text-gray-500 hover:text-gray-700 transition-colors">
+                {categoryName}
               </a>
             </li>
             <li className="text-gray-400">/</li>
@@ -294,13 +307,16 @@ const ProductDetail = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
           {/* Left Column - Images */}
           <div className="space-y-4">
-            {/* Main Image */}
-            <div className="relative aspect-square bg-white rounded-2xl shadow-lg overflow-hidden">
+            {/* Main Image with Zoom */}
+            <div 
+              className="relative aspect-square bg-white rounded-2xl shadow-lg overflow-hidden cursor-zoom-in group"
+              onClick={() => mainImage && handleImageClick(mainImage)}
+            >
               {mainImageUrl ? (
                 <img
                   src={mainImageUrl}
                   alt={product.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100">
@@ -324,6 +340,12 @@ const ProductDetail = () => {
                   )}
                 </div>
               )}
+
+              {/* Zoom hint */}
+              <div className="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1.5 rounded-full text-xs flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <ZoomIn size={12} />
+                Clique para ampliar
+              </div>
             </div>
 
             {/* Gallery Thumbnails */}
@@ -332,7 +354,10 @@ const ProductDetail = () => {
                 {galleryImages.map(({ path, url }, idx) => (
                   <button
                     key={idx}
-                    onClick={() => setMainImage(path)}
+                    onClick={() => {
+                      setMainImage(path);
+                      handleImageClick(path);
+                    }}
                     className={`relative rounded-xl overflow-hidden border-2 transition-all hover:shadow-md ${
                       mainImage === path ? 'border-green-500 ring-2 ring-green-200' : 'border-gray-200 hover:border-gray-300'
                     }`}
@@ -387,6 +412,22 @@ const ProductDetail = () => {
               </Button>
             </div>
 
+            {/* Trust Badges */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Check size={16} className="text-green-600" />
+                <span>Atendimento personalizado</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Shield size={16} className="text-green-600" />
+                <span>Entrega segura</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Wrench size={16} className="text-green-600" />
+                <span>Montagem disponível</span>
+              </div>
+            </div>
+
             {/* Support Text */}
             <p className="text-gray-600 leading-relaxed">
               Tire dúvidas com o Nas e finalize sua compra com nosso time de consultores.
@@ -433,6 +474,37 @@ const ProductDetail = () => {
           </div>
         </div>
 
+        {/* Mascote Section */}
+        <div className="mb-16">
+          <div className="bg-gradient-to-r from-green-50 to-white rounded-2xl border border-green-200 p-8">
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="flex-shrink-0">
+                <img 
+                  src="https://kbpkdnptzvsvoujirfwe.supabase.co/storage/v1/object/public/logo-variacoes/Mascote%203D%20-%20Moveis%20Nascimento.png"
+                  alt="Mascote Nas"
+                  className="h-32 w-auto"
+                />
+              </div>
+              <div className="flex-1 text-center md:text-left">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  Tem dúvidas sobre este móvel?
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  Fale com o Nas no WhatsApp e tire todas as suas dúvidas agora mesmo.
+                </p>
+                <Button
+                  onClick={() => window.open('https://wa.me/5511999999999', '_blank')}
+                  size="lg"
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <MessageCircle size={20} className="mr-2" />
+                  Falar com o Nas
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Description Section */}
         <div className="mb-16">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Descrição do produto</h2>
@@ -446,7 +518,16 @@ const ProductDetail = () => {
         {/* Related Products Section */}
         {!loadingRelated && relatedProducts.length > 0 && (
           <div className="mb-16">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Você também pode gostar</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Produtos relacionados</h2>
+              <Link 
+                to="/catalog" 
+                className="inline-flex items-center gap-2 text-green-600 hover:text-green-700 font-medium transition-colors"
+              >
+                Ver todos
+                <ChevronRight size={16} />
+              </Link>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {relatedProducts.map((relatedProduct) => (
                 <ProductCard
@@ -570,6 +651,25 @@ const ProductDetail = () => {
                 </div>
               )}
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Zoom Modal */}
+      <Dialog open={zoomModalOpen} onOpenChange={setZoomModalOpen}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] p-0">
+          <button
+            onClick={() => setZoomModalOpen(false)}
+            className="absolute top-4 right-4 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors"
+          >
+            <X size={24} />
+          </button>
+          {zoomImage && (
+            <img
+              src={productImagesService.getPublicUrl(zoomImage)}
+              alt={product.name}
+              className="w-full h-full object-contain"
+            />
           )}
         </DialogContent>
       </Dialog>

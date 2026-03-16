@@ -474,6 +474,16 @@ const ProductDetail = () => {
           </div>
         </div>
 
+        {/* Description Section */}
+        <div className="mb-16">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Descrição do produto</h2>
+          <div className="bg-white rounded-2xl shadow-sm p-8">
+            <p className="text-gray-700 leading-relaxed text-lg max-w-4xl">
+              {product.description}
+            </p>
+          </div>
+        </div>
+
         {/* Mascote Section */}
         <div className="mb-16">
           <div className="bg-gradient-to-r from-green-50 to-white rounded-2xl border border-green-200 p-8">
@@ -502,16 +512,6 @@ const ProductDetail = () => {
                 </Button>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Description Section */}
-        <div className="mb-16">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Descrição do produto</h2>
-          <div className="bg-white rounded-2xl shadow-sm p-8">
-            <p className="text-gray-700 leading-relaxed text-lg max-w-4xl">
-              {product.description}
-            </p>
           </div>
         </div>
 

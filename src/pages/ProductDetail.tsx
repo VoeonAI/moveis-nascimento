@@ -245,7 +245,7 @@ const ProductDetail = () => {
     return isNaN(numPrice) ? 'Preço sob consulta' : `R$ ${numPrice.toFixed(2)}`;
   };
 
-  // Handle image click for zoom
+  // Handle image click for zoom (only for main image)
   const handleImageClick = (imagePath: string) => {
     setZoomImage(imagePath);
     setZoomModalOpen(true);
@@ -354,10 +354,7 @@ const ProductDetail = () => {
                 {galleryImages.map(({ path, url }, idx) => (
                   <button
                     key={idx}
-                    onClick={() => {
-                      setMainImage(path);
-                      handleImageClick(path);
-                    }}
+                    onClick={() => setMainImage(path)}
                     className={`relative rounded-xl overflow-hidden border-2 transition-all hover:shadow-md ${
                       mainImage === path ? 'border-green-500 ring-2 ring-green-200' : 'border-gray-200 hover:border-gray-300'
                     }`}

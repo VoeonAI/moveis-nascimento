@@ -39,9 +39,12 @@ const HomeHeader = () => {
             >
               Produtos
             </button>
-            <a href="#" className="text-white hover:text-green-400 font-medium transition-colors">
-              Sobre nós
-            </a>
+            <Link 
+              to="/sobre"
+              className="text-white hover:text-green-400 font-medium transition-colors"
+            >
+              Sobre Nós
+            </Link>
             <Button 
               onClick={handleWhatsAppClick}
               className="bg-green-600 hover:bg-green-700 text-white font-medium"
@@ -82,9 +85,12 @@ const HomeHeader = () => {
             >
               Produtos
             </button>
-            <a href="#" className="block w-full text-left text-white hover:text-green-400 font-medium py-2">
-              Sobre nós
-            </a>
+            <Link 
+              to="/sobre"
+              className="block w-full text-left text-white hover:text-green-400 font-medium py-2"
+            >
+              Sobre Nós
+            </Link>
             <Button 
               onClick={handleWhatsAppClick}
               className="w-full bg-green-600 hover:bg-green-700 text-white font-medium"

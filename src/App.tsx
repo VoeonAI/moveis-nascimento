@@ -20,6 +20,7 @@ import Settings from "./pages/app/Settings";
 import ProductsDashboard from "./pages/app/ProductsDashboard";
 import NotFound from "./pages/NotFound";
 import HomeNew from "./pages/HomeNew";
+import About from "./pages/About";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/catalog" element={<Index />} />
             <Route path="/product/:id" element={<ProductDetail />} />
+            <Route path="/sobre" element={<About />} />
             
             {/* NOVA HOME EM PARALELO - para visualização */}
             <Route path="/new-home" element={<HomeNew />} />
@@ -73,7 +75,7 @@ const App = () => (
               } />
               
               <Route path="pipeline" element={
-                <PermissionGate allowedRoles={[Role.MASTER, Role.GESTOR, Role.ESTOQUE]}>
+                <PermissionGate allowedRoles={[Role.MASTER, PrincRole.GESTOR, Role.ESTOQUE]}>
                   <Pipeline />
                 </PermissionGate>
               } />

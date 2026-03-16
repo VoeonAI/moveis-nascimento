@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-const HeroBanner = () => {
+const HeroBannerNew = () => {
   return (
-    <section className="relative h-[600px] md:h-[700px] overflow-hidden">
+    <div className="relative h-[600px] md:h-[700px] overflow-hidden">
       <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=1920&q=80')" }}>
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/30"></div>
       </div>
@@ -53,8 +53,8 @@ const HeroBanner = () => {
           </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 };
 
-export default HeroBanner;
+export default HeroBannerNew;

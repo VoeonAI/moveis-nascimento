@@ -66,7 +66,7 @@ const StoryTimeline = () => {
       description: 'Inauguração da filial em Extrema - MG, marcando uma nova fase de crescimento e consolidação da marca na região.',
       icon: MapPin,
       color: 'purple',
-      image: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=400&q=80'
+      image: 'https://kbpkdnptzvsvoujirfwe.supabase.co/storage/v1/object/public/historia/Loja-Nova.jpg'
     },
     {
       id: 5,

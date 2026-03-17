@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import HomeHeader from '@/components/home/HomeHeader';
 import HeroBanner from '@/components/home/HeroBanner';
@@ -9,11 +9,28 @@ import WeeklyHighlights from '@/components/home/WeeklyHighlights';
 import PromotionalBanner from '@/components/home/PromotionalBanner';
 import HowToBuySection from '@/components/home/HowToBuySection';
 import ProductGrid from '@/components/home/ProductGrid';
+import { homeHeroService } from '@/services/homeHeroService';
 
 const HomeNew = () => {
+  const [hero, setHero] = useState(null);
+
+  useEffect(() => {
+    const loadHero = async () => {
+      try {
+        const data = await homeHeroService.getHomeHero();
+        if (data) {
+          setHero(data);
+        }
+      } catch (err) {
+        console.error('[HomeNew] Erro ao carregar hero:', err);
+      }
+    };
+
+    loadHero();
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <HomeHeader />
 
       {/* ================================================== */}
@@ -21,7 +38,11 @@ const HomeNew = () => {
       {/* ================================================== */}
       
       {/* 1. Hero principal */}
-      <HeroBanner />
+      <HeroBanner
+        title={hero?.title}
+        highlightWord={hero?.highlight_word}
+        imageUrl={hero?.image_url}
+      />
 
       {/* 2. Categorias principais */}
       <CategorySection />

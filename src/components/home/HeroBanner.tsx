@@ -3,15 +3,22 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-const HeroBanner = () => {
+interface HeroBannerProps {
+  title?: string;
+  highlightWord?: string;
+  imageUrl?: string;
+}
+
+const HeroBanner = ({ title, highlightWord, imageUrl }: HeroBannerProps) => {
+  const finalTitle = title || "Porque a sua casa merece o melhor.";
+  const finalHighlight = highlightWord || "merece o melhor";
+  const finalImageUrl = imageUrl ? `url(${imageUrl})` : "url('https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=1920&q=80')";
+
   return (
     <div className="relative h-[600px] md:h-[700px] overflow-hidden">
       <div
         className="absolute inset-0 bg-cover bg-center"
-        style={{
-          backgroundImage:
-            "url('https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=1920&q=80')",
-        }}
+        style={{ backgroundImage: finalImageUrl }}
       >
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/30"></div>
       </div>
@@ -20,7 +27,7 @@ const HeroBanner = () => {
         <div className="max-w-2xl space-y-6">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
             Porque a sua casa{' '}
-            <span className="text-green-400">merece o melhor.</span>
+            <span className="text-green-400">{finalHighlight}</span>
           </h1>
 
           <p className="text-lg md:text-xl text-gray-200">

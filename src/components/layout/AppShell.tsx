@@ -8,7 +8,7 @@ import {
   Package, 
   Users, 
   Settings, 
-  ArrowRightLeft,
+  ArrowRight,
   Menu,
   X,
   LogOut,
@@ -41,7 +41,7 @@ const sidebarItems = [
   { 
     path: '/app/pipeline', 
     label: 'Pipeline', 
-    icon: ArrowRightLeft,
+    icon: ArrowRight,
     roles: [Role.MASTER, Role.GESTOR, Role.ESTOQUE]
   },
   { 
@@ -51,9 +51,15 @@ const sidebarItems = [
     roles: [Role.MASTER, Role.GESTOR]
   },
   { 
+    path: '/app/home-hero', 
+    label: 'Admin Home', 
+    icon: LayoutDashboard,
+    roles: [Role.MASTER]
+  },
+  { 
     path: '/app/users', 
     label: 'Usuários', 
-    icon: Users,
+    icon: users,
     roles: [Role.MASTER]
   },
   { 

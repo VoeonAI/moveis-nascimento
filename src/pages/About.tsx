@@ -48,7 +48,7 @@ const StoryTimeline = () => {
       description: 'Foi inaugurada oficialmente a primeira loja da Móveis Nascimento em Joanópolis. Um negócio familiar construído com trabalho, dedicação e proximidade com os clientes.',
       icon: Store,
       color: 'yellow',
-      image: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=400&q=80'
+      image: 'https://kbpkdnptzvsvoujirfwe.supabase.co/storage/v1/object/public/historia/loja-antiga.jpg'
     },
     {
       id: 3,

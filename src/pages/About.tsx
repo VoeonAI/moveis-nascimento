@@ -48,7 +48,7 @@ const StoryTimeline = () => {
       description: 'Foi inaugurada oficialmente a primeira loja da Móveis Nascimento em Joanópolis. Um negócio familiar construído com trabalho, dedicação e proximidade com os clientes.',
       icon: Store,
       color: 'yellow',
-      image: 'https://kbpkdnptzvsvoujirfwe.supabase.co/storage/v1/object/public/historia/loja-antiga.jpg'
+      image: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=400&q=80'
     },
     {
       id: 3,
@@ -57,7 +57,7 @@ const StoryTimeline = () => {
       description: 'A empresa passou por momentos difíceis e precisou se reinventar. Quando a continuidade parecia incerta, a família decidiu seguir em frente. Jonas, filho de João, assumiu a gestão e iniciou a reconstrução da confiança com clientes e parceiros.',
       icon: RefreshCw,
       color: 'blue',
-      image: 'https://kbpkdnptzvsvoujirfwe.supabase.co/storage/v1/object/public/historia/PAi-e-filho.jpg'
+      image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&q=80'
     },
     {
       id: 4,
@@ -66,7 +66,7 @@ const StoryTimeline = () => {
       description: 'Inauguração da filial em Extrema - MG, marcando uma nova fase de crescimento e consolidação da marca na região.',
       icon: MapPin,
       color: 'purple',
-      image: 'https://kbpkdnptzvsvoujirfwe.supabase.co/storage/v1/object/public/historia/Loja-Nova.jpg'
+      image: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=400&q=80'
     },
     {
       id: 5,
@@ -75,7 +75,7 @@ const StoryTimeline = () => {
       description: 'Mais de quatro décadas de tradição, construídas com trabalho honesto, respeito e compromisso com os clientes. Uma história que começou com um sofá no teto de um carro — e continua sendo escrita todos os dias.',
       icon: Home,
       color: 'emerald',
-      image: 'https://kbpkdnptzvsvoujirfwe.supabase.co/storage/v1/object/public/historia/Equipe.jpg'
+      image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&q=80'
     }
   ];
 
@@ -405,7 +405,7 @@ const About = () => {
                 Personalização Total
               </h3>
               <p className="text-gray-600 leading-relaxed">
-                Cada projeto é único. Criamos móveis personalizados que se encaixam perfeitamente no seu espaço e no seu estilo. Cores, materiais e medidas sob medida.
+                Temos nosso setor de modulados onde cada projeto é único. Criamos móveis personalizados que se encaixam perfeitamente no seu espaço e no seu estilo. Cores, materiais e medidas sob medida.
               </p>
             </div>
 

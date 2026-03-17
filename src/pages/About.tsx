@@ -57,7 +57,7 @@ const StoryTimeline = () => {
       description: 'A empresa passou por momentos difíceis e precisou se reinventar. Quando a continuidade parecia incerta, a família decidiu seguir em frente. Jonas, filho de João, assumiu a gestão e iniciou a reconstrução da confiança com clientes e parceiros.',
       icon: RefreshCw,
       color: 'blue',
-      image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&q=80'
+      image: 'https://kbpkdnptzvsvoujirfwe.supabase.co/storage/v1/object/public/historia/PAi-e-filho.jpg'
     },
     {
       id: 4,

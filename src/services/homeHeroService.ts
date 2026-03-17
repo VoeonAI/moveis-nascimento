@@ -15,62 +15,48 @@ export const homeHeroService = {
   async getHomeHero(): Promise<HomeHero | null> {
     const { data, error } = await supabase
       .from('home_hero')
-      .select('id, title, highlight_word, image_url')
+      .select('id, title, highlight_word, image_url, image_alt, active, created_at, updated_at')
       .eq('active', true)
       .order('updated_at', { ascending: false })
-      .limit(1);
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (error) throw error;
-    return data?.[0] ?? null;
-  },
+    console.log('[homeHeroService] hero ativo retornado:', data);
+    console.log('[homeHeroService] erro:', error);
 
-  async upsertHomeHero(payload: {
-    title?: string;
-    highlight_word?: string;
-    image_url?: string;
-    image_alt?: string;
-  }): Promise<HomeHero> {
-    try {
-      // Check if there's an existing active hero
-      const { data: existingHero } = await supabase
-        .from('home_hero')
-        .select('id')
-        .eq('active', true)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (existingHero) {
-        // Update existing hero
-        const { data, error } = await supabase
-          .from('home_hero')
-          .update({
-            ...payload,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', existingHero.id)
-          .select()
-          .single();
-
-        if (error) throw error;
-        return data;
-      } else {
-        // Insert new hero
-        const { data, error } = await supabase
-          .from('home_hero')
-          .insert({
-            ...payload,
-            active: true,
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-        return data;
-      }
-    } catch (error) {
-      console.error('[homeHeroService.upsertHomeHero]', error);
+    if (error) {
+      console.error('[homeHeroService] getHomeHero error:', error);
       throw error;
     }
+
+    return data ?? null;
+  },
+
+  async upsertHomeHero(payload: HomeHero): Promise<HomeHero> {
+    // 1. desativa todos
+    await supabase
+      .from('home_hero')
+      .update({ active: false })
+      .eq('active', true);
+
+    // 2. insere novo hero
+    const { data, error } = await supabase
+      .from('home_hero')
+      .insert({
+        title: payload.title,
+        highlight_word: payload.highlight_word,
+        image_url: payload.image_url,
+        image_alt: payload.image_alt,
+        active: true,
+      })
+      .select();
+
+    if (error) {
+      console.error('[homeHeroService] insert error:', error);
+      throw error;
+    }
+
+    return data?.[0];
   },
 };

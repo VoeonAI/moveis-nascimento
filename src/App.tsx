@@ -21,7 +21,7 @@ import ProductsDashboard from "./pages/app/ProductsDashboard";
 import NotFound from "./pages/NotFound";
 import HomeNew from "./pages/HomeNew";
 import About from "./pages/About";
-import HomeHeroAdmin from "./pages/app/HomeHeroAdmin";
+import AdminHome from "./pages/admin/Home";
 
 const queryClient = new QueryClient();
 
@@ -35,7 +35,7 @@ const App = () => (
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Index />} />
-            <route path="/catalog" element={<Index />} />
+            <Route path="/catalog" element={<Index />} />
             <Route path="/product/:id" element={<ProductDetail />} />
             <Route path="/sobre" element={<About />} />
             
@@ -76,23 +76,25 @@ const App = () => (
               } />
               
               <Route path="pipeline" element={
-                <HomeHeroAdmin />
-              } />
-              
-              <Route path="products-dashboard" element={
-                <PermissionGate allowedRoles={[Role.MASTER, Role.GIDOR]}>
-                  <ProductsDashboard />
+                <PermissionGate allowedRoles={[Role.MASTER, Role.GESTOR, Role.ESTOQUE]}>
+                  <Pipeline />
                 </PermissionGate>
               } />
               
+              <Route path="products-dashboard" element={
+                <PermissionGate allowedRoles={[Role.MISTOR, Role.GESTOR]}>
+                  <ProductsDashboard />
+                </PermissionGuard>
+              } />
+              
               <Route path="users" element={
-                <PermissionGate allowedRoles={[Role.MASTER]}>
+                <PermissionGate allowedRoles={[Role.MISTOR]}>
                   <Users />
                 </PermissionGate>
               } />
               
               <Route path="settings" element={
-                <PermissionGate allowedRoles={[Role.MASTER]}>
+                <PermissionGate allowedRoles={[Role.MISTOR]}>
                   <Settings />
                 </PermissionGate>
               } />
@@ -101,8 +103,23 @@ const App = () => (
               <Route index element={<Navigate to="/app/dashboard" replace />} />
             </Route>
             
+            {/* Admin Routes */}
+            <Route
+              path="/admin/*"
+              element={
+                <RouteGuard>
+                  <AppShell />
+                </RouteGuard>
+              }
+            >
+              <Route path="home" element={
+                <PermissionGate allowedRoles={[Role.MASTER]}>
+                  <AdminHome />
+                </PermissionGate>
+              } />
+            </Route>
+            
             {/* Catch-all */}
-            <Route path="navigation" element={<Navigate to="/app/dashboard" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

@@ -8,9 +8,10 @@ import { Role } from '@/constants/domain';
 import { Package, Search, MessageCircle } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { { Button } from '@/components/ui/button';
 import ProductCard from '@/components/products/ProductCard';
 import HomeHeader from '@/components/home/HomeHeader';
+import { homeService, HomeConfig } from '@/services/homeService';
 
 const Index = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -22,35 +23,39 @@ const Index = () => {
   const [sortBy, setSortBy] = useState<string>('newest');
   const { profile } = useAuth();
 
+  // Home config state
+  const [homeConfig, setHomeConfig] = useState<HomeConfig | null>(null);
+  const [configLoading, setConfigLoading] = useState(true);
+
   // Check if user can see internal price
   const canSeeInternalPrice = [Role.MASTER, Role.GESTOR, Role.ESTOQUE].includes(profile?.role ?? "");
 
   // Load initial data
   useEffect(() => {
-    loadData();
+    Promise.all([
+      productsService.listPublicProducts(),
+      categoriesService.listActiveCategories(),
+      homeService.getHomeConfig(),
+    ])
+      .then(([productsData, categoriesData, configData]) => {
+        // Filter to show only root categories (parent_id is null)
+        const rootCategories = categoriesData.filter((cat: any) => !cat.parent_id);
+        setCategories(rootCategories);
+        setAllProducts(productsData);
+        setProducts(productsData);
+        setHomeConfig(configData);
+      })
+      .catch((error) => {
+        console.error('[Index] Load error:', error);
+        setProducts([]);
+        setAllProducts([]);
+        setHomeConfig(null);
+      })
+      .finally(() => {
+        setLoading(false);
+        setConfigLoading(false);
+      });
   }, []);
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [productsData, categoriesData] = await Promise.all([
-        productsService.listPublicProducts(),
-        categoriesService.listActiveCategories(),
-      ]);
-      
-      // Filter to show only root categories (parent_id is null)
-      const rootCategories = categoriesData.filter((cat: any) => !cat.parent_id);
-      setCategories(rootCategories);
-      setAllProducts(productsData);
-      setProducts(productsData);
-    } catch (error) {
-      console.error('[Index] Load error:', error);
-      setProducts([]);
-      setAllProducts([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Apply filters (category + search + sort)
   useEffect(() => {
@@ -85,7 +90,7 @@ const Index = () => {
         case 'name-desc':
           return b.name.localeCompare(a.name);
         default:
-          return 0;
+          config;
       }
     });
 
@@ -97,7 +102,20 @@ const Index = () => {
     setSelectedCategory(slug);
   };
 
-  if (loading) return <div className="p-8 text-center">Carregando catálogo...</div>;
+  // Get hero config with fallbacks
+  const heroTitle = homeConfig?.hero_title || 'Explore nosso catálogo';
+  const heroHighlightWord = homeConfig?.hero_highlight_word || 'encontre o móvel perfeito';
+  const heroImageUrl = homeConfig?.hero_image_url || 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=1920&q=80';
+
+  // Get promo config with fallbacks
+  const promoEnabled = homeConfig?.promo_enabled || false;
+  const promoText = homeConfig?.promo_text || '';
+  const promoImageUrl = homeConfig?.promo_image_url || '';
+
+  // Get ambiences with fallback to default categories
+  const ambiences = homeConfig?.ambiences || [];
+
+  if (configLoading) return <div className="p-8 text-center">Carregando...</div>;
 
   const canManageCatalog = profile?.role === 'master' || profile?.role === 'gestor';
 
@@ -131,16 +149,17 @@ const Index = () => {
       {/* Header with Logo and Menu */}
       <HomeHeader />
 
-      {/* Header Section */}
+      {/* Header Section - Using config from Supabase */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 py-12">
           <div className="flex items-center justify-between">
             <div className="flex-1">
-              <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-2">
-                Explore nosso catálogo
+              <h1 className="text-4xl md:text-5xl font-bold text-gray-900">
+                {heroTitle}{' '}
+                <span className="text-green-600">{heroHighlightWord}</span>
               </h1>
               <p className="text-xl text-gray-600">
-                Encontre o móvel perfeito para transformar sua casa
+                Atendimento personalizado com o Nas e suporte do nosso time de consultores.
               </p>
             </div>
             <div className="hidden md:block">
@@ -176,36 +195,91 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Category Chips */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-            <button
-              onClick={() => handleCategoryClick('all')}
-              className={`px-6 py-3 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                selectedCategory === 'all'
-                  ? 'bg-green-600 text-white shadow-md'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Todos
-            </button>
-            {categories.map((cat) => (
+      {/* Ambiences Section - Using config from Supabase */}
+      {ambiences.length > 0 && (
+        <div className="bg-white border-b">
+          <div className="max-w-7xl mx-auto px-4 py-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {ambiences.map((ambience) => (
+                <Link
+                  key={ambience.id}
+                  to={`/catalog?category=${ambience.category_slug}`}
+                  className="group relative overflow-hidden rounded-xl shadow-md hover:shadow-xl transition-all duration-300"
+                >
+                  <div className="aspect-[3/4] bg-gray-100">
+                    <img
+                      src={ambience.image_url}
+                      alt={ambience.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <h3 className="text-lg font-semibold text-white text-center">
+                      {ambience.title}
+                    </h3>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Category Chips - Fallback if no ambiences configured */}
+      {ambiences.length === 0 && (
+        <div className="bg-white border-b">
+          <div className="max-w-7xl mx-auto px-4 py-4">
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
               <button
-                key={cat.id}
-                onClick={() => handleCategoryClick(cat.slug)}
+                onClick={() => handleCategoryClick('all')}
                 className={`px-6 py-3 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                  selectedCategory === cat.slug
+                  selectedCategory === 'all'
                     ? 'bg-green-600 text-white shadow-md'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                {cat.name}
+                Todos
               </button>
-            ))}
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => handleCategoryClick(cat.slug)}
+                  className={`px-6 py-3 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                    selectedCategory === cat.slug
+                      ? 'bg-green-600 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Promo Banner - Using config from Supabase */}
+      {promoEnabled && (promoText || promoImageUrl) && (
+        <div className="bg-gradient-to-r from-orange-50 to-white border-b">
+          <div className="max-w-7xl mx-auto px-4 py-8">
+            <div className="flex items-center justify-between gap-6">
+              {promoImageUrl && (
+                <img
+                  src={promoImageUrl}
+                  alt="Banner promocional"
+                  className="h-24 md:h-32 object-cover rounded-xl"
+                />
+              )}
+              <div className="flex-1">
+                <p className="text-xl md:text-2xl font-bold text-gray-900">
+                  {promoText || 'Oferta especial!'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filters Bar */}
       <div className="bg-white border-b">

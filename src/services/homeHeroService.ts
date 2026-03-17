@@ -15,25 +15,13 @@ export const homeHeroService = {
   async getHomeHero(): Promise<HomeHero | null> {
     const { data, error } = await supabase
       .from('home_hero')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('id, title, highlight_word, image_url')
+      .eq('active', true)
+      .order('updated_at', { ascending: false })
+      .limit(1);
 
-    console.log('[homeHeroService] raw rows:', data);
-    console.log('[homeHeroService] raw error:', error);
-
-    if (error) {
-      throw error;
-    }
-
-    if (!data || data.length === 0) {
-      return null;
-    }
-
-    const activeHero = data.find((row) => row.active === true) ?? null;
-
-    console.log('[homeHeroService] activeHero found:', activeHero);
-
-    return activeHero;
+    if (error) throw error;
+    return data?.[0] ?? null;
   },
 
   async upsertHomeHero(payload: {

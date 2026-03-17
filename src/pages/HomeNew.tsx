@@ -16,30 +16,17 @@ const HomeNew = () => {
 
   useEffect(() => {
     const loadHero = async () => {
-      console.log('[HomeNew] Iniciando carregamento do Hero...');
       try {
         const data = await homeHeroService.getHomeHero();
-        console.log('[HomeNew] Dados recebidos do serviço:', data);
-        
-        if (data) {
-          console.log('[HomeNew] Hero encontrado, atualizando state:', {
-            title: data.title,
-            highlightWord: data.highlight_word,
-            imageUrl: data.image_url,
-          });
-          setHero(data);
-        } else {
-          console.log('[HomeNew] Nenhum hero encontrado (data é null)');
-        }
+        setHero(data);
       } catch (err) {
         console.error('[HomeNew] Erro ao carregar hero:', err);
+        setHero(null);
       }
     };
 
     loadHero();
   }, []);
-
-  console.log('[HomeNew] Render atual - hero state:', hero);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -76,7 +63,7 @@ const HomeNew = () => {
       <WeeklyHighlights />
 
       {/* ================================================== */}
-      {/* BLOCOS MANUAIS / ESTATÍTICOS */}
+      {/* BLOCOS MANUAIS / ESTATÍSTICOS */}
       {/* ================================================== */}
 
       {/* 7. Como comprar */}

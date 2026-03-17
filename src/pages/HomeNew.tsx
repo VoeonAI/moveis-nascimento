@@ -12,7 +12,7 @@ import ProductGrid from '@/components/home/ProductGrid';
 import { homeHeroService } from '@/services/homeHeroService';
 
 const HomeNew = () => {
-  const [hero, setHero] = useState(null);
+  const [hero, setHero] = useState<null>(null);
 
   useEffect(() => {
     const loadHero = async () => {

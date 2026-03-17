@@ -4,9 +4,9 @@ import { ArrowRight, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface HeroBannerProps {
-  title?: string;
-  highlightWord?: string;
-  imageUrl?: string;
+  title?: string | null;
+  highlightWord?: string | null;
+  imageUrl?: string | null;
 }
 
 const HeroBanner = ({ title, highlightWord, imageUrl }: HeroBannerProps) => {

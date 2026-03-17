@@ -36,7 +36,7 @@ const StoryTimeline = () => {
       id: 1,
       year: 'Início dos anos 80',
       subtitle: 'O sofá no teto do carro',
-      description: 'João Batista Nascimento morava em São Paulo quando percebeu uma oportunidade onde muitos não veriam valor. Em frente a uma pensão havia um sofá descartado. Ele lembrou que um conhecido precisava de um estofado para a guarita onde trabalhava. Com criatividade, colocou o sofá no teto de sua Brasília, amarrou com um lençol e uma corda de varal e levou até o comprador. A venda deu certo — e ali nasceu a ideia do negócio.',
+      description: 'João Batista Nascimento morava em São Paulo quando percebeu uma oportunidade onde muitos não viam valor. Em frente a uma pensão havia um sofá descartado. Ele lembrou que um conhecido precisava de um estofado para a guarita onde trabalhava. Com criatividade, colocou o sofá no teto de sua Brasília, amarrou com um lençol e uma corda de varal e levou até o comprador. A venda deu certo — e ali nasceu a ideia do negócio.',
       icon: Car,
       color: 'green',
       image: 'https://kbpkdnptzvsvoujirfwe.supabase.co/storage/v1/object/public/historia/Brasilia.jpg'
@@ -48,7 +48,7 @@ const StoryTimeline = () => {
       description: 'Foi inaugurada oficialmente a primeira loja da Móveis Nascimento em Joanópolis. Um negócio familiar construído com trabalho, dedicação e proximidade com os clientes.',
       icon: Store,
       color: 'yellow',
-      image: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=400&q=80'
+      image: 'https://kbpkdnptzvsvoujirfwe.supabase.co/storage/v1/object/public/historia/loja-antiga.jpg'
     },
     {
       id: 3,
@@ -57,7 +57,7 @@ const StoryTimeline = () => {
       description: 'A empresa passou por momentos difíceis e precisou se reinventar. Quando a continuidade parecia incerta, a família decidiu seguir em frente. Jonas, filho de João, assumiu a gestão e iniciou a reconstrução da confiança com clientes e parceiros.',
       icon: RefreshCw,
       color: 'blue',
-      image: 'https://kbpkdnptzvsvoujirfwe.supabase.co/storage/v1/object/public/historia/PAi-e-filho.jpg'
+      image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&q=80'
     },
     {
       id: 4,
@@ -66,7 +66,7 @@ const StoryTimeline = () => {
       description: 'Inauguração da filial em Extrema - MG, marcando uma nova fase de crescimento e consolidação da marca na região.',
       icon: MapPin,
       color: 'purple',
-      image: 'https://kbpkdnptzvsvoujirfwe.supabase.co/storage/v1/object/public/historia/Loja-Nova.jpg'
+      image: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=400&q=80'
     },
     {
       id: 5,

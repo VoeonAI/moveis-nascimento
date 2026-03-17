@@ -39,7 +39,7 @@ const StoryTimeline = () => {
       description: 'João Batista Nascimento morava em São Paulo quando percebeu uma oportunidade onde muitos não veriam valor. Em frente a uma pensão havia um sofá descartado. Ele lembrou que um conhecido precisava de um estofado para a guarita onde trabalhava. Com criatividade, colocou o sofá no teto de sua Brasília, amarrou com um lençol e uma corda de varal e levou até o comprador. A venda deu certo — e ali nasceu a ideia do negócio.',
       icon: Car,
       color: 'green',
-      image: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&q=80'
+      image: 'https://kbpkdnptzvsvoujirfwe.supabase.co/storage/v1/object/public/historia/Brasilia.jpg'
     },
     {
       id: 2,

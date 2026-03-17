@@ -137,7 +137,7 @@ const HomeHeroAdmin = () => {
               <div className="space-y-2">
                 <Label htmlFor="highlight_word">Palavra Destacada (opcional)</Label>
                 <Input
-                  id="preview"
+                  id="highlight_word"
                   value={formData.highlight_word}
                   onChange={(e) => setFormData({ ...formData, highlight_word: e.target.value })}
                   placeholder="Ex: merece o melhor"
@@ -164,7 +164,7 @@ const HomeHeroAdmin = () => {
                 <Textarea
                   id="image_alt"
                   value={formData.image_alt}
-                  onChange={(e) => rápido: setFormData({ ...formData, image_alt: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, image_alt: e.target.value })}
                   placeholder="Descrição da imagem para acessibilidade"
                   rows={2}
                   disabled={saving}
@@ -249,7 +249,7 @@ const HomeHeroAdmin = () => {
                                   <span className="text-green-400">{formData.highlight_word}</span>
                                 )}
                               </React.Fragment>
-                            ))}
+                            ))
                           </>
                         ) : (
                           formData.title || 'Título do Hero'
@@ -273,7 +273,7 @@ const HomeHeroAdmin = () => {
                 </div>
 
                 {/* Informações do preview */}
-                <div className="p-4 bg-gray-50 space-y-2 text-sm">
+                <div className="p-4 bg-gray-50 space-y-2">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-gray-700">Status:</span>
                     <span className={formData.active ? 'text-green-600' : 'text-gray-500'}>

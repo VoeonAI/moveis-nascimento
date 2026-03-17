@@ -84,7 +84,7 @@ const App = () => (
               <Route path="products-dashboard" element={
                 <PermissionGate allowedRoles={[Role.MISTOR, Role.GESTOR]}>
                   <ProductsDashboard />
-                </PermissionGuard>
+                </PermissionGate>
               } />
               
               <Route path="users" element={
@@ -94,7 +94,7 @@ const App = () => (
               } />
               
               <Route path="settings" element={
-                <PermissionGate allowedRoles={[Role.MISTOR]}>
+                <PermissionGate allowedRoles={[Role.MISSOR]}>
                   <Settings />
                 </PermissionGate>
               } />

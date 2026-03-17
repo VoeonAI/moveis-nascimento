@@ -13,25 +13,27 @@ export interface HomeHero {
 
 export const homeHeroService = {
   async getHomeHero(): Promise<HomeHero | null> {
-    try {
-      const { data, error } = await supabase
-        .from('home_hero')
-        .select('*')
-        .eq('active', true)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+    const { data, error } = await supabase
+      .from('home_hero')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('[homeHeroService.getHomeHero]', error.message);
-        return null;
-      }
+    console.log('[homeHeroService] raw rows:', data);
+    console.log('[homeHeroService] raw error:', error);
 
-      return data;
-    } catch (error) {
-      console.error('[homeHeroService.getHomeHero]', error);
+    if (error) {
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
       return null;
     }
+
+    const activeHero = data.find((row) => row.active === true) ?? null;
+
+    console.log('[homeHeroService] activeHero found:', activeHero);
+
+    return activeHero;
   },
 
   async upsertHomeHero(payload: {

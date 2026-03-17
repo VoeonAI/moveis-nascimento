@@ -21,6 +21,7 @@ import ProductsDashboard from "./pages/app/ProductsDashboard";
 import NotFound from "./pages/NotFound";
 import HomeNew from "./pages/HomeNew";
 import About from "./pages/About";
+import AdminHome from "./pages/admin/Home";
 
 const queryClient = new QueryClient();
 
@@ -81,25 +82,41 @@ const App = () => (
               } />
               
               <Route path="products-dashboard" element={
-                <PermissionGate allowedRoles={[Role.MASTER, Role.GESTOR]}>
+                <PermissionGate allowedRoles={[Role.MISTOR, Role.GESTOR]}>
                   <ProductsDashboard />
-                </PermissionGate>
+                </PermissionGuard>
               } />
               
               <Route path="users" element={
-                <PermissionGate allowedRoles={[Role.MASTER]}>
+                <PermissionGate allowedRoles={[Role.MISTOR]}>
                   <Users />
                 </PermissionGate>
               } />
               
               <Route path="settings" element={
-                <PermissionGate allowedRoles={[Role.MASTER]}>
+                <PermissionGate allowedRoles={[Role.MISTOR]}>
                   <Settings />
                 </PermissionGate>
               } />
               
               {/* Default redirect for /app */}
               <Route index element={<Navigate to="/app/dashboard" replace />} />
+            </Route>
+            
+            {/* Admin Routes */}
+            <Route
+              path="/admin/*"
+              element={
+                <RouteGuard>
+                  <AppShell />
+                </RouteGuard>
+              }
+            >
+              <Route path="home" element={
+                <PermissionGate allowedRoles={[Role.MASTER]}>
+                  <AdminHome />
+                </PermissionGate>
+              } />
             </Route>
             
             {/* Catch-all */}

@@ -75,7 +75,7 @@ const StoryTimeline = () => {
       description: 'Mais de quatro décadas de tradição, construídas com trabalho honesto, respeito e compromisso com os clientes. Uma história que começou com um sofá no teto de um carro — e continua sendo escrita todos os dias.',
       icon: Home,
       color: 'emerald',
-      image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&q=80'
+      image: 'https://kbpkdnptzvsvoujirfwe.supabase.co/storage/v1/object/public/historia/Equipe.jpg'
     }
   ];
 

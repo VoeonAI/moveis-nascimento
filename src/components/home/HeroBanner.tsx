@@ -9,16 +9,40 @@ interface HeroBannerProps {
   imageUrl?: string | null;
 }
 
+const DEFAULT_TITLE = 'Porque a sua casa merece o melhor.';
+const DEFAULT_HIGHLIGHT = 'merece o melhor.';
+const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=1920&q=80';
+
 const HeroBanner = ({ title, highlightWord, imageUrl }: HeroBannerProps) => {
-  const finalTitle = (title && title.trim()) || "Porque a sua casa merece o melhor.";
-  const finalHighlight = (highlightWord && highlightWord.trim()) || "merece o melhor";
-  const finalImageUrl = (imageUrl && imageUrl.trim()) ? `url(${imageUrl})` : "url('https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=1920&q=80')";
+  const finalTitle = title?.trim() ? title.trim() : DEFAULT_TITLE;
+  const finalHighlight = highlightWord?.trim() ? highlightWord.trim() : DEFAULT_HIGHLIGHT;
+  const finalImageUrl = imageUrl?.trim() ? imageUrl.trim() : DEFAULT_IMAGE;
+
+  const hasHighlight =
+    finalHighlight.length > 0 && finalTitle.includes(finalHighlight);
+
+  const renderTitle = () => {
+    if (!hasHighlight) {
+      return finalTitle;
+    }
+
+    const parts = finalTitle.split(finalHighlight);
+
+    return parts.map((part, index) => (
+      <React.Fragment key={index}>
+        {part}
+        {index < parts.length - 1 && (
+          <span className="text-green-400">{finalHighlight}</span>
+        )}
+      </React.Fragment>
+    ));
+  };
 
   return (
     <div className="relative h-[600px] md:h-[700px] overflow-hidden">
       <div
         className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: finalImageUrl }}
+        style={{ backgroundImage: `url('${finalImageUrl}')` }}
       >
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/30"></div>
       </div>
@@ -26,8 +50,7 @@ const HeroBanner = ({ title, highlightWord, imageUrl }: HeroBannerProps) => {
       <div className="relative z-10 max-w-7xl mx-auto px-4 h-full flex items-center">
         <div className="max-w-2xl space-y-6">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
-            Porque a sua casa{' '}
-            <span className="text-green-400">{finalHighlight}</span>
+            {renderTitle()}
           </h1>
 
           <p className="text-lg md:text-xl text-gray-200">

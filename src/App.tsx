@@ -33,12 +33,22 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             {/* Public Routes */}
-            <Route path="/" element={<Index />} />
+            {/* Home Oficial: Agora usando HomeNew */}
+            <Route path="/" element={<HomeNew />} />
+            
+            {/* Catálogo: Isolado em /catalog */}
             <Route path="/catalog" element={<Index />} />
+            
+            {/* Detalhe do Produto */}
             <Route path="/product/:id" element={<ProductDetail />} />
+            
+            {/* Sobre Nós */}
             <Route path="/sobre" element={<About />} />
             
-            {/* NOVA HOME EM PARALELO - para visualização */}
+            {/* Alias /home: Aponta para a Home Oficial */}
+            <Route path="/home" element={<HomeNew />} />
+            
+            {/* Preview /new-home: Mantido por compatibilidade */}
             <Route path="/new-home" element={<HomeNew />} />
             
             {/* Login Route Alias */}

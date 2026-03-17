@@ -10,9 +10,10 @@ interface HeroBannerProps {
 }
 
 const HeroBanner = ({ title, highlightWord, imageUrl }: HeroBannerProps) => {
-  const finalTitle = title || "Porque a sua casa merece o melhor.";
-  const finalHighlight = highlightWord || "merece o melhor";
-  const finalImageUrl = imageUrl ? `url(${imageUrl})` : "url('https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=1920&q=80')";
+  // Fix: handle empty strings correctly with fallback
+  const finalTitle = (title && title.trim()) || "Porque a sua casa merece o melhor.";
+  const finalHighlight = (highlightWord && highlightWord.trim()) || "merece o melhor";
+  const finalImageUrl = (imageUrl && imageUrl.trim()) ? `url(${imageUrl})` : "url('https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=1920&q=80')";
 
   return (
     <div className="relative h-[600px] md:h-[700px] overflow-hidden">

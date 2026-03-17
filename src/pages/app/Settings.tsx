@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
-import { RefreshCw, Globe, Phone, Code, Clock, Copy, Save, Loader2, Key, Plus, AlertCircle, Edit, Trash2 } from "lucide-react";
+import { RefreshCw, Globe, Phone, Code, Clock, Copy, Save, Loader2, Key, Plus, AlertCircle, Edit, Trash2, Image as ImageIcon, X } from "lucide-react";
 
 import {
   webhooksManagementService,
@@ -24,6 +24,7 @@ import {
 } from "@/services/webhooksManagementService";
 import { settingsService } from "@/services/settingsService";
 import { agentTokensService, AgentToken } from "@/services/agentTokensService";
+import { homeHeroService } from "@/services/homeHeroService";
 import { showError, showSuccess } from "@/utils/toast";
 
 export default function Settings() {
@@ -55,6 +56,14 @@ export default function Settings() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [endpointToDelete, setEndpointToDelete] = useState<WebhookEndpoint | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Home Hero State
+  const [heroTitle, setHeroTitle] = useState('');
+  const [heroHighlight, setHeroHighlight] = useState('');
+  const [heroImageUrl, setHeroImageUrl] = useState('');
+  const [heroImageAlt, setHeroImageAlt] = useState('');
+  const [savingHero, setSavingHero] = useState(false);
+  const [heroImageError, setHeroImageError] = useState(false);
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
   const projectRef = useMemo(() => {
@@ -101,17 +110,26 @@ export default function Settings() {
   async function loadData() {
     setLoading(true);
     try {
-      const [eps, lgs, wa, tokens] = await Promise.all([
+      const [eps, lgs, wa, tokens, hero] = await Promise.all([
         webhooksManagementService.listEndpoints(),
         isMaster ? webhooksManagementService.listLogs(100) : Promise.resolve([]),
         isMaster ? settingsService.getStoreWhatsApp() : Promise.resolve(null),
         isMaster ? agentTokensService.listTokens() : Promise.resolve([]),
+        isMaster ? homeHeroService.getHomeHero() : Promise.resolve(null),
       ]);
       setEndpoints(eps);
       setLogs(lgs);
       setAgentTokens(tokens);
       setStoreWhatsApp(wa ?? "");
       setWhatsappSaved(Boolean(wa));
+
+      // Populate Hero State
+      if (hero) {
+        setHeroTitle(hero.title || '');
+        setHeroHighlight(hero.highlight_word || '');
+        setHeroImageUrl(hero.image_url || '');
+        setHeroImageAlt(hero.image_alt || '');
+      }
     } catch (e) {
       console.error("[Settings] loadData error", e);
       showError("Erro ao carregar configurações");
@@ -261,12 +279,31 @@ export default function Settings() {
     }));
   };
 
+  // Home Hero Handlers
+  const handleSaveHero = async () => {
+    setSavingHero(true);
+    try {
+      await homeHeroService.upsertHomeHero({
+        title: heroTitle,
+        highlight_word: heroHighlight,
+        image_url: heroImageUrl,
+        image_alt: heroImageAlt,
+      });
+      showSuccess("Banner atualizado com sucesso");
+    } catch (error: any) {
+      console.error("[Settings] save hero error", error);
+      showError(error.message || "Erro ao salvar banner");
+    } finally {
+      setSavingHero(false);
+    }
+  };
+
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Configurações</h1>
-          <p className="text-gray-600 text-sm mt-1">Gerencie webhooks, integrações e APIs do sistema</p>
+          <p className="text-gray-600 text-sm mt-1">Gerencie webhooks, integrações, APIs e o banner principal</p>
         </div>
         <Button onClick={loadData} variant="outline" size="sm">
           <RefreshCw size={16} className="mr-2" />
@@ -277,6 +314,7 @@ export default function Settings() {
       <Tabs defaultValue="webhooks" className="space-y-6">
         <TabsList>
           <TabsTrigger value="webhooks"><Globe size={16} className="mr-2" />Webhooks</TabsTrigger>
+          {isMaster && <TabsTrigger value="home_hero"><ImageIcon size={16} className="mr-2" />Home Hero</TabsTrigger>}
           {isMaster && <TabsTrigger value="whatsapp"><Phone size={16} className="mr-2" />WhatsApp</TabsTrigger>}
           {isMaster && <TabsTrigger value="apis"><Code size={16} className="mr-2" />APIs</TabsTrigger>}
           {isMaster && <TabsTrigger value="logs"><Clock size={16} className="mr-2" />Logs</TabsTrigger>}
@@ -351,6 +389,106 @@ export default function Settings() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {isMaster && (
+          <TabsContent value="home_hero">
+            <Card>
+              <CardHeader>
+                <CardTitle>Banner Principal (Home Hero)</CardTitle>
+                <CardDescription>Personalize o banner da página inicial.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="hero_title">Título Principal</Label>
+                  <Input
+                    id="hero_title"
+                    value={heroTitle}
+                    onChange={(e) => setHeroTitle(e.target.value)}
+                    placeholder="Ex: Porque a sua casa merece o melhor."
+                    disabled={savingHero}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="hero_highlight">Palavra de Destaque</Label>
+                  <Input
+                    id="hero_highlight"
+                    value={heroHighlight}
+                    onChange={(e) => setHeroHighlight(e.target.value)}
+                    placeholder="Ex: merece o melhor."
+                    disabled={savingHero}
+                  />
+                  <p className="text-xs text-gray-500">
+                    Esta palavra será destacada em verde dentro do título.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="hero_image_url">URL da Imagem (1920x700px recomendado)</Label>
+                  <Input
+                    id="hero_image_url"
+                    value={heroImageUrl}
+                    onChange={(e) => {
+                      setHeroImageUrl(e.target.value);
+                      setHeroImageError(false);
+                    }}
+                    placeholder="https://exemplo.com/imagem.jpg"
+                    disabled={savingHero}
+                  />
+                  <p className="text-xs text-gray-500">
+                    Use uma imagem com proporção aproximada de 2.7:1 (1920x700) para melhor visualização.
+                  </p>
+                  
+                  {/* Preview da Imagem */}
+                  {heroImageUrl && (
+                    <div className="mt-2 border rounded-md overflow-hidden bg-gray-50">
+                      <img
+                        src={heroImageUrl}
+                        alt="Preview"
+                        className="w-full h-48 object-cover"
+                        onError={() => setHeroImageError(true)}
+                        style={{ display: heroImageError ? 'none' : 'block' }}
+                      />
+                      {heroImageError && (
+                        <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
+                          <X size={16} className="mr-2" />
+                          Erro ao carregar imagem
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="hero_image_alt">Texto Alternativo (Alt)</Label>
+                  <Input
+                    id="hero_image_alt"
+                    value={heroImageAlt}
+                    onChange={(e) => setHeroImageAlt(e.target.value)}
+                    placeholder="Descrição da imagem para acessibilidade"
+                    disabled={savingHero}
+                  />
+                </div>
+
+                <div className="flex justify-end pt-4">
+                  <Button onClick={handleSaveHero} disabled={savingHero}>
+                    {savingHero ? (
+                      <>
+                        <Loader2 size={16} className="mr-2 animate-spin" />
+                        Salvando...
+                      </>
+                    ) : (
+                      <>
+                        <Save size={16} className="mr-2" />
+                        Salvar Banner
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         {isMaster && (
           <TabsContent value="whatsapp">

@@ -12,8 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Switch } from "@/components/ui/switch";
 
-import { RefreshCw, Globe, Phone, Code, Clock, Copy, Save, Loader2, Key, Plus, AlertCircle, Edit, Trash2, Image as ImageIcon, X } from "lucide-react";
+import { RefreshCw, Globe, Phone, Code, Clock, Copy, Save, Loader2, Key, Plus, AlertCircle, Edit, Trash2, Image as ImageIcon, X, ArrowUp, ArrowDown } from "lucide-react";
 
 import {
   webhooksManagementService,
@@ -25,6 +26,7 @@ import {
 import { settingsService } from "@/services/settingsService";
 import { agentTokensService, AgentToken } from "@/services/agentTokensService";
 import { homeHeroService } from "@/services/homeHeroService";
+import { homeAmbiencesService, HomeAmbience } from "@/services/homeAmbiencesService";
 import { showError, showSuccess } from "@/utils/toast";
 
 export default function Settings() {
@@ -36,6 +38,7 @@ export default function Settings() {
   const [endpoints, setEndpoints] = useState<WebhookEndpoint[]>([]);
   const [logs, setLogs] = useState<WebhookLog[]>([]);
   const [agentTokens, setAgentTokens] = useState<AgentToken[]>([]);
+  const [ambiences, setAmbiences] = useState<HomeAmbience[]>([]);
 
   const [storeWhatsApp, setStoreWhatsApp] = useState("");
   const [savingWhatsApp, setSavingWhatsApp] = useState(false);
@@ -64,6 +67,18 @@ export default function Settings() {
   const [heroImageAlt, setHeroImageAlt] = useState('');
   const [savingHero, setSavingHero] = useState(false);
   const [heroImageError, setHeroImageError] = useState(false);
+
+  // Ambiences Edit State
+  const [ambienceEditModalOpen, setAmbienceEditModalOpen] = useState(false);
+  const [editingAmbience, setEditingAmbience] = useState<HomeAmbience | null>(null);
+  const [ambienceFormData, setAmbienceFormData] = useState({
+    title: '',
+    category_slug: '',
+    image_url: '',
+    active: true,
+    sort_order: 0,
+  });
+  const [savingAmbience, setSavingAmbience] = useState(false);
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
   const projectRef = useMemo(() => {
@@ -110,12 +125,13 @@ export default function Settings() {
   async function loadData() {
     setLoading(true);
     try {
-      const [eps, lgs, wa, tokens, hero] = await Promise.all([
+      const [eps, lgs, wa, tokens, hero, ambiences] = await Promise.all([
         webhooksManagementService.listEndpoints(),
         isMaster ? webhooksManagementService.listLogs(100) : Promise.resolve([]),
         isMaster ? settingsService.getStoreWhatsApp() : Promise.resolve(null),
         isMaster ? agentTokensService.listTokens() : Promise.resolve([]),
         isMaster ? homeHeroService.getHomeHero() : Promise.resolve(null),
+        isMaster ? homeAmbiencesService.listAllAmbiences() : Promise.resolve([]),
       ]);
       setEndpoints(eps);
       setLogs(lgs);
@@ -130,6 +146,9 @@ export default function Settings() {
         setHeroImageUrl(hero.image_url || '');
         setHeroImageAlt(hero.image_alt || '');
       }
+
+      // Populate Ambiences State
+      setAmbiences(ambiences);
     } catch (e) {
       console.error("[Settings] loadData error", e);
       showError("Erro ao carregar configurações");
@@ -210,7 +229,6 @@ export default function Settings() {
     setSaving(true);
     try {
       if (editingEndpoint) {
-        // Update existing endpoint
         await webhooksManagementService.updateEndpoint(editingEndpoint.id, {
           name: formData.name,
           url: formData.url,
@@ -219,7 +237,6 @@ export default function Settings() {
         });
         showSuccess("Endpoint atualizado com sucesso");
       } else {
-        // Create new endpoint
         await webhooksManagementService.createEndpoint({
           name: formData.name,
           url: formData.url,
@@ -298,6 +315,103 @@ export default function Settings() {
     }
   };
 
+  // Ambiences Handlers
+  const handleOpenAmbienceEditModal = (ambience: HomeAmbience) => {
+    setEditingAmbience(ambience);
+    setAmbienceFormData({
+      title: ambience.title,
+      category_slug: ambience.category_slug,
+      image_url: ambience.image_url,
+      active: ambience.active,
+      sort_order: ambience.sort_order,
+    });
+    setAmbienceEditModalOpen(true);
+  };
+
+  const handleSaveAmbience = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!editingAmbience) return;
+    
+    if (!ambienceFormData.title.trim()) {
+      showError("Título é obrigatório");
+      return;
+    }
+    
+    if (!ambienceFormData.category_slug.trim()) {
+      showError("Slug da categoria é obrigatório");
+      return;
+    }
+    
+    if (!ambienceFormData.image_url.trim()) {
+      showError("URL da imagem é obrigatória");
+      return;
+    }
+    
+    setSavingAmbience(true);
+    try {
+      await homeAmbiencesService.updateAmbience(editingAmbience.id, {
+        title: ambienceFormData.title,
+        category_slug: ambienceFormData.category_slug,
+        image_url: ambienceFormData.image_url,
+        active: ambienceFormData.active,
+        sort_order: ambienceFormData.sort_order,
+      });
+      showSuccess("Ambiente atualizado com sucesso");
+      setAmbienceEditModalOpen(false);
+      setEditingAmbience(null);
+      setAmbienceFormData({
+        title: '',
+        category_slug: '',
+        image_url: '',
+        active: true,
+        sort_order: 0,
+      });
+      await loadData();
+    } catch (error: any) {
+      console.error("[Settings] save ambience error", error);
+      showError(error.message || "Erro ao salvar ambiente");
+    } finally {
+      setSavingAmbience(false);
+    }
+  };
+
+  const handleAmbienceToggleActive = async (ambience: HomeAmbience) => {
+    try {
+      await homeAmbiencesService.updateAmbience(ambience.id, {
+        active: !ambience.active,
+      });
+      showSuccess(ambience.active ? "Ambiente desativado" : "Ambiente ativado");
+      await loadData();
+    } catch (error: any) {
+      console.error("[Settings] toggle ambience active error", error);
+      showError(error.message || "Erro ao atualizar ambiente");
+    }
+  };
+
+  const handleMoveAmbience = async (ambience: HomeAmbience, direction: 'up' | 'down') => {
+    const currentIndex = ambiences.findIndex(a => a.id === ambience.id);
+    if (currentIndex === -1) return;
+
+    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (newIndex < 0 || newIndex >= ambiences.length) return;
+
+    const targetAmbience = ambiences[newIndex];
+
+    try {
+      // Swap sort_order values
+      await Promise.all([
+        homeAmbiencesService.updateAmbience(ambience.id, { sort_order: targetAmbience.sort_order }),
+        homeAmbiencesService.updateAmbience(targetAmbience.id, { sort_order: ambience.sort_order }),
+      ]);
+      showSuccess("Ordem atualizada");
+      await loadData();
+    } catch (error: any) {
+      console.error("[Settings] move ambience error", error);
+      showError(error.message || "Erro ao atualizar ordem");
+    }
+  };
+
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
@@ -315,6 +429,7 @@ export default function Settings() {
         <TabsList>
           <TabsTrigger value="webhooks"><Globe size={16} className="mr-2" />Webhooks</TabsTrigger>
           {isMaster && <TabsTrigger value="home_hero"><ImageIcon size={16} className="mr-2" />Home Hero</TabsTrigger>}
+          {isMaster && <TabsTrigger value="ambientes_home"><ImageIcon size={16} className="mr-2" />Ambientes</TabsTrigger>}
           {isMaster && <TabsTrigger value="whatsapp"><Phone size={16} className="mr-2" />WhatsApp</TabsTrigger>}
           {isMaster && <TabsTrigger value="apis"><Code size={16} className="mr-2" />APIs</TabsTrigger>}
           {isMaster && <TabsTrigger value="logs"><Clock size={16} className="mr-2" />Logs</TabsTrigger>}
@@ -485,6 +600,102 @@ export default function Settings() {
                     )}
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {isMaster && (
+          <TabsContent value="ambientes_home">
+            <Card>
+              <CardHeader>
+                <CardTitle>Ambientes da Home</CardTitle>
+                <CardDescription>Configure os ambientes exibidos na página inicial.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="text-gray-500 py-8">Carregando...</div>
+                ) : ambiences.length === 0 ? (
+                  <div className="text-gray-500 py-8">Nenhum ambiente cadastrado.</div>
+                ) : (
+                  <div className="space-y-4">
+                    {ambiences.map((ambience, index) => (
+                      <div key={ambience.id} className="border rounded-lg p-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="font-semibold">{ambience.title}</div>
+                              <Badge variant={ambience.active ? "default" : "secondary"}>{ambience.active ? "Ativo" : "Inativo"}</Badge>
+                              <Badge variant="outline" className="text-xs">Ordem: {ambience.sort_order}</Badge>
+                            </div>
+                            <div className="text-sm text-gray-600 mb-2">
+                              <span className="text-gray-500">Categoria:</span> {ambience.category_slug}
+                            </div>
+                            <div className="text-xs text-gray-500 font-mono break-all">
+                              {ambience.image_url}
+                            </div>
+                            
+                            {/* Preview da Imagem */}
+                            {ambience.image_url && (
+                              <div className="mt-3">
+                                <img
+                                  src={ambience.image_url}
+                                  alt={ambience.title}
+                                  className="w-full h-32 object-cover rounded-md"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                  }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="flex flex-col gap-2">
+                            <div className="flex gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleAmbienceToggleActive(ambience)}
+                                title={ambience.active ? "Desativar" : "Ativar"}
+                              >
+                                {ambience.active ? "Desativar" : "Ativar"}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenAmbienceEditModal(ambience)}
+                              >
+                                <Edit size={14} className="mr-1" />
+                                Editar
+                              </Button>
+                            </div>
+                            
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleMoveAmbience(ambience, 'up')}
+                                disabled={index === 0}
+                                title="Mover para cima"
+                              >
+                                <ArrowUp size={14} />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleMoveAmbience(ambience, 'down')}
+                                disabled={index === ambiences.length - 1}
+                                title="Mover para baixo"
+                              >
+                                <ArrowDown size={14} />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -762,6 +973,139 @@ export default function Settings() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Ambientes Edit Modal */}
+      <Dialog open={ambienceEditModalOpen} onOpenChange={setAmbienceEditModalOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Editar Ambiente</DialogTitle>
+            <DialogDescription>
+              Altere os dados do ambiente exibido na Home.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSaveAmbience} className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="ambience_title">Título *</Label>
+              <Input
+                id="ambience_title"
+                value={ambienceFormData.title}
+                onChange={(e) => setAmbienceFormData({ ...ambienceFormData, title: e.target.value })}
+                placeholder="Ex: Sala de Estar"
+                disabled={savingAmbience}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ambience_category_slug">Slug da Categoria *</Label>
+              <Input
+                id="ambience_category_slug"
+                value={ambienceFormData.category_slug}
+                onChange={(e) => setAmbienceFormData({ ...ambienceFormData, category_slug: e.target.value })}
+                placeholder="Ex: sala, quarto, cozinha"
+                disabled={savingAmbience}
+                required
+              />
+              <p className="text-xs text-gray-500">
+                Este slug será usado para filtrar produtos no catálogo.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ambience_image_url">URL da Imagem (1200x900px recomendado)</Label>
+              <Input
+                id="ambience_image_url"
+                value={ambienceFormData.image_url}
+                onChange={(e) => setAmbienceFormData({ ...ambienceFormData, image_url: e.target.value })}
+                placeholder="https://exemplo.com/ambiente.jpg"
+                disabled={savingAmbience}
+                required
+              />
+              <p className="text-xs text-gray-500">
+                Recomendado: imagem com proporção 4:3 (1200x900) para melhor visualização na grid.
+              </p>
+              
+              {/* Preview da Imagem */}
+              {ambienceFormData.image_url && (
+                <div className="mt-2 border rounded-md overflow-hidden bg-gray-50">
+                  <img
+                    src={ambienceFormData.image_url}
+                    alt="Preview"
+                    className="w-full h-40 object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ambience_sort_order">Ordem de Exibição</Label>
+              <Input
+                id="ambience_sort_order"
+                type="number"
+                min="0"
+                max="99"
+                value={ambienceFormData.sort_order}
+                onChange={(e) => setAmbienceFormData({ ...ambienceFormData, sort_order: parseInt(e.target.value) || 0 })}
+                disabled={savingAmbience}
+                required
+              />
+              <p className="text-xs text-gray-500">
+                Menor valor aparece primeiro.
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="ambience_active"
+                checked={ambienceFormData.active}
+                onCheckedChange={(checked) => setAmbienceFormData({ ...ambienceFormData, active: checked })}
+                disabled={savingAmbience}
+              />
+              <Label htmlFor="ambience_active" className="cursor-pointer">
+                Ambiente Ativo
+              </Label>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setAmbienceEditModalOpen(false);
+                  setEditingAmbience(null);
+                  setAmbienceFormData({
+                    title: '',
+                    category_slug: '',
+                    image_url: '',
+                    active: true,
+                    sort_order: 0,
+                  });
+                }}
+                disabled={savingAmbience}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={savingAmbience}>
+                {savingAmbience ? (
+                  <>
+                    <Loader2 size={16} className="mr-2 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Save size={16} className="mr-2" />
+                    Salvar
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

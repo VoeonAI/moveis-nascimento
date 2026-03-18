@@ -43,4 +43,47 @@ export const homeAmbiencesService = {
       return [];
     }
   },
+
+  async listAllAmbiences(): Promise<HomeAmbience[]> {
+    try {
+      const { data, error } = await supabase
+        .from('home_ambiences')
+        .select('*')
+        .order('sort_order', { ascending: true });
+
+      if (error) {
+        console.error('[homeAmbiencesService.listAllAmbiences] Erro:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('[homeAmbiencesService.listAllAmbiences] Erro inesperado:', error);
+      return [];
+    }
+  },
+
+  async updateAmbience(id: string, updates: Partial<HomeAmbience>): Promise<HomeAmbience> {
+    try {
+      const { data, error } = await supabase
+        .from('home_ambiences')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('[homeAmbiencesService.updateAmbience] Erro:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('[homeAmbiencesService.updateAmbience] Erro inesperado:', error);
+      throw error;
+    }
+  },
 };

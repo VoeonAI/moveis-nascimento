@@ -80,6 +80,9 @@ export default function Settings() {
   });
   const [savingAmbience, setSavingAmbience] = useState(false);
 
+  // Creating new ambience state
+  const [creatingAmbience, setCreatingAmbience] = useState(false);
+
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
   const projectRef = useMemo(() => {
     return supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1] || "<project-ref>";
@@ -412,6 +415,22 @@ export default function Settings() {
     }
   };
 
+  const handleCreateAmbience = async () => {
+    setCreatingAmbience(true);
+    try {
+      const newAmbience = await homeAmbiencesService.createHomeAmbience();
+      showSuccess("Ambiente criado com sucesso");
+      await loadData();
+      // Abrir modal de edição automaticamente
+      handleOpenAmbienceEditModal(newAmbience);
+    } catch (error: any) {
+      console.error("[Settings] create ambience error", error);
+      showError(error.message || "Erro ao criar ambiente");
+    } finally {
+      setCreatingAmbience(false);
+    }
+  };
+
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
@@ -609,8 +628,16 @@ export default function Settings() {
           <TabsContent value="ambientes_home">
             <Card>
               <CardHeader>
-                <CardTitle>Ambientes da Home</CardTitle>
-                <CardDescription>Configure os ambientes exibidos na página inicial.</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Ambientes da Home</CardTitle>
+                    <CardDescription>Configure os ambientes exibidos na página inicial.</CardDescription>
+                  </div>
+                  <Button onClick={handleCreateAmbience} disabled={creatingAmbience}>
+                    <Plus size={16} className="mr-2" />
+                    Novo Ambiente
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {loading ? (
@@ -683,7 +710,7 @@ export default function Settings() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleMoveAmbience(ambience, 'down')}
+                                onClick={() => handleMoveAmbience(withAmbience, 'down')}
                                 disabled={index === ambiences.length - 1}
                                 title="Mover para baixo"
                               >
@@ -974,7 +1001,7 @@ export default function Settings() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Ambientes Edit Modal */}
+      {/* Ambiences Edit Modal */}
       <Dialog open={ambienceEditModalOpen} onOpenChange={setAmbienceEditModalOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>

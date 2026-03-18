@@ -72,15 +72,14 @@ export const homeAmbiencesService = {
           updated_at: new Date().toISOString(),
         })
         .eq('id', id)
-        .select()
-        .single();
+        .select(); // Removido .single() para evitar erro de coerção
 
       if (error) {
         console.error('[homeAmbiencesService.updateAmbience] Erro:', error);
         throw error;
       }
 
-      return data;
+      return data?.[0] ?? null; // Acesso seguro ao primeiro item
     } catch (error) {
       console.error('[homeAmbiencesService.updateAmbience] Erro inesperado:', error);
       throw error;

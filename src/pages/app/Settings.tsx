@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useAuth } from "@/core/auth/AuthProvider";
 import { Role } from "@/constants/domain";
 import { PermissionGate } from "@/core/guards/PermissionGate";
@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 
-import { RefreshCw, Globe, Phone, Code, Clock, Copy, Save, Loader2, Key, Plus, AlertCircle, Edit, Trash2, Image as ImageIcon, X, ArrowUp, ArrowDown } from "lucide-react";
+import { RefreshCw, Globe, Phone, Code, Clock, Copy, Save, Loader2, Key, Plus, AlertCircle, Edit, Trash2, Image as ImageIcon, X, ArrowUp, ArrowDown, Upload } from "lucide-react";
 
 import {
   webhooksManagementService,
@@ -27,6 +27,7 @@ import { settingsService } from "@/services/settingsService";
 import { agentTokensService, AgentToken } from "@/services/agentTokensService";
 import { homeHeroService } from "@/services/homeHeroService";
 import { homeAmbiencesService, HomeAmbience } from "@/services/homeAmbiencesService";
+import { homeAssetsService } from "@/services/homeAssetsService";
 import { showError, showSuccess } from "@/utils/toast";
 
 export default function Settings() {
@@ -82,6 +83,10 @@ export default function Settings() {
 
   // Creating new ambience state
   const [creatingAmbience, setCreatingAmbience] = useState(false);
+
+  // Upload state
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
   const projectRef = useMemo(() => {
@@ -431,6 +436,28 @@ export default function Settings() {
     }
   };
 
+  // Image Upload Handler
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    try {
+      const publicUrl = await homeAssetsService.uploadAmbienceImage(file);
+      setAmbienceFormData(prev => ({ ...prev, image_url: publicUrl }));
+      showSuccess("Imagem enviada com sucesso");
+    } catch (error: any) {
+      console.error("[Settings] image upload error", error);
+      showError(error.message || "Erro ao enviar imagem");
+    } finally {
+      setUploadingImage(false);
+      // Limpar input para permitir re-upload do mesmo arquivo
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
@@ -710,7 +737,7 @@ export default function Settings() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleMoveAmbience(withAmbience, 'down')}
+                                onClick={() => handleMoveAmbience(ambience, 'down')}
                                 disabled={index === ambiences.length - 1}
                                 title="Mover para baixo"
                               >
@@ -1040,7 +1067,48 @@ export default function Settings() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="ambience_image_url">URL da Imagem (1200x900px recomendado)</Label>
+              <Label>Imagem do Ambiente</Label>
+              
+              {/* Upload Button */}
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingImage || savingAmbience}
+                  className="flex-1"
+                >
+                  {uploadingImage ? (
+                    <>
+                      <Loader2 size={16} className="mr-2 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={16} className="mr-2" />
+                      Selecionar Imagem
+                    </>
+                  )}
+                </Button>
+              </div>
+              
+              {/* Hidden File Input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+                disabled={uploadingImage || savingAmbience}
+              />
+              
+              <p className="text-xs text-gray-500">
+                Formatos aceitos: JPG, PNG, WebP. Proporção recomendada: 4:3 (1200x900px).
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ambience_image_url">URL da Imagem</Label>
               <Input
                 id="ambience_image_url"
                 value={ambienceFormData.image_url}
@@ -1050,7 +1118,7 @@ export default function Settings() {
                 required
               />
               <p className="text-xs text-gray-500">
-                Recomendado: imagem com proporção 4:3 (1200x900) para melhor visualização na grid.
+                Você pode colar uma URL manualmente ou usar o upload acima.
               </p>
               
               {/* Preview da Imagem */}

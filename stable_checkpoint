@@ -1,3 +1,20 @@
-Versão estável 266
-- Paths mínimos de CMS com Ambiente e Hero
-Data 18/03/2026
+# STABLE CHECKPOINT
+
+Data: 18/03/2026
+Version: 269
+
+## Estado estável
+- Home oficial consolidada
+- Hero CMS V1 funcionando
+- Ambientes CMS V1 funcionando
+- RLS do home_hero ajustado
+- home_ambiences com updated_at
+
+## Não mexer sem necessidade
+- HeroBanner
+- Home pública
+- services do Hero e Ambientes
+- policies atuais
+
+## Próxima etapa planejada
+- Upload simples de imagem via Supabase Storage

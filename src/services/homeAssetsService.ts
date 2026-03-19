@@ -115,7 +115,7 @@ export const homeAssetsService = {
     // Gerar nome único
     const timestamp = Date.now();
     const randomStr = Math.random().toString(36).substring(2, 8);
-    const extension = file.name.split('.pop() || 'jpg';
+    const extension = file.name.split('.').pop() || 'jpg';
     const fileName = `hero/${timestamp}-${randomStr}.${extension}`;
 
     console.log('[homeAssetsService] Iniciando upload hero:', {

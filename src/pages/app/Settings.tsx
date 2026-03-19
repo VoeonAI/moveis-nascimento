@@ -935,7 +935,7 @@ const Settings = () => {
                                 size="sm"
                                 onClick={() => handleDeleteEndpointClick(endpoint)}
                               >
-                                <Trash2 size={16} className="text-red-" />
+                                <Trash2 size={16} className="text-red-600" />
                               </Button>
                             </div>
                           </div>

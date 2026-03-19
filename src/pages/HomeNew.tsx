@@ -53,11 +53,11 @@ const HomeNew = () => {
         imageUrl={hero?.image_url}
       />
 
-      {/* 2. Ambientes que inspiram */}
-      <HomeAmbiences />
-
-      {/* 3. Categorias principais */}
+      {/* 2. Categorias principais */}
       <CategorySection />
+
+      {/* 3. Ambientes que inspiram */}
+      <HomeAmbiences />
 
       {/* 4. Banner Promocional */}
       <PromotionalBanner />

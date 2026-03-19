@@ -53,36 +53,33 @@ const HomeNew = () => {
         imageUrl={hero?.image_url}
       />
 
-      {/* 2. Banner Promocional (NOVO) */}
-      <PromotionalBanner />
-
-      {/* 3. Categorias principais */}
-      <CategorySection />
-
-      {/* 4. Ambientes que inspiram */}
+      {/* 2. Ambientes que inspiram */}
       <HomeAmbiences />
 
-      {/* 5. Banner institucional/promocional */}
-      {/* Removido o PromotionalBanner antigo, agora é o bloco 2 */}
+      {/* 3. Banner Promocional */}
+      <PromotionalBanner />
+
+      {/* 4. Categorias principais */}
+      <CategorySection />
 
       {/* ================================================== */}
       {/* BLOCOS AUTOMÁTICOS (preenchidos por regra) */}
       {/* ================================================== */}
 
-      {/* 6. Produtos em destaque (featured = true) */}
+      {/* 5. Produtos em destaque (featured = true) */}
       <FeaturedProducts />
 
-      {/* 7. Destaques da semana (on_promotion = true) */}
+      {/* 6. Destaques da semana (on_promotion = true) */}
       <WeeklyHighlights />
 
       {/* ================================================== */}
       {/* BLOCOS MANUAIS / ESTATÍSTICOS */}
       {/* ================================================== */}
 
-      {/* 8. Como comprar */}
+      {/* 7. Como comprar */}
       <HowToBuySection />
 
-      {/* 9. Nossos produtos (todos os produtos) */}
+      {/* 8. Nossos produtos (todos os produtos) */}
       <ProductGrid />
 
       {/* Footer */}

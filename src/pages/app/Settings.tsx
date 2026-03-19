@@ -36,6 +36,7 @@ import { homeHeroService, HomeHero } from '@/services/homeHeroService';
 import { homeAmbiencesService, HomeAmbience } from '@/services/homeAmbiencesService';
 import { homePromoBannerService, HomePromoBanner } from '@/services/homePromoBannerService';
 import { homeAssetsService } from '@/services/homeAssetsService';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 const Settings = () => {
   const { profile } = useAuth();

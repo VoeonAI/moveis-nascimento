@@ -14,8 +14,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 
-import { RefreshCw, Globe, Phone, Code, Clock, Copy, Save, Loader2, Key, Plus, AlertCircle, Edit, Trash2, Image as ImageIcon, X, ArrowUp, ArrowDown, Upload, Megaphone } from "lucide-react";
-
 import {
   webhooksManagementService,
   WebhookEndpoint,
@@ -70,6 +68,8 @@ export default function Settings() {
   const [heroImageAlt, setHeroImageAlt] = useState('');
   const [savingHero, setSavingHero] = useState(false);
   const [heroImageError, setHeroImageError] = useState(false);
+  const [uploadingHeroImage, setUploadingHeroImage] = useState(false);
+  const heroFileInputRef = useRef<HTMLInputElement>(null);
 
   // Ambiences Edit State
   const [ambienceEditModalOpen, setAmbienceEditModalOpen] = useState(false);
@@ -304,7 +304,7 @@ export default function Settings() {
     setDeleteDialogOpen(true);
   };
 
-  const handleConfirmDelete = async () => {
+  const const handleConfirmDelete = async () => {
     if (!endpointToDelete) return;
     
     setDeleting(true);
@@ -332,6 +332,28 @@ export default function Settings() {
   };
 
   // Home Hero Handlers
+  const handleHeroImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingHeroImage(true);
+    try {
+      const publicUrl = await homeAssetsService.uploadHeroImage(file);
+      setHeroImageUrl(publicUrl);
+      setHeroImageError(false);
+      showSuccess("Imagem enviada com sucesso");
+    } catch (error: any) {
+      console.error("[Settings] hero image upload error", error);
+      showError(error.message || "Erro ao enviar imagem");
+    } finally {
+      setUploadingHeroImage(false);
+      // Limpar input para permitir re-upload do mesmo arquivo
+      if (heroFileInputRef.current) {
+        heroFileInputRef.current.value = '';
+      }
+    }
+  };
+
   const handleSaveHero = async () => {
     setSavingHero(true);
     try {
@@ -400,6 +422,7 @@ export default function Settings() {
         category_slug: '',
         image_url: '',
         active: true,
+        painel: true,
         sort_order: 0,
       });
       await loadData();
@@ -521,7 +544,7 @@ export default function Settings() {
       const publicUrl = await homeAssetsService.uploadPromoImage(file);
       setPromoBannerFormData(prev => ({ ...prev, image_url: publicUrl }));
       showSuccess("Imagem enviada com sucesso");
-    } catch (error: any) {
+    } catch (error: any) mantendo o padrão técnico dos outros uploads
       console.error("[Settings] promo image upload error", error);
       showError(error.message || "Erro ao enviar imagem");
     } finally {
@@ -550,7 +573,7 @@ export default function Settings() {
           <TabsTrigger value="webhooks"><Globe size={16} className="mr-2" />Webhooks</TabsTrigger>
           {isMaster && <TabsTrigger value="home_hero"><ImageIcon size={16} className="mr-2" />Home Hero</TabsTrigger>}
           {isMaster && <TabsTrigger value="promo_banner"><Megaphone size={16} className="mr-2" />Banner Promocional</TabsTrigger>}
-          {isMaster && <TabsTrigger value="ambientes_home"><ImageIcon size={16} className="mr-2" />Ambientes</TabsTrigger>}
+          {isMaster && <TabsTrigger value="ambiences_home"><ImageIcon size={16} className="mr-2" />Ambientes</TabsTrigger>}
           {isMaster && <TabsTrigger value="whatsapp"><Phone size={16} className="mr-2" />WhatsApp</TabsTrigger>}
           {isMaster && <TabsTrigger value="apis"><Code size={16} className="mr-2" />APIs</TabsTrigger>}
           {isMaster && <TabsTrigger value="logs"><Clock size={16} className="mr-2" />Logs</TabsTrigger>}
@@ -660,7 +683,48 @@ export default function Settings() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="hero_image_url">URL da Imagem (1920x700px recomendado)</Label>
+                  <Label>Imagem do Banner</Label>
+                  
+                  {/* Upload Button */}
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => heroFileInputRef.current?.click()}
+                      disabled={uploadingHeroImage || savingHero}
+                      className="flex-1"
+                    >
+                      {uploadingHeroImage ? (
+                        <>
+                          <Loader2 size={16} className="mr-2 animate-spin" />
+                          Enviando...
+                        </>
+                      ) : (
+                        <>
+                          <Upload size={16} className="mr-2" />
+                          Selecionar Imagem
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  
+                  {/* Hidden File Input */}
+                  <input
+                    ref={heroFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleHeroImageUpload}
+                    className="hidden"
+                    disabled={uploadingHeroImage || savingHero}
+                  />
+                  
+                  <p className="text-xs text-gray-500">
+                    Formatos aceitos: JPG, PNG, WebP. Proporção recomendada: 2.7:1 (1920x700px).
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="hero_image_url">URL da Imagem</Label>
                   <Input
                     id="hero_image_url"
                     value={heroImageUrl}
@@ -668,11 +732,11 @@ export default function Settings() {
                       setHeroImageUrl(e.target.value);
                       setHeroImageError(false);
                     }}
-                    placeholder="https://exemplo.com/imagem.jpg"
+                    placeholder="https://exemplo.com/banner.jpg"
                     disabled={savingHero}
                   />
                   <p className="text-xs text-gray-500">
-                    Use uma imagem com proporção aproximada de 2.7:1 (1920x700) para melhor visualização.
+                    Você pode colar uma URL manualmente ou usar o upload acima.
                   </p>
                   
                   {/* Preview da Imagem */}
@@ -710,7 +774,7 @@ export default function Settings() {
                   <Button onClick={handleSaveHero} disabled={savingHero}>
                     {savingHero ? (
                       <>
-                        <Loader2 size={16} className="mr-2 animate-spin" />
+                        <Loader2 size={16} className="bar-2 mr-2 animate-spin" />
                         Salvando...
                       </>
                     ) : (
@@ -744,7 +808,7 @@ export default function Settings() {
                       <div className="flex gap-2">
                         <Button
                           type="button"
-                          variant="outline"
+                          variant=" único
                           onClick={() => promoFileInputRef.current?.click()}
                           disabled={uploadingPromoImage || savingPromoBanner}
                           className="flex-1"
@@ -821,7 +885,7 @@ export default function Settings() {
                       <Input
                         id="promo_image_alt"
                         value={promoBannerFormData.image_alt}
-                        onChange={(e) => setPromoBannerFormData({ ...promoBannerFormData, image_alt: e.target.value })}
+                        onChange={(e) => { setPromoBannerFormData({ ...promoBannerFormData, image_alt: e.target.value }); }}
                         placeholder="Descrição da imagem para acessibilidade"
                         disabled={savingPromoBanner}
                       />
@@ -858,7 +922,7 @@ export default function Settings() {
                         id="promo_active"
                         checked={promoBannerFormData.active}
                         onCheckedChange={(checked) => setPromoBannerFormData({ ...promoBannerFormData, active: checked })}
-                        disabled={savingPromoBanner}
+                        disabled={savingPromoBugner}
                       />
                       <Label htmlFor="promo_active" className="cursor-pointer">
                         Banner Ativo
@@ -904,7 +968,7 @@ export default function Settings() {
         )}
 
         {isMaster && (
-          <TabsContent value="ambientes_home">
+          <TabsContent value="ambiences_home">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -1029,7 +1093,7 @@ export default function Settings() {
                 </div>
 
                 <Button onClick={handleSaveWhatsApp} disabled={savingWhatsApp}>
-                  {savingWhatsApp ? (<><Loader2 size={16} className="mr-2 animate-spin" />Salvando...</>) : (<><Save size={16} className="mr-2" />Salvar</>)}
+                  {savingWhatsApp ? (<><Loader2 size={16} com className="mr-2 animate-spin" />Salvando...</>) : (<><Save size={16} className="mr-2" />Salvar</>)}
                 </Button>
 
                 {whatsappSaved && storeWhatsApp && (
@@ -1453,6 +1517,256 @@ export default function Settings() {
           </form>
         </DialogContent>
       </Dialog>
-    </div>
-  );
-}
+
+      {/* Promo Banner Edit Modal */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>{editingEndpoint ? 'Editar Endpoint de Webhook' : 'Novo Endpoint de Webhook'}</DialogTitle>
+            <DialogDescription>
+              {editingEndpoint ? 'Altere as configurações do endpoint.' : 'Configure um novo endpoint para receber notificações de eventos.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSave} className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="webhook_name">Nome *</Label>
+              <Input
+                id="webhook_name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Ex: Integração n8n"
+                disabled={saving}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="webhook_url">URL *</Label>
+              <Input
+                id="webhook_url"
+                value={formData.url}
+                onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                placeholder="https://seu-endpoint.com/webhook"
+                disabled={saving}
+                required
+              />
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="webhook_active"
+                checked={formData.active}
+                onCheckedChange={(checked) => setFormData({ ...formData, active: checked as boolean })}
+                disabled={saving}
+              />
+              <Label htmlFor="webhook_active" className="cursor-pointer">
+                Ativo
+              </Label>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Eventos *</Label>
+              <div className="space-y-2">
+                {Object.entries(WEBHOOK_EVENTS).map(([key, value]) => (
+                  <div key={key} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`event_${key}`}
+                      checked={formData.events.includes(value)}
+                      onCheckedChange={() => toggleEvent(value)}
+                      disabled={saving}
+                    />
+                    <Label htmlFor={`event_${key}`} className="cursor-pointer">
+                      {WEBHOOK_EVENT_LABELS[value as keyof typeof WEBHOOK_EVENT_LABELS] || value}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setModalOpen(false);
+                  setEditingEndpoint(null);
+                  setFormData({
+                    name: '',
+                    url: '',
+                    active: true,
+                    events: [],
+                  });
+                }}
+                disabled={saving}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? (
+                  <>
+                    <Loader2 size={16} className="mr-2 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  editingEndpoint ? 'Salvar alterações' : 'Criar Endpoint'
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir endpoint de webhook?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação removerá o endpoint e ele não receberá mais eventos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? 'Excluindo...' : 'Excluir'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Ambiences Edit Modal */}
+      <Dialog open={ambienceEditModalOpen} onOpenChange={setAmbienceEditModalOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Editar Ambiente</DialogTitle>
+            <DialogDescription>
+              Altere os dados do ambiente exibido na Home.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSaveAmbience} className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="ambience_title">Título *</Label>
+              <Input
+                id="ambience_title"
+                value={ambienceFormData.title}
+                onChange={(e) => setAmbienceFormData({ ...ambienceFormData, title: e.target.value })}
+                placeholder="Ex: Sala de Estar"
+                disabled={savingAmbience}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ambience_category_slug">Slug da Categoria *</Label>
+              <Input
+                id="ambience_category_slug"
+                value={ambienceFormData.category_slug}
+                onChange={(e) => setAmbienceFormData({ ...ambienceFormData, category_slug: e.target.value })}
+                placeholder="Ex: sala, quarto, cozinha"
+                disabled={savingAmbience}
+                required
+              />
+              <p className="text-xs text-gray-500">
+                Este slug será usado para filtrar produtos no catálogo.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Imagem do Ambiente</Label>
+              
+              {/* Upload Button */}
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingImage || savingAmbience}
+                  className="flex-1"
+                >
+                  {uploadingImage ? (
+                    <>
+                      <Loader2 size={16} className="mr-2 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={16} className="mr-2" />
+                      Selecionar Imagem
+                    </>
+                  )}
+                </Button>
+              </div>
+              
+              {/* Hidden File Input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+                disabled={uploadingImage || savingAmbience}
+              />
+              
+              <p className="text-xs text-gray-500">
+                Formatos aceitos: JPG, PNG, WebP. Proporção recomendada: 4:3 (1200x900px).
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ambience_image_url">URL da Imagem</Label>
+              <Input
+                id="ambience_image_url"
+                value={ambienceFormData.image_url}
+                onChange={(e) => setAmbienceFormData({ ...ambienceFormData, image_url: e.target.value })}
+                placeholder="https://exemplo.com/ambiente.jpg"
+                disabled={savingAmbience}
+                required
+              />
+              <p className="text-xs text-gray-500">
+                Você pode colar uma URL manualmente ou usar o upload acima.
+              </p>
+              
+              {/* Preview da Imagem */}
+              {ambienceFormData.image_url && (
+                <div className="mt-2 border rounded-md overflow-hidden bg-gray-50">
+                  <img
+                    src={ambienceFormData.image_url}
+                    alt="Preview"
+                    className="w-full h-40 object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ambience_sort_order">Ordem de Exibição</Label>
+              <Input
+                id="ambience_sort_order"
+                type="number"
+                min="0"
+                max="99"
+                value={ambienceFormData.sort_order}
+                resetValue={0}
+                onChange={(e) => setAmbienceFormData({ ...ambienceFormData, sort_order: parseInt(e.target.value) || 0 })}
+                disabled={savingAmbience}
+                required
+              />
+              <p className="text-xs text-gray-500">
+                Menor valor aparece primeiro.
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="ambience_active"
+                checked={ambienceFormData.active}
+                onCheckedChange={(checked) => setAmbience CMS com upload de imagem

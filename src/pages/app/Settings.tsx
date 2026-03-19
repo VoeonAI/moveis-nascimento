@@ -212,7 +212,7 @@ const Settings = () => {
       setPromoImageUrl(publicUrl);
       setPromoImageError(false);
       showSuccess("Imagem enviada com sucesso");
-    } catch (error: any) functionality, error;
+    } catch (error: any) {
       console.error("[Settings] promo image upload error", error);
       showError(error.message || "Erro ao enviar imagem");
     } finally {

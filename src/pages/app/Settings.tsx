@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 
-import { RefreshCw, Globe, Phone, Code, Clock, Copy, Save, Loader2, Key, Plus, AlertCircle, Edit, Trash2, Image as ImageIcon, X, ArrowUp, ArrowDown, Upload } from "lucide-react";
+import { RefreshCw, Globe, Phone, Code, Clock, Copy, Save, Loader2, Key, Plus, AlertCircle, Edit, Trash2, Image as ImageIcon, X, ArrowUp, ArrowDown, Upload, Megaphone } from "lucide-react";
 
 import {
   webhooksManagementService,
@@ -28,6 +28,7 @@ import { agentTokensService, AgentToken } from "@/services/agentTokensService";
 import { homeHeroService } from "@/services/homeHeroService";
 import { homeAmbiencesService, HomeAmbience } from "@/services/homeAmbiencesService";
 import { homeAssetsService } from "@/services/homeAssetsService";
+import { homePromoBannerService, HomePromoBanner } from "@/services/homePromoBannerService";
 import { showError, showSuccess } from "@/utils/toast";
 
 export default function Settings() {
@@ -40,6 +41,7 @@ export default function Settings() {
   const [logs, setLogs] = useState<WebhookLog[]>([]);
   const [agentTokens, setAgentTokens] = useState<AgentToken[]>([]);
   const [ambiences, setAmbiences] = useState<HomeAmbience[]>([]);
+  const [promoBanner, setPromoBanner] = useState<HomePromoBanner | null>(null);
 
   const [storeWhatsApp, setStoreWhatsApp] = useState("");
   const [savingWhatsApp, setSavingWhatsApp] = useState(false);
@@ -88,6 +90,19 @@ export default function Settings() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Promo Banner State
+  const [promoBannerFormData, setPromoBannerFormData] = useState({
+    image_url: '',
+    image_alt: '',
+    text: '',
+    show_text: true,
+    active: true,
+  });
+  const [savingPromoBanner, setSavingPromoBanner] = useState(false);
+  const [promoBannerImageError, setPromoBannerImageError] = useState(false);
+  const [uploadingPromoImage, setUploadingPromoImage] = useState(false);
+  const promoFileInputRef = useRef<HTMLInputElement>(null);
+
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
   const projectRef = useMemo(() => {
     return supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1] || "<project-ref>";
@@ -133,13 +148,14 @@ export default function Settings() {
   async function loadData() {
     setLoading(true);
     try {
-      const [eps, lgs, wa, tokens, hero, ambiences] = await Promise.all([
+      const [eps, lgs, wa, tokens, hero, ambiences, promo] = await Promise.all([
         webhooksManagementService.listEndpoints(),
         isMaster ? webhooksManagementService.listLogs(100) : Promise.resolve([]),
         isMaster ? settingsService.getStoreWhatsApp() : Promise.resolve(null),
         isMaster ? agentTokensService.listTokens() : Promise.resolve([]),
         isMaster ? homeHeroService.getHomeHero() : Promise.resolve(null),
         isMaster ? homeAmbiencesService.listAllAmbiences() : Promise.resolve([]),
+        isMaster ? homePromoBannerService.getPromoBanner() : Promise.resolve(null),
       ]);
       setEndpoints(eps);
       setLogs(lgs);
@@ -157,6 +173,17 @@ export default function Settings() {
 
       // Populate Ambiences State
       setAmbiences(ambiences);
+
+      // Populate Promo Banner State
+      if (promo) {
+        setPromoBannerFormData({
+          image_url: promo.image_url || '',
+          image_alt: promo.image_alt || '',
+          text: promo.text || '',
+          show_text: promo.show_text ?? true,
+          active: promo.active ?? true,
+        });
+      }
     } catch (e) {
       console.error("[Settings] loadData error", e);
       showError("Erro ao carregar configurações");
@@ -436,7 +463,7 @@ export default function Settings() {
     }
   };
 
-  // Image Upload Handler
+  // Image Upload Handler (Ambiences)
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -458,6 +485,53 @@ export default function Settings() {
     }
   };
 
+  // Promo Banner Handlers
+  const handleSavePromoBanner = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!promoBannerFormData.image_url.trim()) {
+      showError("URL da imagem é obrigatória");
+      return;
+    }
+
+    setSavingPromoBanner(true);
+    try {
+      await homePromoBannerService.upsertPromoBanner({
+        image_url: promoBannerFormData.image_url,
+        image_alt: promoBannerFormData.image_alt,
+        text: promoBannerFormData.text,
+        show_text: promoBannerFormData.show_text,
+        active: promoBannerFormData.active,
+      });
+      showSuccess("Banner promocional atualizado com sucesso");
+    } catch (error: any) {
+      console.error("[Settings] save promo banner error", error);
+      showError(error.message || "Erro ao salvar banner promocional");
+    } finally {
+      setSavingPromoBanner(false);
+    }
+  };
+
+  const handlePromoImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingPromoImage(true);
+    try {
+      const publicUrl = await homeAssetsService.uploadPromoImage(file);
+      setPromoBannerFormData(prev => ({ ...prev, image_url: publicUrl }));
+      showSuccess("Imagem enviada com sucesso");
+    } catch (error: any) {
+      console.error("[Settings] promo image upload error", error);
+      showError(error.message || "Erro ao enviar imagem");
+    } finally {
+      setUploadingPromoImage(false);
+      if (promoFileInputRef.current) {
+        promoFileInputRef.current.value = '';
+      }
+    }
+  };
+
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
@@ -475,6 +549,7 @@ export default function Settings() {
         <TabsList>
           <TabsTrigger value="webhooks"><Globe size={16} className="mr-2" />Webhooks</TabsTrigger>
           {isMaster && <TabsTrigger value="home_hero"><ImageIcon size={16} className="mr-2" />Home Hero</TabsTrigger>}
+          {isMaster && <TabsTrigger value="promo_banner"><Megaphone size={16} className="mr-2" />Banner Promocional</TabsTrigger>}
           {isMaster && <TabsTrigger value="ambientes_home"><ImageIcon size={16} className="mr-2" />Ambientes</TabsTrigger>}
           {isMaster && <TabsTrigger value="whatsapp"><Phone size={16} className="mr-2" />WhatsApp</TabsTrigger>}
           {isMaster && <TabsTrigger value="apis"><Code size={16} className="mr-2" />APIs</TabsTrigger>}
@@ -646,6 +721,183 @@ export default function Settings() {
                     )}
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {isMaster && (
+          <TabsContent value="promo_banner">
+            <Card>
+              <CardHeader>
+                <CardTitle>Banner Promocional</CardTitle>
+                <CardDescription>Configure o banner promocional exibido na página inicial.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <form onSubmit={handleSavePromoBanner}>
+                  <div className="space-y-4">
+                    {/* Imagem */}
+                    <div className="space-y-2">
+                      <Label>Imagem do Banner</Label>
+                      
+                      {/* Upload Button */}
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => promoFileInputRef.current?.click()}
+                          disabled={uploadingPromoImage || savingPromoBanner}
+                          className="flex-1"
+                        >
+                          {uploadingPromoImage ? (
+                            <>
+                              <Loader2 size={16} className="mr-2 animate-spin" />
+                              Enviando...
+                            </>
+                          ) : (
+                            <>
+                              <Upload size={16} className="mr-2" />
+                              Selecionar Imagem
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                      
+                      {/* Hidden File Input */}
+                      <input
+                        ref={promoFileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePromoImageUpload}
+                        className="hidden"
+                        disabled={uploadingPromoImage || savingPromoBanner}
+                      />
+                      
+                      <p className="text-xs text-gray-500">
+                        Formatos aceitos: JPG, PNG, WebP. Proporção recomendada: 16:9 (1920x1080px).
+                      </p>
+                    </div>
+
+                    {/* URL da Imagem */}
+                    <div className="space-y-2">
+                      <Label htmlFor="promo_image_url">URL da Imagem</Label>
+                      <Input
+                        id="promo_image_url"
+                        value={promoBannerFormData.image_url}
+                        onChange={(e) => {
+                          setPromoBannerFormData({ ...promoBannerFormData, image_url: e.target.value });
+                          setPromoBannerImageError(false);
+                        }}
+                        placeholder="https://exemplo.com/banner.jpg"
+                        disabled={savingPromoBanner}
+                      />
+                      <p className="text-xs text-gray-500">
+                        Você pode colar uma URL manualmente ou usar o upload acima.
+                      </p>
+                      
+                      {/* Preview da Imagem */}
+                      {promoBannerFormData.image_url && (
+                        <div className="mt-2 border rounded-md overflow-hidden bg-gray-50">
+                          <img
+                            src={promoBannerFormData.image_url}
+                            alt="Preview"
+                            className="w-full h-40 object-cover"
+                            onError={() => setPromoBannerImageError(true)}
+                            style={{ display: promoBannerImageError ? 'none' : 'block' }}
+                          />
+                          {promoBannerImageError && (
+                            <div className="flex items-center justify-center h-40 text-gray-400 text-sm">
+                              <X size={16} className="mr-2" />
+                              Erro ao carregar imagem
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Texto Alternativo (Alt) */}
+                    <div className="space-y-2">
+                      <Label htmlFor="promo_image_alt">Texto Alternativo (Alt)</Label>
+                      <Input
+                        id="promo_image_alt"
+                        value={promoBannerFormData.image_alt}
+                        onChange={(e) => setPromoBannerFormData({ ...promoBannerFormData, image_alt: e.target.value })}
+                        placeholder="Descrição da imagem para acessibilidade"
+                        disabled={savingPromoBanner}
+                      />
+                    </div>
+
+                    {/* Texto do Banner */}
+                    <div className="space-y-2">
+                      <Label htmlFor="promo_text">Texto do Banner</Label>
+                      <Input
+                        id="promo_text"
+                        value={promoBannerFormData.text}
+                        onChange={(e) => setPromoBannerFormData({ ...promoBannerFormData, text: e.target.value })}
+                        placeholder="Ex: Promoção de Verão!"
+                        disabled={savingPromoBanner}
+                      />
+                    </div>
+
+                    {/* Mostrar Texto */}
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="promo_show_text"
+                        checked={promoBannerFormData.show_text}
+                        onCheckedChange={(checked) => setPromoBannerFormData({ ...promoBannerFormData, show_text: checked })}
+                        disabled={savingPromoBanner}
+                      />
+                      <Label htmlFor="promo_show_text" className="cursor-pointer">
+                        Mostrar texto sobre a imagem
+                      </Label>
+                    </div>
+
+                    {/* Ativo */}
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="promo_active"
+                        checked={promoBannerFormData.active}
+                        onCheckedChange={(checked) => setPromoBannerFormData({ ...promoBannerFormData, active: checked })}
+                        disabled={savingPromoBanner}
+                      />
+                      <Label htmlFor="promo_active" className="cursor-pointer">
+                        Banner Ativo
+                      </Label>
+                    </div>
+
+                    <div className="flex justify-end pt-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setPromoBannerFormData({
+                            image_url: '',
+                            image_alt: '',
+                            text: '',
+                            show_text: true,
+                            active: true,
+                          });
+                        }}
+                        disabled={savingPromoBanner}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button type="submit" disabled={savingPromoBanner}>
+                        {savingPromoBanner ? (
+                          <>
+                            <Loader2 size={16} className="mr-2 animate-spin" />
+                            Salvando...
+                          </>
+                        ) : (
+                          <>
+                            <Save size={16} className="mr-2" />
+                            Salvar Banner
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </form>
               </CardContent>
             </Card>
           </TabsContent>

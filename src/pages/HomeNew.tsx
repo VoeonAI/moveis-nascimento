@@ -56,11 +56,11 @@ const HomeNew = () => {
       {/* 2. Ambientes que inspiram */}
       <HomeAmbiences />
 
-      {/* 3. Banner Promocional */}
-      <PromotionalBanner />
-
-      {/* 4. Categorias principais */}
+      {/* 3. Categorias principais */}
       <CategorySection />
+
+      {/* 4. Banner Promocional */}
+      <PromotionalBanner />
 
       {/* ================================================== */}
       {/* BLOCOS AUTOMÁTICOS (preenchidos por regra) */}

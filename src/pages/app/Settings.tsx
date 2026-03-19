@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { 
   Save, 
   RefreshCw, 
@@ -727,7 +727,7 @@ const Settings = () => {
                           <div className="flex gap-2">
                             <Input
                               value={ambience.image_url}
-                              onChange={(e) => handleUpdateAmbience(ambience.id, 'image_url', e.target.value)}
+                              onChange={(e) => handleUpdateAmbience(id: ambience.id, 'image_url', e.target.value)}
                               placeholder="https://exemplo.com/ambiente.jpg"
                               className="flex-1"
                             />
@@ -935,7 +935,7 @@ const Settings = () => {
                                 size="sm"
                                 onClick={() => handleDeleteEndpointClick(endpoint)}
                               >
-                                <Trash2 size={16} className="text-red-600" />
+                                <Trash2 size={16} className="text-red-" />
                               </Button>
                             </div>
                           </div>

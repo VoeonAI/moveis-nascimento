@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui/label';
 import { Loader2, Save, X } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { homeHeroService, HomeHero } from '@/services/homeHeroService';
@@ -14,6 +14,9 @@ const HomeHeroAdmin = () => {
   const [heroImageAlt, setHeroImageAlt] = useState('');
   const [heroImageError, setHeroImageError] = useState(false);
   const [savingHero, setSavingHero] = useState(false);
+
+  // NOVO: Estado para o arquivo selecionado
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
     loadHero();
@@ -98,10 +101,25 @@ const HomeHeroAdmin = () => {
               type="file"
               accept="image/*"
               disabled={savingHero}
+              onChange={(e) => {
+                const file = e.target.files?.[0] || null;
+                setSelectedFile(file);
+              }}
             />
             <p className="text-xs text-gray-500">
               Recomendado: imagem horizontal 1920x700
             </p>
+            
+            {/* Feedback do arquivo selecionado */}
+            {selectedFile ? (
+              <p className="text-sm text-green-600 font-medium">
+                Arquivo selecionado: {selectedFile.name}
+              </p>
+            ) : (
+              <p className="text-sm text-gray-500">
+                Nenhum arquivo selecionado
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">

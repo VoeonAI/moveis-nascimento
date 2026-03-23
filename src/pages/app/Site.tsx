@@ -62,34 +62,34 @@ const Site = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {siteSections.map((section) => (
-          <Card key={section.id} className="hover:shadow-lg transition-shadow">
+        {siteSections.map((item) => (
+          <Card key={item.id} className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-blue-50 rounded-lg">
-                    <section.icon size={24} className="text-blue-600" />
+                    <item.icon size={24} className="text-blue-600" />
                   </div>
                   <div>
-                    <CardTitle className="text-xl">{section.title}</CardTitle>
+                    <CardTitle className="text-xl">{item.title}</CardTitle>
                     <CardDescription className="mt-1">
-                      {section.description}
+                      {item.description}
                     </CardDescription>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`text-sm font-medium ${section.statusColor}`}>
-                    {section.status}
+                  <span className={`text-sm font-medium ${item.statusColor}`}>
+                    {item.status}
                   </span>
-                  {section.status === 'Em breve' && (
+                  {item.status === 'Em breve' && (
                     <Clock size={14} className="text-orange-600" />
                   )}
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              {section.link ? (
-                <Link to={section.link}>
+              {item.link ? (
+                <Link to={item.link}>
                   <Button className="w-full" variant="outline">
                     Configurar
                     <ArrowRight size={16} className="ml-2" />
@@ -110,7 +110,7 @@ const Site = () => {
       <Card className="mt-8 bg-blue-50 border-blue-200">
         <CardContent className="p-6">
           <div className="flex items-start gap-3">
-            <SettingsIcon size={20 className="text-blue-600 mt-0.5" />
+            <SettingsIcon size={20} className="text碧色-600 mt-0.5" />
             <div>
               <h3 className="font-semibold text-blue-900">Configurações Técnicas</h3>
               <p className="text-sm text-blue-700 mt-1">

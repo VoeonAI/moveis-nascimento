@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 
 import { RefreshCw, Image as ImageIcon, AlertCircle, Save, Loader2, Edit, ArrowUp, ArrowDown, Trash2, AlertTriangle, Plus, Upload, X, Megaphone } from "lucide-react";
@@ -50,7 +50,12 @@ export default function SiteContent() {
   const [savingAmbience, setSavingAmbience] = useState(false);
   const [creatingAmbience, setCreatingAmbience] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [fileInputRef] = useRef<HTMLInputElement>(null);
+
+  // Delete confirmation state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [ambienceToDelete, setAmbienceToDelete] = useState<HomeAmbience | null>(null);
+  const [deletingAmbience, setDeletingAmbience] = useState(false);
 
   // Promo Banner State
   const [promoBannerFormData, setPromoBannerFormData] = useState({
@@ -278,6 +283,30 @@ export default function SiteContent() {
     }
   };
 
+  // Delete Handlers
+  const handleDeleteClick = (ambience: HomeAmbience) => {
+    setAmbienceToDelete(ambience);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!ambienceToDelete) return;
+
+    setDeletingAmbience(true);
+    try {
+      await homeAmbiencesService.deleteHomeAmbience(ambienceToDelete.id, ambienceToDelete.image_url);
+      showSuccess("Ambiente excluído com sucesso");
+      setDeleteDialogOpen(false);
+      setAmbienceToDelete(null);
+      await loadData();
+    } catch (error: any) {
+      console.error("[SiteContent] delete ambience error", error);
+      showError(error.message || "Erro ao excluir ambiente");
+    } finally {
+      setDeletingAmbience(false);
+    }
+  };
+
   // Promo Banner Handlers
   const handleSavePromoBanner = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -488,7 +517,7 @@ export default function SiteContent() {
           </Card>
         </TabsContent>
 
-        {/* Ambiences Tab */}
+        {/* Ambientes Tab */}
         <TabsContent value="ambientes_home">
           <Card>
             <CardHeader>
@@ -555,6 +584,16 @@ export default function SiteContent() {
                             >
                               <Edit size={14} className="mr-1" />
                               Editar
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteClick(ambience)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              title="Excluir ambiente"
+                            >
+                              <Trash2 size={14} />
+                              Excluir
                             </Button>
                           </div>
                           
@@ -896,6 +935,39 @@ export default function SiteContent() {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Excluir Ambiente</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir o ambiente <strong>"{ambienceToDelete?.title}"</strong>?
+              <br /><br />
+              Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogCancel onClick={() => setDeleteDialogOpen(false)} disabled={deletingAmbience}>
+              Cancelar
+            </DialogCancel>
+            <DialogAction
+              onClick={handleConfirmDelete}
+              disabled={deletingAmbience}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deletingAmbience ? (
+                <>
+                  <Loader2 size={16} className="mr-2 animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                'Confirmar Exclusão'
+              )}
+            </DialogAction>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

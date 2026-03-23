@@ -2,11 +2,21 @@ import React, { useEffect, useState, useRef } from 'react';
 import { homeHeroService, HomeHero } from '@/services/homeHeroService';
 import { homeAmbiencesService, HomeAmbience } from '@/services/homeAmbiencesService';
 import { homeAssetsService } from '@/services/homeAssetsService';
-import { Loader2, Image as ImageIcon, AlertCircle, Save, Upload, CheckCircle, XCircle, Edit, ArrowUp, ArrowDown } from 'lucide-react';
+import { Loader2, Image as ImageIcon, AlertCircle, Save, Upload, CheckCircle, XCircle, Edit, ArrowUp, ArrowDown, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from '@/components/ui/alert-dialog';
 import { showSuccess, showError } from '@/utils/toast';
 
 const SiteContent = () => {
@@ -33,6 +43,11 @@ const SiteContent = () => {
   const [savingAmbienceId, setSavingAmbienceId] = useState<string | null>(null);
   const [uploadingAmbienceId, setUploadingAmbienceId] = useState<string | null>(null);
   const ambienceFileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  // Delete confirmation state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingAmbienceId, setDeletingAmbienceId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -199,6 +214,35 @@ const SiteContent = () => {
     }
   };
 
+  // Delete Handlers
+  const handleDeleteClick = (ambience: HomeAmbience) => {
+    setDeletingAmbienceId(ambience.id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingAmbienceId) return;
+
+    setDeleting(true);
+    try {
+      const ambience = ambiences.find(a => a.id === deletingAmbienceId);
+      if (!ambience) {
+        throw new Error('Ambiente não encontrado');
+      }
+
+      await homeAmbiencesService.deleteHomeAmbience(deletingAmbienceId, ambience.image_url);
+      showSuccess('Ambiente excluído com sucesso');
+      setDeleteDialogOpen(false);
+      setDeletingAmbienceId(null);
+      await loadData();
+    } catch (error: any) {
+      console.error('[SiteContent] delete ambience error:', error);
+      showError(error.message || 'Erro ao excluir ambiente');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   // Função para renderizar o título com highlight
   const renderTitle = () => {
     if (!hero) return '';
@@ -308,11 +352,11 @@ const SiteContent = () => {
             {/* Info dos dados */}
             <div className="p-6 bg-gray-50 border-t space-y-3">
               <div>
-               , <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Título</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Título</p>
                 <p className="text-sm font-medium text-gray-900">{hero.title || '<sem título>'}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">EditingFormData</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Palavra de Destaque</p>
                 <p className="text-sm font-medium text-gray-900">{hero.highlight_word || '<sem highlight>'}</p>
               </div>
               <div>
@@ -406,7 +450,7 @@ const SiteContent = () => {
               >
                 {uploading ? (
                   <>
-                    <Loader2 size={16} className="ambienceFileInputRefs.current[ambience.id] = ref" />
+                    <Loader2 size={16} className="mr-2 animate-spin" />
                     Enviando...
                   </>
                 ) : (
@@ -444,7 +488,7 @@ const SiteContent = () => {
               disabled={saving}
             />
             <p className="text-xs text-gray-500">
-              Você pode colar uma URL manualmente ou usar o upload above.
+              Você pode colar uma URL manualmente ou usar o upload acima.
             </p>
             
             {/* Preview da Imagem */}
@@ -480,9 +524,26 @@ const SiteContent = () => {
         </div>
       </div>
 
-      {/* Ambiences Section - Editable with Image Upload */}
+      {/* Ambiences Section - Editable with Image Upload and Delete */}
       <div className="bg-white rounded-2xl shadow-sm border p-6">
-        <h2 className="text-lg font-semibold mb-4">Ambientes da Home</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Ambientes da Home</h2>
+          <Button onClick={() => {
+            // Criar novo ambiente
+            homeAmbiencesService.createHomeAmbience()
+              .then((newAmbience) => {
+                showSuccess('Ambiente criado com sucesso');
+                loadData();
+              })
+              .catch((err) => {
+                console.error('[SiteContent] Erro ao criar ambiente:', err);
+                showError('Erro ao criar ambiente');
+              });
+          }}>
+            <Plus size={16} className="mr-2" />
+            Novo Ambiente
+          </Button>
+        </div>
         
         {ambiencesLoading ? (
           <div className="text-center py-12">
@@ -494,7 +555,7 @@ const SiteContent = () => {
             <ImageIcon size={48} className="mx-auto text-gray-400 mb-4" />
             <h3 className="text-lg font-semibold text-gray-700 mb-2">Nenhum ambiente cadastrado</h3>
             <p className="text-gray-500 text-sm">
-              Configure ambientes na aba "Ambientes" para ver a lista aqui.
+              Clique em "Novo Ambiente" para começar.
             </p>
           </div>
         ) : (
@@ -564,7 +625,7 @@ const SiteContent = () => {
                           
                           <Button
                             variant="ghost"
-                            mode="sm"
+                            size="sm"
                             onClick={() => handleMoveAmbience(ambience, 'up')}
                             disabled={ambience.sort_order === 0}
                             title="Mover para cima"
@@ -590,33 +651,44 @@ const SiteContent = () => {
                             <Edit size={14} className="mr-1" />
                             Editar
                           </Button>
+
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteClick(ambience)}
+                            title="Excluir ambiente"
+                          >
+                            <Trash2 size={14} className="text-red-500 hover:text-red-700" />
+                          </Button>
                         </div>
                       </>
                     ) : (
                       /* Edit Mode */
                       <div className="space-y-3">
                         <div className="space-y-2">
-                          <Label htmlFor={`ambience_title_${ambience.id}`}>Título</Label>
+                          <Label htmlFor={`ambience_title_${ambience.id}`}>Título *</Label>
                           <Input
                             id={`ambience_title_${ambience.id}`}
                             value={editingFormData.title || ''}
                             onChange={(e) => setEditingFormData({ ...editingFormData, title: e.target.value })}
                             disabled={isSaving}
+                            required
                           />
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor={`ambience_category_${ambience.id}`}>Slug da Categoria</Label>
+                          <Label htmlFor={`ambience_category_${ambience.id}`}>Slug da Categoria *</Label>
                           <Input
                             id={`ambience_category_${ambience.id}`}
                             value={editingFormData.category_slug || ''}
                             onChange={(e) => setEditingFormData({ ...editingFormData, category_slug: e.target.value })}
                             disabled={isSaving}
+                            required
                           />
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor={`ambience_order_${ambience.id}`}>Ordem de Exibição</Label>
+                          <Label htmlFor={`ambience_order_${ambience.id}`}>Ordem de Exibição *</Label>
                           <Input
                             id={`ambience_order_${ambience.id}`}
                             type="number"
@@ -625,6 +697,7 @@ const SiteContent = () => {
                             value={editingFormData.sort_order ?? 0}
                             onChange={(e) => setEditingFormData({ ...editingFormData, sort_order: parseInt(e.target.value) || 0 })}
                             disabled={isSaving}
+                            required
                           />
                         </div>
 
@@ -675,11 +748,11 @@ const SiteContent = () => {
                           />
                           
                           <p className="text-xs text-gray-500">
-                            Formatos aceitos: JPG, PNG, WebP. Proporção recomendada: 4:3.
+                            Formatos aceitos: JPG, PNG, WebP. Proporção recomendada: 4:3 (1200x900px).
                           </p>
                         </div>
 
-                        <div className="flex gap-2 pt-2">
+                        <div className="flex gap-2 pt-4">
                           <Button
                             onClick={() => handleSaveAmbience(ambience.id)}
                             disabled={isSaving}
@@ -715,6 +788,40 @@ const SiteContent = () => {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Ambiente</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este ambiente? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setDeleteDialogOpen(false);
+              setDeletingAmbienceId(null);
+            }}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 size={16} className="mr-2 animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                'Excluir'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

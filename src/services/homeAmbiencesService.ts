@@ -10,6 +10,8 @@ export interface HomeAmbience {
   created_at: string;
 }
 
+const BUCKET = 'home-assets';
+
 export const homeAmbiencesService = {
   async listActiveAmbiences(): Promise<HomeAmbience[]> {
     try {
@@ -160,6 +162,52 @@ export const homeAmbiencesService = {
       return updated;
     } catch (error) {
       console.error('[homeAmbiencesService.updateAmbience] ERRO INESPERADO:', error);
+      throw error;
+    }
+  },
+
+  async deleteHomeAmbience(id: string, imageUrl: string | null): Promise<void> {
+    console.log('[homeAmbiencesService.deleteHomeAmbience] Iniciando exclusão:', { id, hasImage: !!imageUrl });
+
+    try {
+      // 1. Se tiver imageUrl e for do bucket home-assets, tentar apagar do storage
+      if (imageUrl && imageUrl.includes('home-assets')) {
+        // Converter URL pública em path interno
+        const path = imageUrl.replace(
+          'https://kbpkdnptzvsvoujirfwe.supabase.co/storage/v1/object/public/home-assets/',
+          ''
+        );
+        
+        console.log('[homeAmbiencesService] Tentando remover imagem do storage:', path);
+
+        // Remover arquivo do storage
+        const { error: storageError } = await supabase.storage
+          .from(BUCKET)
+          .remove([path]);
+
+        if (storageError) {
+          console.error('[homeAmbiencesService] Erro ao remover imagem do storage:', storageError);
+          throw new Error('Erro ao remover imagem do storage');
+        }
+
+        console.log('[homeAmbiencesService] Imagem removida com sucesso');
+      }
+
+      // 2. Excluir registro do banco
+      console.log('[homeAmbiencesService] Excluindo registro do banco:', id);
+      const { error: dbError } = await supabase
+        .from('home_ambiences')
+        .delete()
+        .eq('id', id);
+
+      if (dbError) {
+        console.error('[homeAmbiencesService] Erro ao excluir registro:', dbError);
+        throw new Error('Erro ao excluir ambiente');
+      }
+
+      console.log('[homeAmbiencesService] Ambiente excluído com sucesso');
+    } catch (error) {
+      console.error('[homeAmbiencesService] deleteHomeAmbience error:', error);
       throw error;
     }
   },

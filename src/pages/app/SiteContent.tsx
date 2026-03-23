@@ -50,7 +50,7 @@ export default function SiteContent() {
   const [savingAmbience, setSavingAmbience] = useState(false);
   const [creatingAmbience, setCreatingAmbience] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [fileInputRef] = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Delete confirmation state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);

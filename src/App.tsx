@@ -21,6 +21,7 @@ import ProductsDashboard from "./pages/app/ProductsDashboard";
 import NotFound from "./pages/NotFound";
 import HomeNew from "./pages/HomeNew";
 import About from "./pages/About";
+import Site from "./pages/app/Site"; // NOVA IMPORT
 
 const queryClient = new QueryClient();
 
@@ -37,7 +38,7 @@ const App = () => (
             <Route path="/" element={<HomeNew />} />
             
             {/* Catálogo: Isolado em /catalog */}
-            <Route path="/catalog" element={<Index />} />
+            <route path="/catalog" element={<Index />} />
             
             {/* Detalhe do Produto */}
             <Route path="/product/:id" element={<ProductDetail />} />
@@ -55,9 +56,6 @@ const App = () => (
             <Route path="/login" element={<Navigate to="/app/login" replace />} />
             
             {/* Internal Routes */}
-            <Route path="/app/login" element={<Login />} />
-            
-            {/* Protected Routes with AppShell */}
             <Route
               path="/app/*"
               element={
@@ -79,7 +77,7 @@ const App = () => (
               } />
               
               <Route path="crm" element={
-                <PermissionGate allowedRoles={[Role.MASTER, Role.GESTOR]}>
+                <PermissionGate allowedRoles={[Role.Major, Role.GESTOR]}>
                   <CRM />
                 </PermissionGate>
               } />
@@ -103,8 +101,15 @@ const App = () => (
               } />
               
               <Route path="settings" element={
-                <PermissionGate allowedRoles={[Role.MASTER]}>
+                <PermissionGuard allowedRoles={[Role.MASTER]}>
                   <Settings />
+                </PermissionGuard>
+              } />
+              
+              {/* NOVA ROTA: Site */}
+              <Route path="site" element={
+                <PermissionGate allowedRoles={[Role.MASTER, Role.GESTOR]}>
+                  <Site />
                 </PermissionGate>
               } />
               

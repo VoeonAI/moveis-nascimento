@@ -21,10 +21,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const sidebarItems = [
   {
-   path: '/app/site',
-   label: 'Conteúdo do Site',
-   icon: LayoutTemplate,
-   roles: [Role.MASTER, Role.GESTOR],
+    path: '/app/site',
+    label: 'Conteúdo do Site',
+    icon: LayoutTemplate,
+    roles: [Role.MASTER, Role.GESTOR],
   },
   { 
     path: '/app/dashboard', 

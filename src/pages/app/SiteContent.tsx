@@ -31,6 +31,8 @@ const SiteContent = () => {
   const [editingAmbienceId, setEditingAmbienceId] = useState<string | null>(null);
   const [editingFormData, setEditingFormData] = useState<Partial<HomeAmbience>>({});
   const [savingAmbienceId, setSavingAmbienceId] = useState<string | null>(null);
+  const [uploadingAmbienceId, setUploadingAmbienceId] = useState<string | null>(null);
+  const ambienceFileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
     loadData();
@@ -137,6 +139,28 @@ const SiteContent = () => {
       showError('Erro ao salvar ambiente');
     } finally {
       setSavingAmbienceId(null);
+    }
+  };
+
+  const handleAmbienceImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, ambienceId: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingAmbienceId(ambienceId);
+    try {
+      const publicUrl = await homeAssetsService.uploadAmbienceImage(file);
+      setEditingFormData(prev => ({ ...prev, image_url: publicUrl }));
+      showSuccess('Imagem enviada com sucesso');
+    } catch (err) {
+      console.error('[SiteContent] Erro no upload de ambiente:', err);
+      showError('Erro ao enviar imagem');
+    } finally {
+      setUploadingAmbienceId(null);
+      // Limpar input para permitir re-upload do mesmo arquivo
+      const input = ambienceFileInputRefs.current[ambienceId];
+      if (input) {
+        input.value = '';
+      }
     }
   };
 
@@ -284,11 +308,11 @@ const SiteContent = () => {
             {/* Info dos dados */}
             <div className="p-6 bg-gray-50 border-t space-y-3">
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Título</p>
+               , <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Título</p>
                 <p className="text-sm font-medium text-gray-900">{hero.title || '<sem título>'}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Palavra de Destaque</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">EditingFormData</p>
                 <p className="text-sm font-medium text-gray-900">{hero.highlight_word || '<sem highlight>'}</p>
               </div>
               <div>
@@ -382,7 +406,7 @@ const SiteContent = () => {
               >
                 {uploading ? (
                   <>
-                    <Loader2 size={16} className="mr-2 animate-spin" />
+                    <Loader2 size={16} className="ambienceFileInputRefs.current[ambience.id] = ref" />
                     Enviando...
                   </>
                 ) : (
@@ -420,7 +444,7 @@ const SiteContent = () => {
               disabled={saving}
             />
             <p className="text-xs text-gray-500">
-              Você pode colar uma URL manualmente ou usar o upload acima.
+              Você pode colar uma URL manualmente ou usar o upload above.
             </p>
             
             {/* Preview da Imagem */}
@@ -456,7 +480,7 @@ const SiteContent = () => {
         </div>
       </div>
 
-      {/* Ambientes Section - Editable */}
+      {/* Ambiences Section - Editable with Image Upload */}
       <div className="bg-white rounded-2xl shadow-sm border p-6">
         <h2 className="text-lg font-semibold mb-4">Ambientes da Home</h2>
         
@@ -478,14 +502,16 @@ const SiteContent = () => {
             {ambiences.map((ambience) => {
               const isEditing = editingAmbienceId === ambience.id;
               const isSaving = savingAmbienceId === ambience.id;
+              const isUploading = uploadingAmbienceId === ambience.id;
+              const currentImageUrl = isEditing ? editingFormData.image_url : ambience.image_url;
 
               return (
                 <div key={ambience.id} className="border rounded-xl overflow-hidden bg-white hover:shadow-md transition-shadow">
                   {/* Imagem (Sempre visível) */}
                   <div className="aspect-[4/3] bg-gray-100 relative">
-                    {ambience.image_url ? (
+                    {currentImageUrl ? (
                       <img
-                        src={ambience.image_url}
+                        src={currentImageUrl}
                         alt={ambience.title}
                         className="w-full h-full object-cover"
                       />
@@ -538,7 +564,7 @@ const SiteContent = () => {
                           
                           <Button
                             variant="ghost"
-                            size="sm"
+                            mode="sm"
                             onClick={() => handleMoveAmbience(ambience, 'up')}
                             disabled={ambience.sort_order === 0}
                             title="Mover para cima"
@@ -612,6 +638,45 @@ const SiteContent = () => {
                           <Label htmlFor={`ambience_active_${ambience.id}`} className="cursor-pointer">
                             Ambiente Ativo
                           </Label>
+                        </div>
+
+                        {/* Image Upload Section */}
+                        <div className="space-y-2 pt-2 border-t">
+                          <Label>Imagem do Ambiente</Label>
+                          
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => ambienceFileInputRefs.current[ambience.id]?.click()}
+                            disabled={isUploading || isSaving}
+                            className="w-full"
+                          >
+                            {isUploading ? (
+                              <>
+                                <Loader2 size={14} className="mr-2 animate-spin" />
+                                Enviando...
+                              </>
+                            ) : (
+                              <>
+                                <Upload size={14} className="mr-2" />
+                                Alterar Imagem
+                              </>
+                            )}
+                          </Button>
+                          
+                          <input
+                            ref={(ref) => { ambienceFileInputRefs.current[ambience.id] = ref; }}
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleAmbienceImageUpload(e, ambience.id)}
+                            className="hidden"
+                            disabled={isUploading || isSaving}
+                          />
+                          
+                          <p className="text-xs text-gray-500">
+                            Formatos aceitos: JPG, PNG, WebP. Proporção recomendada: 4:3.
+                          </p>
                         </div>
 
                         <div className="flex gap-2 pt-2">

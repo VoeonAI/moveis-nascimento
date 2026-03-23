@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { homeHeroService, HomeHero } from '@/services/homeHeroService';
+import { homeAmbiencesService, HomeAmbience } from '@/services/homeAmbiencesService';
 import { homeAssetsService } from '@/services/homeAssetsService';
-import { Loader2, Image as ImageIcon, AlertCircle, Save, Upload } from 'lucide-react';
+import { Loader2, Image as ImageIcon, AlertCircle, Save, Upload, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,10 +10,12 @@ import { showSuccess, showError } from '@/utils/toast';
 
 const SiteContent = () => {
   const [hero, setHero] = useState<HomeHero | null>(null);
+  const [ambiences, setAmbiences] = useState<HomeAmbience[]>([]);
   const [loading, setLoading] = useState(true);
+  const [ambiencesLoading, setAmbiencesLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Form state
+  // Hero Form state
   const [formData, setFormData] = useState({
     title: '',
     highlight_word: '',
@@ -24,31 +27,28 @@ const SiteContent = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    loadHero();
+    loadData();
   }, []);
 
-  const loadHero = async () => {
+  const loadData = async () => {
     setLoading(true);
+    setAmbiencesLoading(true);
     setError(null);
     try {
-      const data = await homeHeroService.getHomeHero();
-      setHero(data);
-      
-      // Populate form with existing data
-      if (data) {
-        setFormData({
-          title: data.title || '',
-          highlight_word: data.highlight_word || '',
-          image_url: data.image_url || '',
-          image_alt: data.image_alt || '',
-        });
-      }
+      const [heroData, ambiencesData] = await Promise.all([
+        homeHeroService.getHomeHero(),
+        homeAmbiencesService.listAllAmbiences(),
+      ]);
+      setHero(heroData);
+      setAmbiences(ambiencesData);
     } catch (err) {
-      console.error('[SiteContent] Erro ao carregar hero:', err);
-      setError('Erro ao carregar dados do Hero');
+      console.error('[SiteContent] Erro ao carregar dados:', err);
+      setError('Erro ao carregar dados');
       setHero(null);
+      setAmbiences([]);
     } finally {
       setLoading(false);
+      setAmbiencesLoading(false);
     }
   };
 
@@ -87,7 +87,7 @@ const SiteContent = () => {
       showSuccess('Banner atualizado com sucesso');
       
       // Reload to get fresh data
-      await loadHero();
+      await loadData();
     } catch (err) {
       console.error('[SiteContent] Erro ao salvar hero:', err);
       showError('Erro ao salvar banner');
@@ -123,12 +123,12 @@ const SiteContent = () => {
     <div className="p-8">
       <h1 className="text-2xl font-bold mb-6">Conteúdo do Site</h1>
       <p className="text-gray-600 text-sm mb-6">
-        Gerencie o banner principal da página inicial.
+        Gerencie o banner principal e os ambientes da página inicial.
       </p>
 
       {/* Hero Section - Preview */}
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold mb-4">Preview do Banner Principal</h2>
+      <div className="mb-12">
+        <h2 className="text-lg font-semibold mb-4">Banner Principal</h2>
         
         {loading ? (
           <div className="bg-white rounded-2xl shadow-sm border p-12 text-center">
@@ -226,7 +226,7 @@ const SiteContent = () => {
       </div>
 
       {/* Hero Edit Form */}
-      <div className="bg-white rounded-2xl shadow-sm border p-6">
+      <div className="bg-white rounded-2xl shadow-sm border p-6 mb-12">
         <h2 className="text-lg font-semibold mb-4">Editar Texto do Banner</h2>
         
         <div className="space-y-4">
@@ -285,7 +285,7 @@ const SiteContent = () => {
       </div>
 
       {/* Hero Image Upload */}
-      <div className="bg-white rounded-2xl shadow-sm border p-6 mt-6">
+      <div className="bg-white rounded-2xl shadow-sm border p-6 mb-12">
         <h2 className="text-lg font-semibold mb-4">Imagem do Banner</h2>
         
         <div className="space-y-4">
@@ -375,6 +375,74 @@ const SiteContent = () => {
             </Button>
           </div>
         </div>
+      </div>
+
+      {/* Ambientes Section - Read-Only */}
+      <div className="bg-white rounded-2xl shadow-sm border p-6">
+        <h2 className="text-lg font-semibold mb-4">Ambientes da Home</h2>
+        
+        {ambiencesLoading ? (
+          <div className="text-center py-12">
+            <Loader2 size={32} className="animate-spin mx-auto text-gray-400 mb-4" />
+            <p className="text-gray-500">Carregando ambientes...</p>
+          </div>
+        ) : ambiences.length === 0 ? (
+          <div className="text-center py-12 bg-gray-50 rounded-2xl border border border-gray-200">
+            <ImageIcon size={48} className="mx-auto text-gray-400 mb-4" />
+            <h3 className="text-lg font-semibold text-gray-700 mb-2">Nenhum ambiente cadastrado</h3>
+            <p className="text-gray-500 text-sm">
+              Configure ambientes na aba "Ambientes" para ver a lista aqui.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {ambiences.map((ambience) => (
+              <div key={ambience.id} className="border rounded-xl overflow-hidden bg-white hover:shadow-md transition-shadow">
+                {/* Imagem */}
+                <div className="aspect-[4/3] bg-gray-100 relative">
+                  {ambience.image_url ? (
+                    <img
+                      src={ambience.image_url}
+                      alt={ambience.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                      <ImageIcon size={32} />
+                    </div>
+                  )}
+                  
+                  {/* Status Badge */}
+                  <div className="absolute top-3 right-3">
+                    {ambience.active ? (
+                      <div className="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-md">
+                        <CheckCircle size={12} />
+                        Ativo
+                      </div>
+                    ) : (
+                      <div className="bg-gray-400 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
+                        <XCircle size={12} />
+                        Inativo
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Conteúdo */}
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold text-gray-900">{ambience.title}</h3>
+                    <span className="text-xs text-gray-500">#{ambience.sort_order}</span>
+                  </div>
+                  
+                  <p className="text-sm text-gray-600">
+                    Categoria: <span className="font-medium text-gray-900">{ambience.category_slug}</span>
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -70,7 +70,6 @@ export default function Settings() {
   const [heroImageAlt, setHeroImageAlt] = useState('');
   const [savingHero, setSavingHero] = useState(false);
   const [heroImageError, setHeroImageError] = useState(false);
-  const [selectedHeroFile, setSelectedHeroFile] = useState<File | null>(null);
 
   // Ambiences Edit State
   const [ambienceEditModalOpen, setAmbienceEditModalOpen] = useState(false);
@@ -660,35 +659,6 @@ export default function Settings() {
                   </p>
                 </div>
 
-                {/* Upload de Imagem - NOVO */}
-                <div className="space-y-2">
-                  <Label htmlFor="hero_image_file">Enviar imagem do banner</Label>
-                  <Input
-                    id="hero_image_file"
-                    type="file"
-                    accept="image/*"
-                    disabled={savingHero}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] || null;
-                      setSelectedHeroFile(file);
-                    }}
-                  />
-                  <p className="text-xs text-gray-500">
-                    Recomendado: imagem horizontal 1920x700
-                  </p>
-
-                  {/* Feedback do arquivo selecionado */}
-                  {selectedHeroFile ? (
-                    <p className="text-sm text-green-600 font-medium">
-                      Arquivo selecionado: {selectedHeroFile.name}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-gray-500">
-                      Nenhum arquivo selecionado
-                    </p>
-                  )}
-                </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="hero_image_url">URL da Imagem (1920x700px recomendado)</Label>
                   <Input
@@ -745,7 +715,7 @@ export default function Settings() {
                       </>
                     ) : (
                       <>
-                        <Save size={16} className="pr-2" />
+                        <Save size={16} className="mr-2" />
                         Salvar Banner
                       </>
                     )}
@@ -915,7 +885,7 @@ export default function Settings() {
                       <Button type="submit" disabled={savingPromoBanner}>
                         {savingPromoBanner ? (
                           <>
-                            <Loader2 size={16} className="r-2 animate-spin" />
+                            <Loader2 size={16} className="mr-2 animate-spin" />
                             Salvando...
                           </>
                         ) : (
@@ -1019,7 +989,7 @@ export default function Settings() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleMoveAmbience(Change direction: 'down')}
+                                onClick={() => handleMoveAmbience(ambience, 'down')}
                                 disabled={index === ambiences.length - 1}
                                 title="Mover para baixo"
                               >
@@ -1059,7 +1029,7 @@ export default function Settings() {
                 </div>
 
                 <Button onClick={handleSaveWhatsApp} disabled={savingWhatsApp}>
-                  {savingWhatsApp ? (<><Loader2 size={16} className="r-2 animate-spin" />Salvando...</>) : (<><Save size={16} className="mr-2" />Salvar</>)}
+                  {savingWhatsApp ? (<><Loader2 size={16} className="mr-2 animate-spin" />Salvando...</>) : (<><Save size={16} className="mr-2" />Salvar</>)}
                 </Button>
 
                 {whatsappSaved && storeWhatsApp && (
@@ -1483,127 +1453,6 @@ export default function Settings() {
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* Promo Banner Modal */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>{editingEndpoint ? 'Editar Endpoint de Webhook' : 'Novo Endpoint de Webhook'}</DialogTitle>
-            <DialogDescription>
-              {editingEndpoint ? 'Altere as configurações do endpoint.' : 'Configure um novo endpoint para receber notificações de eventos.'}
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleSave} className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label htmlFor="webhook_name">Nome *</Label>
-              <Input
-                id="webhook_name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Ex: Integração n8n"
-                disabled={saving}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="webhook_url">URL *</Label>
-              <Input
-                id="webhook_url"
-                value={formData.url}
-                onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                placeholder="https://seu-endpoint.com/webhook"
-                disabled={saving}
-                required
-              />
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="webhook_active"
-                checked={formData.active}
-                onCheckedChange={(checked) => setFormData({ ...formData, active: checked as boolean })}
-                disabled={saving}
-              />
-              <Label htmlFor="webhook_active" className="cursor-pointer">
-                Ativo
-              </Label>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Eventos *</Label>
-              <div className="space-y-2">
-                {Object.entries(WEBHOOK_EVENTS).map(([key, value]) => (
-                  <div key={key} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`event_${key}`}
-                      checked={formData.events.includes(value)}
-                      onCheckedChange={() => toggleEvent(value)}
-                      disabled={saving}
-                    />
-                    <Label htmlFor={`event_${key}`} className="cursor-pointer">
-                      {WEBHOOK_EVENT_LABELS[value as keyof typeof WEBHOOK_EVENT_LABELS] || value}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex gap-2 justify-end pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setModalOpen(false);
-                  setEditingEndpoint(null);
-                  setFormData({
-                    name: '',
-                    url: '',
-                    active: true,
-                    events: [],
-                  });
-                }}
-                disabled={saving}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={saving}>
-                {saving ? (
-                  <>
-                    <Loader2 size={16} className="mr-2 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  editingEndpoint ? 'Salvar alterações' : 'Criar Endpoint'
-                )}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir endpoint de webhook?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação removerá o endpoint e ele não receberá mais eventos.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleting ? 'Excluindo...' : 'Excluir'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

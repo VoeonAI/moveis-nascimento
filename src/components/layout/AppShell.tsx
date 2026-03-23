@@ -20,6 +20,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const sidebarItems = [
+  {
+  path: '/app/site',
+  label: 'Conteúdo do Site',
+  icon: LayoutTemplate,
+  roles: [Role.MASTER, Role.GESTOR],
+  },
   { 
     path: '/app/dashboard', 
     label: 'Dashboard', 

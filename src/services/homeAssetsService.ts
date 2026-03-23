@@ -102,8 +102,57 @@ export const homeAssetsService = {
   },
 
   /**
+   * Faz upload da imagem do Hero para o bucket home-assets/hero/
+   * @param file Arquivo de imagem
+   * @returns URL pública da imagem
+   */
+  async uploadHeroImage(file: File): Promise<string> {
+    // Validar tipo de arquivo
+    if (!file.type.startsWith('image/')) {
+      throw new Error('Apenas arquivos de imagem são permitidos');
+    }
+
+    // Gerar nome único
+    const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substring(2, 8);
+    const extension = file.name.split('.').pop() || 'jpg';
+    const fileName = `hero/${timestamp}-${randomStr}.${extension}`;
+
+    console.log('[homeAssetsService] Iniciando upload Hero:', {
+      fileName,
+      fileType: file.type,
+      fileSize: file.size,
+    });
+
+    // Upload para o bucket
+    const { error } = await supabase.storage
+      .from(BUCKET)
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: file.type,
+      });
+
+    if (error) {
+      console.error('[homeAssetsService] Erro no upload Hero:', error);
+      throw new Error(error.message || 'Erro ao fazer upload da imagem do Hero');
+    }
+
+    // Obter URL pública
+    const { data } = supabase.storage.from(BUCKET).getPublicUrl(fileName);
+
+    if (!data?.publicUrl) {
+      throw new Error('Erro ao obter URL pública da imagem do Hero');
+    }
+
+    console.log('[homeAssetsService] Upload Hero concluído:', data.publicUrl);
+
+    return data.publicUrl;
+  },
+
+  /**
    * Obtém URL pública de um arquivo no bucket
-   * @param path Caminho do arquivo (ex: ambiences/123456-abc.jpg)
+   * @param path Caminho do arquivo (ex: hero/123456-abc.jpg)
    * @returns URL pública
    */
   getPublicUrl(path: string): string {

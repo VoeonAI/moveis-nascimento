@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { homeHeroService, HomeHero } from '@/services/homeHeroService';
-import { Loader2, Image as ImageIcon, AlertCircle, Save } from 'lucide-react';
+import { homeAssetsService } from '@/services/homeAssetsService';
+import { Loader2, Image as ImageIcon, AlertCircle, Save, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,9 +16,12 @@ const SiteContent = () => {
   const [formData, setFormData] = useState({
     title: '',
     highlight_word: '',
+    image_url: '',
     image_alt: '',
   });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadHero();
@@ -35,6 +39,7 @@ const SiteContent = () => {
         setFormData({
           title: data.title || '',
           highlight_word: data.highlight_word || '',
+          image_url: data.image_url || '',
           image_alt: data.image_alt || '',
         });
       }
@@ -47,13 +52,34 @@ const SiteContent = () => {
     }
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const publicUrl = await homeAssetsService.uploadHeroImage(file);
+      setFormData(prev => ({ ...prev, image_url: publicUrl }));
+      showSuccess('Imagem enviada com sucesso');
+    } catch (err) {
+      console.error('[SiteContent] Erro no upload:', err);
+      showError('Erro ao enviar imagem');
+    } finally {
+      setUploading(false);
+      // Limpar input para permitir re-upload do mesmo arquivo
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
       await homeHeroService.upsertHomeHero({
         title: formData.title,
         highlight_word: formData.highlight_word,
-        image_url: hero?.image_url || '',
+        image_url: formData.image_url,
         image_alt: formData.image_alt,
         active: true,
       });
@@ -238,6 +264,99 @@ const SiteContent = () => {
               placeholder="Descrição da imagem para acessibilidade"
               disabled={saving}
             />
+          </div>
+
+          <div className="flex justify-end pt-4">
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? (
+                <>
+                  <Loader2 size={16} className="mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Save size={16} className="mr-2" />
+                  Salvar
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Hero Image Upload */}
+      <div className="bg-white rounded-2xl shadow-sm border p-6 mt-6">
+        <h2 className="text-lg font-semibold mb-4">Imagem do Banner</h2>
+        
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Upload de Imagem</Label>
+            
+            {/* Upload Button */}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading || saving}
+                className="flex-1"
+              >
+                {uploading ? (
+                  <>
+                    <Loader2 size={16} className="mr-2 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <Upload size={16} className="mr-2" />
+                    Selecionar Imagem
+                  </>
+                )}
+              </Button>
+            </div>
+            
+            {/* Hidden File Input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+              disabled={uploading || saving}
+            />
+            
+            <p className="text-xs text-gray-500">
+              Formatos aceitos: JPG, PNG, WebP. Proporção recomendada: 2.7:1 (1920x700px).
+            </p>
+          </div>
+
+          {/* URL da Imagem (editável) */}
+          <div className="space-y-2">
+            <Label htmlFor="hero_image_url">URL da Imagem</Label>
+            <Input
+              id="hero_image_url"
+              value={formData.image_url}
+              onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+              placeholder="https://exemplo.com/imagem.jpg"
+              disabled={saving}
+            />
+            <p className="text-xs text-gray-500">
+              Você pode colar uma URL manualmente ou usar o upload acima.
+            </p>
+            
+            {/* Preview da Imagem */}
+            {formData.image_url && (
+              <div className="mt-2 border rounded-md overflow-hidden bg-gray-50">
+                <img
+                  src={formData.image_url}
+                  alt="Preview"
+                  className="w-full h-48 object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end pt-4">

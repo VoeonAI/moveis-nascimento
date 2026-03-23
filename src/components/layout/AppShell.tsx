@@ -13,8 +13,7 @@ import {
   X,
   LogOut,
   AlertCircle,
-  BarChart3,
-  LayoutTemplate
+  BarChart3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -56,12 +55,6 @@ const sidebarItems = [
     label: 'Usuários', 
     icon: Users,
     roles: [Role.MASTER]
-  },
-  { 
-    path: '/app/site', 
-    label: 'Conteúdo do Site', 
-    icon: LayoutTemplate,
-    roles: [Role.MASTER, Role.GESTOR]
   },
   { 
     path: '/app/settings', 

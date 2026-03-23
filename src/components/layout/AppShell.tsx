@@ -23,7 +23,7 @@ const sidebarItems = [
   {
     path: '/app/site',
     label: 'Conteúdo do Site',
-    icon: LayoutTemplate,
+    icon: LayoutDashboard,
     roles: [Role.MASTER, Role.GESTOR],
   },
   { 

@@ -1,30 +1,74 @@
 import React, { useEffect, useState } from 'react';
 import { homeHeroService, HomeHero } from '@/services/homeHeroService';
-import { Loader2, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { Loader2, Image as ImageIcon, AlertCircle, Save } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { showSuccess, showError } from '@/utils/toast';
 
 const SiteContent = () => {
   const [hero, setHero] = useState<HomeHero | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    title: '',
+    highlight_word: '',
+    image_alt: '',
+  });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const loadHero = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await homeHeroService.getHomeHero();
-        setHero(data);
-      } catch (err) {
-        console.error('[SiteContent] Erro ao carregar hero:', err);
-        setError('Erro ao carregar dados do Hero');
-        setHero(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadHero();
   }, []);
+
+  const loadHero = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await homeHeroService.getHomeHero();
+      setHero(data);
+      
+      // Populate form with existing data
+      if (data) {
+        setFormData({
+          title: data.title || '',
+          highlight_word: data.highlight_word || '',
+          image_alt: data.image_alt || '',
+        });
+      }
+    } catch (err) {
+      console.error('[SiteContent] Erro ao carregar hero:', err);
+      setError('Erro ao carregar dados do Hero');
+      setHero(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await homeHeroService.upsertHomeHero({
+        title: formData.title,
+        highlight_word: formData.highlight_word,
+        image_url: hero?.image_url || '',
+        image_alt: formData.image_alt,
+        active: true,
+      });
+      
+      showSuccess('Banner atualizado com sucesso');
+      
+      // Reload to get fresh data
+      await loadHero();
+    } catch (err) {
+      console.error('[SiteContent] Erro ao salvar hero:', err);
+      showError('Erro ao salvar banner');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // Função para renderizar o título com highlight
   const renderTitle = () => {
@@ -153,6 +197,65 @@ const SiteContent = () => {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Hero Edit Form */}
+      <div className="bg-white rounded-2xl shadow-sm border p-6">
+        <h2 className="text-lg font-semibold mb-4">Editar Texto do Banner</h2>
+        
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="hero_title">Título Principal</Label>
+            <Input
+              id="hero_title"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              placeholder="Ex: Porque a sua casa merece o melhor."
+              disabled={saving}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="hero_highlight">Palavra de Destaque</Label>
+            <Input
+              id="hero_highlight"
+              value={formData.highlight_word}
+              onChange={(e) => setFormData({ ...formData, highlight_word: e.target.value })}
+              placeholder="Ex: merece o melhor."
+              disabled={saving}
+            />
+            <p className="text-xs text-gray-500">
+              Esta palavra será destacada em verde dentro do título.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="hero_alt">Texto Alternativo (Alt)</Label>
+            <Input
+              id="hero_alt"
+              value={formData.image_alt}
+              onChange={(e) => setFormData({ ...formData, image_alt: e.target.value })}
+              placeholder="Descrição da imagem para acessibilidade"
+              disabled={saving}
+            />
+          </div>
+
+          <div className="flex justify-end pt-4">
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? (
+                <>
+                  <Loader2 size={16} className="mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Save size={16} className="mr-2" />
+                  Salvar
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );

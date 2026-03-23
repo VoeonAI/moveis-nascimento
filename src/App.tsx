@@ -21,6 +21,7 @@ import ProductsDashboard from "./pages/app/ProductsDashboard";
 import NotFound from "./pages/NotFound";
 import HomeNew from "./pages/HomeNew";
 import About from "./pages/About";
+import SiteContent from "./pages/app/SiteContent";
 
 const queryClient = new QueryClient();
 
@@ -55,9 +56,6 @@ const App = () => (
             <Route path="/login" element={<Navigate to="/app/login" replace />} />
             
             {/* Internal Routes */}
-            <Route path="/app/login" element={<Login />} />
-            
-            {/* Protected Routes with AppShell */}
             <Route
               path="/app/*"
               element={
@@ -105,6 +103,12 @@ const App = () => (
               <Route path="settings" element={
                 <PermissionGate allowedRoles={[Role.MASTER]}>
                   <Settings />
+                </PermissionGate>
+              } />
+              
+              <Route path="site" element={
+                <PermissionGate allowedRoles={[Role.MASTER, Role.GESTOR]}>
+                  <SiteContent />
                 </PermissionGate>
               } />
               

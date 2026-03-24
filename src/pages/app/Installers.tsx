@@ -1,12 +1,25 @@
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { RefreshCw, Phone, MapPin, Users } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { RefreshCw, Phone, MapPin, Users, Plus, Loader2 } from 'lucide-react';
 import { installerService } from '@/services/installersService';
-import { showError } from '@/utils/toast';
+import { showSuccess, showError } from '@/utils/toast';
 
 export default function Installers() {
   const [installers, setInstallers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  // Modal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    phone: '',
+    city: '',
+  });
+  const [saving, setSaving] = useState(false);
 
   const loadInstallers = async () => {
     setLoading(true);
@@ -25,25 +38,81 @@ export default function Installers() {
     loadInstallers();
   }, []);
 
+  const handleOpenModal = () => {
+    setFormData({ name: '', phone: '', city: '' });
+    setModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setModalOpen(false);
+    setFormData({ name: '', phone: '', city: '' });
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.name.trim()) {
+      showError('Nome é obrigatório');
+      return;
+    }
+    
+    if (!formData.phone.trim()) {
+      showError('Telefone é obrigatório');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await installerService.createInstaller({
+        name: formData.name.trim(),
+        phone: formData.phone.trim(),
+        city: formData.city.trim() || undefined,
+      });
+      
+      showSuccess('Montador cadastrado com sucesso');
+      setModalOpen(false);
+      setFormData({ name: '', phone: '', city: '' });
+      await loadInstallers();
+    } catch (error: any) {
+      console.error('[Installers] Erro ao salvar:', error);
+      showError(error.message || 'Erro ao cadastrar montador');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Montadores</h1>
-          <p className="text-gray-600 text-sm mt-1">Lista de montadores ativos</p>
+          <p className="text-gray-600 text-sm mt-1">Gerencie os montadores cadastrados no sistema</p>
         </div>
-        <Button onClick={loadInstallers} variant="outline" size="sm">
-          <RefreshCw size={16} className="mr-2" />
-          Atualizar
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={loadInstallers} variant="outline" size="sm">
+            <RefreshCw size={16} className="mr-2" />
+            Atualizar
+          </Button>
+          <Button onClick={handleOpenModal}>
+            <Plus size={16} className="mr-2" />
+            Novo Montador
+          </Button>
+        </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users size={20} />
-            Montadores Cadastrados
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Users size={20} />
+                Montadores Cadastrados
+              </CardTitle>
+              <CardDescription>
+                {installers.length} montador{installers.length !== 1 ? 'es' : ''} cadastrado{installers.length !== 1 ? 's' : ''}
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -56,24 +125,22 @@ export default function Installers() {
             <div className="space-y-3">
               {installers.map((installer) => (
                 <div key={installer.id} className="border rounded-lg p-4">
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center">
-                      <Users size={20} className="text-blue-600" />
-                    </div>
+                  <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">{installer.name}</h3>
-                      <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                        <div className="flex items-center gap-1">
-                          <Phone size={14} />
-                          {installer.phone}
-                        </div>
-                        {installer.city && (
-                          <div className="flex items-center gap-1">
-                            <MapPin size={14} />
-                            {installer.city}
-                          </div>
-                        )}
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="font-semibold text-gray-900">{installer.name}</div>
+                        <Badge variant={installer.active ? "default" : "secondary"}>
+                          {installer.active ? "Ativo" : "Inativo"}
+                        </Badge>
                       </div>
+                      <div className="text-sm text-gray-600 mb-1">
+                        <span className="text-gray-500">Telefone:</span> {installer.phone}
+                      </div>
+                      {installer.city && (
+                        <div className="text-sm text-gray-600">
+                          <span className="text-gray-500">Cidade:</span> {installer.city}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -82,6 +149,76 @@ export default function Installers() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de Cadastro */}
+      <Dialog open={modalOpen} onOpenChange={handleCloseModal}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Novo Montador</DialogTitle>
+            <DialogDescription>
+              Cadastre um novo montador no sistema.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={handleSave} className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="installer_name">Nome *</Label>
+              <Input
+                id="installer_name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Nome do montador"
+                disabled={saving}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="installer_phone">Telefone *</Label>
+              <Input
+                id="installer_phone"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="(00) 00000-0000"
+                disabled={saving}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="installer_city">Cidade</Label>
+              <Input
+                id="installer_city"
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                placeholder="Ex: São Paulo"
+                disabled={saving}
+              />
+            </div>
+
+            <div className="flex gap-2 justify-end pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCloseModal}
+                disabled={saving}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? (
+                  <>
+                    <Loader2 size={16} className="mr-2 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  'Salvar'
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -82,11 +82,7 @@ export default function Installers() {
     }
   };
 
-  return (
-  <div style={{ padding: 40, background: 'red', color: 'white' }}>
-    TESTE INSTALLERS
-  </div>
-);
+  
   return (
     
     <div className="p-8">

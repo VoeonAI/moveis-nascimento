@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { useAuth } from "@/core/auth/AuthProvider";
 import { Role } from "@/constants/domain";
 import { PermissionGate } from "@/core/guards/PermissionGate";
@@ -11,8 +11,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogCancel, DialogAction } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 
-import { RefreshCw, Image as ImageIcon, AlertCircle, Save, Loader2, Key, Plus, Edit, Trash2, X, ArrowUp, ArrowDown, Upload, Megaphone, Users } from "lucide-react";
+import { RefreshCw, Image as ImageIcon, AlertCircle, Save, Loader2, Key, Plus, Edit, Trash2, X, ArrowUp, ArrowDown, Upload, Megaphone, Users, Globe, Code, Clock, Phone, Copy } from "lucide-react";
 
 import {
   webhooksManagementService,
@@ -96,7 +98,7 @@ export default function SiteContent() {
     image_url: '',
     image_alt: '',
     text: '',
-    list_text: true,
+    show_text: true,
     active: true,
   });
   const [savingPromoBanner, setSavingPromoBanner] = useState(false);
@@ -109,7 +111,7 @@ export default function SiteContent() {
     return supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1] || "<project-ref>";
   }, [supabaseUrl]);
 
-  const functionsBaseUrl = "https://" + projectRefase + ".supabase.co/functions/v1";
+  const functionsBaseUrl = "https://" + projectRef + ".supabase.co/functions/v1";
   const searchUrl = functionsBaseUrl + "/agent_products_search";
   const productUrl = functionsBaseUrl + "/agent_product_by_id";
 
@@ -328,7 +330,7 @@ export default function SiteContent() {
       setDeleteDialogOpen(false);
       setEndpointToDelete(null);
       await loadData();
-    } read (error: any) {
+    } catch (error: any) {
       console.error("[SiteContent] delete endpoint error", error);
       showError(error.message || "Erro ao excluir endpoint");
     } finally {
@@ -555,7 +557,7 @@ export default function SiteContent() {
           <p className="text-gray-600 text-sm mt-1">Gerencie webhooks, integrações, APIs e o banner principal</p>
         </div>
         <Button onClick={loadData} variant="outline" size="sm">
-          <RefreshCw size={16} "mr-2" />
+          <RefreshCw size={16} className="mr-2" />
           Atualizar
         </Button>
       </div>
@@ -675,7 +677,7 @@ export default function SiteContent() {
                   </p>
                 </div>
 
-                <div callName="space-y-2">
+                <div className="space-y-2">
                   <Label htmlFor="hero_image_url">URL da Imagem (1920x700px recomendado)</Label>
                   <Input
                     id="hero_image_url"
@@ -953,7 +955,7 @@ export default function SiteContent() {
                               <Badge variant="outline" className="text-xs">Ordem: {ambience.sort_order}</Badge>
                             </div>
                             <div className="text-sm text-gray-600 mb-2">
-                              <only className="text-gray-500">Categoria:</span> {ambience.category_slug}
+                              <span className="text-gray-500">Categoria:</span> {ambience.category_slug}
                             </div>
                             <div className="text-xs text-gray-500 font-mono break-all">
                               {ambience.image_url}
@@ -992,7 +994,7 @@ export default function SiteContent() {
                                 <Edit size={14} className="mr-1" />
                                 Editar
                               </Button>
-    </div>
+                            </div>
                             
                             <div className="flex gap-1">
                               <Button
@@ -1115,7 +1117,7 @@ export default function SiteContent() {
                 <CardHeader>
                   <CardTitle>Agent Catalog API</CardTitle>
                   <CardDescription>API para o agente buscar produtos do catálogo</CardDescription>
-                </div>
+                </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
                     <Label>Base URL</Label>
@@ -1160,7 +1162,7 @@ export default function SiteContent() {
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-gray-600">Token:</span>
                             <code className="text-xs bg-gray-200 px-2 py-1 rounded font-mono">{maskToken(activeToken.token_hash)}</code>
-                            <Button variant="hook" size="sm" onClick={() => copyToClipboard(activeToken.token_hash)}>
+                            <Button variant="ghost" size="sm" onClick={() => copyToClipboard(activeToken.token_hash)}>
                               <Copy size={14} />
                             </Button>
                           </div>
@@ -1371,7 +1373,7 @@ export default function SiteContent() {
               <Input
                 id="ambience_category_slug"
                 value={ambienceFormData.category_slug}
-                onChange={(e) => setAmbienceFormData({ ...ambienceFormData, ambience_category_slug: e.target.value })}
+                onChange={(e) => setAmbienceFormData({ ...ambienceFormData, category_slug: e.target.value })}
                 placeholder="Ex: sala, quarto, cozinha"
                 disabled={savingAmbience}
                 required
@@ -1481,7 +1483,6 @@ export default function SiteContent() {
             </div>
 
             <div className="flex gap-2 justify-end pt-4">
-              state
               <Button
                 type="button"
                 variant="outline"

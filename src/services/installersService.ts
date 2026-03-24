@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/core/supabaseClient';
 
 export const installerService = {
   async getActiveInstallers() {

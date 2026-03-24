@@ -23,7 +23,7 @@ export const installersService = {
       throw error;
     }
 
-    data || [];
+    return data || [];
   },
 
   async getActiveInstallers(): Promise<Installer[]> {

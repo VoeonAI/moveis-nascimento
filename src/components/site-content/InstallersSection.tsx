@@ -1,17 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { installersService, Installer } from "@/services/installersService";
+import { installerService, } from "@/services/installersService";
 import { showError } from "@/utils/toast";
 
 export function InstallersSection() {
-  const [installers, setInstallers] = useState<Installer[]>([]);
+  const [installers, setInstallers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   const loadInstallers = async () => {
     setLoading(true);
     try {
-      const data = await installersService.getActiveInstallers();
+      const data = await installerService.getActiveInstallers();
       setInstallers(data);
     } catch (e) {
       console.error("[InstallersSection] loadInstallers error", e);

@@ -1,3 +1,4 @@
+import { installersService } from '@/services/installersService';
 import React, { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/core/auth/AuthProvider";
 import { Role } from "@/constants/domain";
@@ -85,6 +86,10 @@ export default function SiteContent() {
       // Populate Ambiences State
       setAmbiences(ambiencesData);
 
+      // InstallersServices States
+      const [installers, setInstallers] = useState<any[]>([]);
+      const [loadingInstallers, setLoadingInstallers] = useState(false);
+
       // Populate Promo Banner State
       if (promo) {
         setPromoBannerFormData({
@@ -105,6 +110,7 @@ export default function SiteContent() {
 
   useEffect(() => {
     loadData();
+    loadInstallers();
   }, []);
 
   // Home Hero Handlers

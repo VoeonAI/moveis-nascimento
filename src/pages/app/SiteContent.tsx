@@ -1,3 +1,4 @@
+import { installerService } from '@/services/installersService';
 import React, { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/core/auth/AuthProvider";
 import { Role } from "@/constants/domain";
@@ -36,6 +37,10 @@ export default function SiteContent() {
   const [uploadingHeroImage, setUploadingHeroImage] = useState(false);
   const heroFileInputRef = useRef<HTMLInputElement>(null);
 
+  // InstallerService State
+  const [installers, setInstallers] = useState<any[]>([]);
+  const [loadingInstallers, setLoadingInstallers] = useState(false);
+
   // Ambiences State
   const [ambiences, setAmbiences] = useState<HomeAmbience[]>([]);
   const [ambienceEditModalOpen, setAmbienceEditModalOpen] = useState(false);
@@ -65,14 +70,28 @@ export default function SiteContent() {
   const [uploadingPromoImage, setUploadingPromoImage] = useState(false);
   const promoFileInputRef = useRef<HTMLInputElement>(null);
 
-  async function loadData() {
+  
+      const loadInstallers = async () => {
+        try {
+          setLoadingInstallers(true);
+          const data = await installerService.getActiveInstallers();
+          setInstallers(data);
+        } catch (error) {
+          console.error('[SiteContent] erro ao carregar montadores:', error);
+        } finally {
+          setLoadingInstallers(false);
+        }
+      };
+
+      async function loadData() {
     setLoading(true);
     try {
       const [hero, ambiencesData, promo] = await Promise.all([
         homeHeroService.getHomeHero(),
         homeAmbiencesService.listAllAmbiences(),
         homePromoBannerService.getPromoBanner(),
-      ]);
+  ]);
+      
 
       // Populate Hero State
       if (hero) {
@@ -105,6 +124,7 @@ export default function SiteContent() {
 
   useEffect(() => {
     loadData();
+    loadInstallers();
   }, []);
 
   // Home Hero Handlers
@@ -116,6 +136,7 @@ export default function SiteContent() {
         highlight_word: heroHighlight,
         image_url: heroImageUrl,
         image_alt: heroImageAlt,
+        active: true,
       });
       showSuccess("Banner atualizado com sucesso");
     } catch (error: any) {
@@ -355,6 +376,7 @@ export default function SiteContent() {
           <TabsTrigger value="home_hero"><ImageIcon size={16} className="mr-2" />Home Hero</TabsTrigger>
           <TabsTrigger value="ambientes_home"><ImageIcon size={16} className="mr-2" />Ambientes</TabsTrigger>
           <TabsTrigger value="promo_banner"><Megaphone size={16} className="mr-2" />Banner Promocional</TabsTrigger>
+          <TabsTrigger value="installers">Montadores</TabsTrigger>
         </TabsList>
 
         {/* Home Hero Tab */}
@@ -732,6 +754,51 @@ export default function SiteContent() {
             </CardContent>
           </Card>
         </TabsContent>
+        
+        {/* InstallerService Tab */ }
+        <TabsContent value="installers">
+  <Card>
+    <CardHeader>
+      <CardTitle>Montadores</CardTitle>
+      <CardDescription>
+        Lista de montadores cadastrados
+      </CardDescription>
+    </CardHeader>
+
+    <CardContent>
+      {loadingInstallers ? (
+        <p>Carregando montadores...</p>
+      ) : installers.length === 0 ? (
+        <p>Nenhum montador cadastrado</p>
+      ) : (
+        <div className="space-y-4">
+          {installers.map((item) => (
+            <div
+              key={item.id}
+              className="border rounded-lg p-4 flex justify-between items-center"
+            >
+              <div>
+                <p className="font-semibold">{item.name}</p>
+                <p className="text-sm text-gray-500">
+                  📞 {item.phone}
+                </p>
+                {item.city && (
+                  <p className="text-sm text-gray-500">
+                    📍 {item.city}
+                  </p>
+                )}
+              </div>
+
+              <Badge>
+                {item.active ? 'Ativo' : 'Inativo'}
+              </Badge>
+            </div>
+          ))}
+        </div>
+      )}
+    </CardContent>
+  </Card>
+</TabsContent>
       </Tabs>
 
       {/* Ambiences Edit Modal */}

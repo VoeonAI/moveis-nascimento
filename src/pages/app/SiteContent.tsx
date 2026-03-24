@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogCancel, DialogAction } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
@@ -29,7 +29,7 @@ import { homeHeroService } from "@/services/homeHeroService";
 import { homeAmbiencesService, HomeAmbience } from "@/services/homeAmbiencesService";
 import { homeAssetsService } from "@/services/homeAssetsService";
 import { homePromoBannerService, HomePromoBanner } from "@/services/homePromoBannerService";
-import { installersService, Installer } from "@/services/installersService";
+import { installersService, } from "@/services/installersService";
 import { showError, showSuccess } from "@/utils/toast";
 
 export default function SiteContent() {
@@ -43,7 +43,7 @@ export default function SiteContent() {
   const [agentTokens, setAgentTokens] = useState<AgentToken[]>([]);
   const [ambiences, setAmbiences] = useState<HomeAmbience[]>([]);
   const [promoBanner, setPromoBanner] = useState<HomePromoBanner | null>(null);
-  const [installers, setInstallers] = useState<Installer[]>([]);
+  const [installers, setInstallers] = useState<any[]>([]);
   const [loadingInstallers, setLoadingInstallers] = useState(false);
 
   const [storeWhatsApp, setStoreWhatsApp] = useState("");
@@ -365,7 +365,8 @@ export default function SiteContent() {
         highlight_word: heroHighlight,
         image_url: heroImageUrl,
         image_alt: heroImageAlt,
-      });
+        active: true,
+      } as any);
       showSuccess("Banner principal atualizado com sucesso!");
     } catch (error: any) {
       console.error("[SiteContent] save hero error", error);

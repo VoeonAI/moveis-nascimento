@@ -83,6 +83,12 @@ export default function Installers() {
   };
 
   return (
+  <div style={{ padding: 40, background: 'red', color: 'white' }}>
+    TESTE INSTALLERS
+  </div>
+);
+  return (
+    
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <div>

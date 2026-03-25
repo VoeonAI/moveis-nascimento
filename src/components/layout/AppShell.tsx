@@ -63,6 +63,12 @@ const sidebarItems = [
     roles: [Role.MASTER]
   },
   { 
+    path: '/app/installers', 
+    label: 'Montadores', 
+    icon: Users,
+    roles: [Role.MASTER, Role.GESTOR]
+  },
+  { 
     path: '/app/settings', 
     label: 'Configurações', 
     icon: Settings,

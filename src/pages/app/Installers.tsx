@@ -1,4 +1,4 @@
-import { installerService, Installer } from '@/services/installersService';
+import { Badge } from "@/components/ui/badge";
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,10 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { RefreshCw, Phone, MapPin, Users, Plus, Loader2 } from 'lucide-react';
+import { installerService } from '@/services/installersService';
 import { showSuccess, showError } from '@/utils/toast';
 
 export default function Installers() {
-  const [installers, setInstallers] = useState<Installer[]>([]);
+  const [installers, setInstallers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   
   // Modal state
@@ -66,7 +67,7 @@ export default function Installers() {
       await installerService.createInstaller({
         name: formData.name.trim(),
         phone: formData.phone.trim(),
-        city: formData.city?.trim() || undefined,
+        city: formData.city.trim() || undefined,
       });
       
       showSuccess('Montador cadastrado com sucesso');
@@ -81,7 +82,9 @@ export default function Installers() {
     }
   };
 
+  
   return (
+    
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -221,4 +224,4 @@ export default function Installers() {
       </Dialog>
     </div>
   );
-};
+}

@@ -1,8 +1,7 @@
 import { supabase } from '@/core/supabaseClient';
-import { Installer } from '@/types/installers';
 
 export const installerService = {
-  async getActiveInstallers(): Promise<Installer[]> {
+  async getActiveInstallers() {
     const { data, error } = await supabase
       .from('installers')
       .select('*')
@@ -21,7 +20,7 @@ export const installerService = {
     name: string;
     phone: string;
     city?: string;
-  }): Promise<Installer> {
+  }) {
     const { data, error } = await supabase
       .from('installers')
       .insert({

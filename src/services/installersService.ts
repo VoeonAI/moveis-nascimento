@@ -37,20 +37,4 @@ export const installerService = {
 
     return data;
   },
-
-  async toggleInstallerStatus(id: string, active: boolean) {
-    const { data, error } = await supabase
-      .from('installers')
-      .update({ active })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('[installerService] erro ao alternar status:', error);
-      throw error;
-    }
-
-    return data;
-  },
 };

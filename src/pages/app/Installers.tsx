@@ -1,18 +1,17 @@
 import { Badge } from "@/components/ui/badge";
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { RefreshCw, Phone, MapPin, Users, Plus, Loader2, Power, PowerOff } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { RefreshCw, Phone, MapPin, Users, Plus, Loader2 } from 'lucide-react';
 import { installerService } from '@/services/installersService';
 import { showSuccess, showError } from '@/utils/toast';
 
 export default function Installers() {
   const [installers, setInstallers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [togglingId, setTogglingId] = useState<string | null>(null);
   
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -83,26 +82,6 @@ export default function Installers() {
     }
   };
 
-  const handleToggleStatus = async (id: string, currentActive: boolean) => {
-    setTogglingId(id);
-    try {
-      await installerService.toggleInstallerStatus(id, !currentActive);
-      showSuccess(currentActive ? 'Montador desativado' : 'Montador ativado');
-      
-      // Atualizar lista localmente para evitar recarregamento
-      setInstallers(prev => 
-        prev.map(item => 
-          item.id === id ? { ...item, active: !currentActive } : item
-        )
-      );
-    } catch (error: any) {
-      console.error('[Installers] Erro ao alternar status:', error);
-      showError(error.message || 'Erro ao alterar status');
-    } finally {
-      setTogglingId(null);
-    }
-  };
-
   
   return (
     
@@ -166,31 +145,11 @@ export default function Installers() {
                         </div>
                       )}
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleToggleStatus(installer.id, installer.active)}
-                      disabled={togglingId === installer.id}
-                    >
-                      {togglingId === installer.id ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : installer.active ? (
-                        <>
-                          <PowerOff size={14} className="mr-1" />
-                          Desativar
-                        </>
-                      ) : (
-                        <>
-                          <Power size={14} className="mr-1" />
-                          Ativar
-                        </>
-                      ))}
-                    </Button>
                   </div>
                 </div>
               ))}
             </div>
-          )} */}
+          )}
         </CardContent>
       </Card>
 
@@ -252,12 +211,12 @@ export default function Installers() {
               <Button type="submit" disabled={saving}>
                 {saving ? (
                   <>
-                    <Loader2 size={16} className="m-2 animate-spin" />
+                    <Loader2 size={16} className="mr-2 animate-spin" />
                     Salvando...
                   </>
                 ) : (
                   'Salvar'
-                ) }
+                )}
               </Button>
             </div>
           </form>

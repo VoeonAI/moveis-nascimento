@@ -1,3 +1,4 @@
+import HomeHeader from '@/components/home/HomeHeader';
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,7 +33,11 @@ export default function Montadores() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
+    <div className="min-h-screen bg-gray-50">
+    <HomeHeader />
+
+    <div className="py-12 px-4">
+    </div>
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Nossos Montadores</h1>

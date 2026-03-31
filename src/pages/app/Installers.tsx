@@ -94,7 +94,6 @@ export default function Installers() {
   };
   
   return (
-    
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -212,7 +211,7 @@ export default function Installers() {
               <Input
                 id="installer_city"
                 value={formData.city}
-                onChange={((e) => setFormData({ ...formData, city: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                 placeholder="Ex: São Paulo"
                 disabled={saving}
               />

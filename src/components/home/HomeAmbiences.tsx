@@ -39,8 +39,8 @@ const HomeAmbiences = () => {
       <div className="max-w-7xl mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-800">Ambientes que inspiram seu lar</h2>
-          <p className="text-gray-600 mt-2">Inspire-se com projetos completos para cada espaço da sua casa</p>
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-800">Ambientes Modulados que inspiram seu lar</h2>
+          <p className="text-gray-600 mt-2">Conheça os Móveis Modulados com projetos completos e sob medida para a da sua casa</p>
         </div>
 
         {/* Loading */}

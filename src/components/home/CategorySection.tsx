@@ -17,19 +17,19 @@ const categories = [
     id: 'sala',
     name: 'Sala',
     slug: 'sala',
-    image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400&q=80',
+    image: 'https://images.unsplash.com/photo-1588082255003-1a93643ecf59?q=80&w=2127&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3Dhttps://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400&q=80',
   },
   {
     id: 'quarto',
     name: 'Quarto',
     slug: 'quarto',
-    image: 'https://images.unsplash.com/photo-1616594039914-746bb0062b09?w=400&q=80',
+    image: 'https://images.unsplash.com/photo-1744974256549-8ece7cdb5dd2?q=80&w=2059&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
   },
   {
     id: 'cozinha',
     name: 'Cozinha',
     slug: 'cozinha',
-    image: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=400&q=80',
+    image: 'https://images.unsplash.com/photo-1556911220-bff31c812dba?q=80&w=1268&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
   },
   {
     id: 'escritorio',
@@ -41,7 +41,7 @@ const categories = [
     id: 'infantil',
     name: 'Infantil',
     slug: 'infantil',
-    image: 'https://images.unsplash.com/photo-1505693314120-0d443867891c?w=400&q=80',
+    image: 'https://images.unsplash.com/photo-1613685301918-59b1039422cc?q=80&w=1332&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D://images.unsplash.com/photo-1505693314120-0d443867891c?w=400&q=80',
   },
   {
     id: 'multiuso',

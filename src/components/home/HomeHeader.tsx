@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { Menu, X, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,6 +8,19 @@ import { Input } from '@/components/ui/input';
 const HomeHeader = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate();
+
+const handleSearch = () => {
+  const term = searchQuery.trim();
+
+  if (!term) {
+    navigate('/catalog');
+    return;
+  }
+
+  navigate(`/catalog?search=${encodeURIComponent(term)}`);
+  setMobileMenuOpen(false);
+};
 
   const scrollToProducts = () => {
     const productsSection = document.getElementById('products-section');
@@ -40,7 +54,7 @@ const HomeHeader = () => {
               Produtos
             </button>
             <Link 
-              to="/sobre"
+              to="/catalog"
               className="text-white hover:text-green-400 font-medium transition-colors"
             >
               Sobre Nós
@@ -68,6 +82,11 @@ const HomeHeader = () => {
                 placeholder="Buscar produtos..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSearch();
+                    }
+                  }}
                 className="pl-10 w-64 bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
               />
             </div>
@@ -109,11 +128,17 @@ const HomeHeader = () => {
             >
               Fale com o Nas
             </Button>
+            
             <Input
               type="text"
               placeholder="Buscar produtos..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSearch();
+                     }
+                   }}
               className="w-full bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
             />
           </div>

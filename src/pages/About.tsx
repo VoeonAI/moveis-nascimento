@@ -1,3 +1,4 @@
+import HomeHeader from '@/components/home/HomeHeader';
 import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/core/supabaseClient';
@@ -320,7 +321,9 @@ const About = () => {
   };
 
   return (
+    
     <div className="min-h-screen bg-gray-50">
+       <HomeHeader />
       {/* Hero Institucional */}
       <section className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-24 overflow-hidden">
         <div className="absolute inset-0 opacity-10">

@@ -1,3 +1,4 @@
+import { useSearchParams } from 'react-router-dom';
 import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { productsService } from '@/services/productsService';
@@ -21,6 +22,12 @@ const Index = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('newest');
   const { profile } = useAuth();
+  const [searchParams] = useSearchParams();
+  const searchFromUrl = searchParams.get('search') || '';
+  
+  useEffect(() => {
+  setSearchQuery(searchFromUrl);
+}, [searchFromUrl]);
 
   // Check if user can see internal price
   const canSeeInternalPrice = [Role.MASTER, Role.GESTOR, Role.ESTOQUE].includes(profile?.role ?? "");

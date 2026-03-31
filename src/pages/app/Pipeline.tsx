@@ -119,14 +119,14 @@ const Pipeline = () => {
 
   const getStageColor = (stage: string) => {
     switch (stage) {
-      case OrderStage.ORDER_CREATED: return 'bg-blue-100 text-blue-800 border-blue-200';
-      case OrderStage.PREPARING_ORDER: return 'bg-purple-100 text-purple-800 border-purple-200';
-      case OrderStage.ASSEMBLY: return 'bg-orange-100 text-orange-800 border-orange-200';
-      case OrderStage.READY_TO_SHIP: return 'bg-green-100 text-green-800 border-green-200';
-      case OrderStage.DELIVERY_ROUTE: return 'bg-teal-100 text-teal-800 border-teal-200';
-      case OrderStage.DELIVERED: return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-      case OrderStage.CANCELED: return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case OrderStage.ORDER_CREATED: return 'bg-blue-900/50 text-blue-300 border-blue-700';
+      case OrderStage.PREPARING_ORDER: return 'bg-purple-900/50 text-purple-300 border-purple-700';
+      case OrderStage.ASSEMBLY: return 'bg-orange-900/50 text-orange-300 border-orange-700';
+      case OrderStage.READY_TO_SHIP: return 'bg-green-900/50 text-green-300 border-green-700';
+      case OrderStage.DELIVERY_ROUTE: return 'bg-teal-900/50 text-teal-300 border-teal-700';
+      case OrderStage.DELIVERED: return 'bg-emerald-900/50 text-emerald-300 border-emerald-700';
+      case OrderStage.CANCELED: return 'bg-red-900/50 text-red-300 border-red-700';
+      default: return 'bg-gray-800 text-gray-300 border-gray-700';
     }
   };
 
@@ -194,10 +194,10 @@ const Pipeline = () => {
     return (
       <div className="p-8">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3" />
+          <div className="h-8 bg-gray-800 rounded w-1/3" />
           <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-64 bg-gray-200 rounded" />
+              <div key={i} className="h-64 bg-gray-800 rounded" />
             ))}
           </div>
         </div>
@@ -208,17 +208,17 @@ const Pipeline = () => {
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Pipeline de Pedidos</h1>
-        <Button onClick={fetchOrders} variant="outline" size="sm">
+        <h1 className="text-2xl font-bold text-white">Pipeline de Pedidos</h1>
+        <Button onClick={fetchOrders} variant="outline" size="sm" className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white">
           <RefreshCw size={16} className="mr-2" />
           Atualizar
         </Button>
       </div>
       
       {error && (
-        <Alert variant="destructive" className="mb-6">
+        <Alert variant="destructive" className="mb-6 bg-red-900/20 border-red-800">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription className="text-red-300">{error}</AlertDescription>
         </Alert>
       )}
       
@@ -232,7 +232,7 @@ const Pipeline = () => {
           const count = filteredOrders?.length || 0;
 
           return (
-            <div key={stage} className="flex-shrink-0 w-80 bg-gray-50 rounded-lg border flex flex-col max-h-[calc(100vh-140px)]">
+            <div key={stage} className="flex-shrink-0 w-80 bg-gray-900 rounded-lg border border-gray-800 flex flex-col max-h-[calc(100vh-140px)]">
               {/* Stage Header */}
               <div className={`p-4 border-b rounded-t-lg ${getStageColor(stage)}`}>
                 <h2 className="font-semibold text-center">
@@ -246,10 +246,10 @@ const Pipeline = () => {
                 {stage === OrderStage.DELIVERED && (
                   <div className="mt-3">
                     <Select value={deliveredPeriod} onValueChange={(value) => setDeliveredPeriod(value as DeliveredPeriodType)}>
-                      <SelectTrigger className="h-8 text-xs">
+                      <SelectTrigger className="h-8 text-xs bg-gray-800 border-gray-700 text-gray-300">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-gray-900 border-gray-700">
                         <SelectItem value="all">Todos</SelectItem>
                         <SelectItem value="today">Hoje</SelectItem>
                         <SelectItem value="last_7_days">Últimos 7 dias</SelectItem>
@@ -265,7 +265,7 @@ const Pipeline = () => {
               {/* Orders List */}
               <div className="flex-1 overflow-y-auto p-3 space-y-3">
                 {filteredOrders?.length === 0 ? (
-                  <div className="text-center text-gray-400 text-sm py-8">
+                  <div className="text-center text-gray-500 text-sm py-8">
                     Nenhum pedido
                   </div>
                 ) : (
@@ -274,15 +274,15 @@ const Pipeline = () => {
                     const displayName = order.customer_name ?? order.opportunities?.leads?.name ?? 'Cliente não informado';
                     
                     return (
-                      <Card key={order.id} className="shadow-sm hover:shadow-md transition-shadow">
+                      <Card key={order.id} className="shadow-sm hover:shadow-md transition-shadow bg-gray-800 border-gray-700">
                         <CardContent className="p-4 space-y-3">
                           {/* Order Header */}
                           <div className="flex justify-between items-start">
                             <div className="flex items-center gap-2">
                               <Hash size={16} className="text-gray-500" />
-                              <span className="font-bold text-sm">#{order.id.slice(0, 8)}</span>
+                              <span className="font-bold text-sm text-white">#{order.id.slice(0, 8)}</span>
                             </div>
-                            <Badge variant="secondary" className="text-xs">
+                            <Badge variant="secondary" className="text-xs bg-gray-700 text-gray-300">
                               R$ {(order.total_value ?? 0).toFixed(2)}
                             </Badge>
                           </div>
@@ -290,14 +290,14 @@ const Pipeline = () => {
                           {/* Customer Info */}
                           <div className="text-sm">
                             <span className="text-gray-500">Cliente: </span>
-                            <span className="font-medium">{displayName}</span>
+                            <span className="font-medium text-gray-200">{displayName}</span>
                           </div>
 
                           {/* Internal Code */}
                           {order.internal_code && (
                             <div className="text-sm">
                               <span className="text-gray-500">Código: </span>
-                              <span className="font-mono text-xs">{order.internal_code}</span>
+                              <span className="font-mono text-xs text-gray-300">{order.internal_code}</span>
                             </div>
                           )}
 
@@ -305,7 +305,7 @@ const Pipeline = () => {
                           {order.delivery_address && (
                             <div className="text-sm">
                               <span className="text-gray-500">Entrega: </span>
-                              <span className="text-xs line-clamp-1">{order.delivery_address}</span>
+                              <span className="text-xs text-gray-400 line-clamp-1">{order.delivery_address}</span>
                             </div>
                           )}
 
@@ -313,7 +313,7 @@ const Pipeline = () => {
                           {order.opportunities?.products?.name && (
                             <div className="text-sm">
                               <span className="text-gray-500">Produto: </span>
-                              <span className="font-medium truncate block" title={order.opportunities.products.name}>
+                              <span className="font-medium truncate block text-gray-200" title={order.opportunities.products.name}>
                                 {order.opportunities.products.name}
                               </span>
                             </div>
@@ -327,7 +327,7 @@ const Pipeline = () => {
 
                           {/* Notes */}
                           {order.notes && (
-                            <div className="text-xs text-gray-600 bg-gray-100 p-2 rounded">
+                            <div className="text-xs text-gray-400 bg-gray-900 p-2 rounded">
                               {order.notes}
                             </div>
                           )}
@@ -344,8 +344,7 @@ const Pipeline = () => {
                                 }}
                                 disabled={movingOrder === order.id}
                                 size="sm"
-                                className="flex-1"
-                                variant="outline"
+                                className="flex-1 bg-green-600 hover:bg-green-700"
                               >
                                 {movingOrder === order.id ? (
                                   'Movendo...'
@@ -364,16 +363,18 @@ const Pipeline = () => {
                                   variant="outline"
                                   size="sm"
                                   disabled={movingOrder === order.id}
+                                  className="border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white"
                                 >
                                   <MoreHorizontal size={14} />
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
+                              <DropdownMenuContent align="end" className="bg-gray-900 border-gray-800">
                                 {ORDER_STAGES_FLOW.map((targetStage) => (
                                   targetStage !== stage && (
                                     <DropdownMenuItem
                                       key={targetStage}
                                       onClick={() => handleMoveStage(order, targetStage)}
+                                      className="text-gray-300 hover:bg-gray-800 focus:bg-gray-800"
                                     >
                                       {ORDER_STAGE_LABELS[targetStage]}
                                     </DropdownMenuItem>
@@ -382,7 +383,7 @@ const Pipeline = () => {
                                 {isMaster && (
                                   <DropdownMenuItem 
                                     onClick={() => handleHardDeleteOrder(order)}
-                                    className="text-red-600 font-semibold"
+                                    className="text-red-400 font-semibold hover:bg-gray-800 focus:bg-gray-800"
                                   >
                                     <Trash2 size={14} className="mr-2" />
                                     Excluir Definitivamente

@@ -14,7 +14,7 @@ import { LeadsRadar as LeadsRadarComponent } from '@/components/LeadsRadar';
 import { PipelineRadar as PipelineRadarComponent } from '@/components/PipelineRadar';
 
 const COLORS = {
-  primary: '#3b82f6',
+  primary: '#22c55e',
   success: '#22c55e',
   warning: '#f59e0b',
   danger: '#ef4444',
@@ -203,10 +203,10 @@ const Dashboard = () => {
     return (
       <div className="p-8">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3" />
+          <div className="h-8 bg-gray-800 rounded w-1/3" />
           <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
             {[1, 2, 3, 4, 5].map(i => (
-              <div key={i} className="h-32 bg-gray-200 rounded" />
+              <div key={i} className="h-32 bg-gray-800 rounded" />
             ))}
           </div>
         </div>
@@ -231,13 +231,13 @@ const Dashboard = () => {
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <h1 className="text-2xl font-bold text-white">Dashboard</h1>
         <div className="flex items-center gap-4">
           <Select value={period} onValueChange={(value) => setPeriod(value as PeriodType)}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-48 bg-gray-900 border-gray-700 text-white">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-gray-900 border-gray-700">
               <SelectItem value="today">Hoje</SelectItem>
               <SelectItem value="last_7_days">Últimos 7 dias</SelectItem>
               <SelectItem value="last_30_days">Últimos 30 dias</SelectItem>
@@ -248,7 +248,7 @@ const Dashboard = () => {
           </Select>
           <button
             onClick={loadData}
-            className="flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 border border-gray-700 rounded-md hover:bg-gray-800 transition-colors text-gray-300"
           >
             <RefreshCw size={16} />
             Atualizar
@@ -258,116 +258,116 @@ const Dashboard = () => {
 
       {/* System Overview */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-        <Card>
+        <Card className="bg-gray-900 border-gray-800">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Produtos</CardTitle>
-            <Box className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-300">Produtos</CardTitle>
+            <Box className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{overview.totalProducts}</div>
-            <p className="text-xs text-muted-foreground mt-1">Cadastrados</p>
+            <div className="text-2xl font-bold text-white">{overview.totalProducts}</div>
+            <p className="text-xs text-gray-500 mt-1">Cadastrados</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gray-900 border-gray-800">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Leads</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-300">Leads</CardTitle>
+            <Users className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{overview.totalLeads}</div>
-            <p className="text-xs text-muted-foreground mt-1">Total</p>
+            <div className="text-2xl font-bold text-white">{overview.totalLeads}</div>
+            <p className="text-xs text-gray-500 mt-1">Total</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gray-900 border-gray-800">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Oportunidades</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-300">Oportunidades</CardTitle>
+            <Target className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{overview.totalOpportunities}</div>
-            <p className="text-xs text-muted-foreground mt-1">Total</p>
+            <div className="text-2xl font-bold text-white">{overview.totalOpportunities}</div>
+            <p className="text-xs text-gray-500 mt-1">Total</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gray-900 border-gray-800">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Usuários</CardTitle>
-            <UserCheck className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-300">Usuários</CardTitle>
+            <UserCheck className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{overview.totalUsers}</div>
-            <p className="text-xs text-muted-foreground mt-1">Ativos</p>
+            <div className="text-2xl font-bold text-white">{overview.totalUsers}</div>
+            <p className="text-xs text-gray-500 mt-1">Ativos</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gray-900 border-gray-800">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Entregues</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-300">Entregues</CardTitle>
+            <Package className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{overview.totalDelivered}</div>
-            <p className="text-xs text-muted-foreground mt-1">Total</p>
+            <div className="text-2xl font-bold text-white">{overview.totalDelivered}</div>
+            <p className="text-xs text-gray-500 mt-1">Total</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Period KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-        <Card>
+        <Card className="bg-gray-900 border-gray-800">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Leads</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-300">Leads</CardTitle>
+            <Users className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.leadsInPeriod}</div>
-            <p className="text-xs text-muted-foreground mt-1">{periodLabels[period]}</p>
+            <div className="text-2xl font-bold text-white">{metrics.leadsInPeriod}</div>
+            <p className="text-xs text-gray-500 mt-1">{periodLabels[period]}</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gray-900 border-gray-800">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Oportunidades Ativas</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-300">Oportunidades Ativas</CardTitle>
+            <TrendingUp className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.activeOpportunities}</div>
-            <p className="text-xs text-muted-foreground mt-1">Em aberto</p>
+            <div className="text-2xl font-bold text-white">{metrics.activeOpportunities}</div>
+            <p className="text-xs text-gray-500 mt-1">Em aberto</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gray-900 border-gray-800">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ganhos</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-300">Ganhos</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{metrics.wonInPeriod}</div>
-            <p className="text-xs text-muted-foreground mt-1">{periodLabels[period]}</p>
+            <div className="text-2xl font-bold text-green-500">{metrics.wonInPeriod}</div>
+            <p className="text-xs text-gray-500 mt-1">{periodLabels[period]}</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gray-900 border-gray-800">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Perdidas</CardTitle>
-            <XCircle className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-300">Perdidas</CardTitle>
+            <XCircle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{metrics.lostInPeriod}</div>
-            <p className="text-xs text-muted-foreground mt-1">{periodLabels[period]}</p>
+            <div className="text-2xl font-bold text-red-500">{metrics.lostInPeriod}</div>
+            <p className="text-xs text-gray-500 mt-1">{periodLabels[period]}</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gray-900 border-gray-800">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Entregues</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-300">Entregues</CardTitle>
+            <Package className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{metrics.deliveredInPeriod}</div>
-            <p className="text-xs text-muted-foreground mt-1">{periodLabels[period]}</p>
+            <div className="text-2xl font-bold text-green-500">{metrics.deliveredInPeriod}</div>
+            <p className="text-xs text-gray-500 mt-1">{periodLabels[period]}</p>
           </CardContent>
         </Card>
       </div>
@@ -375,9 +375,9 @@ const Dashboard = () => {
       {/* Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         {/* Funil de Oportunidades */}
-        <Card>
+        <Card className="bg-gray-900 border-gray-800">
           <CardHeader>
-            <CardTitle>Funil de Oportunidades</CardTitle>
+            <CardTitle className="text-white">Funil de Oportunidades</CardTitle>
           </CardHeader>
           <CardContent>
             {opportunityFunnel.length === 0 ? (
@@ -387,10 +387,13 @@ const Dashboard = () => {
             ) : (
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={opportunityFunnel} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis dataKey="label" type="category" width={120} tick={{ fontSize: 12 }} />
-                  <Tooltip />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis type="number" stroke="#9ca3af" />
+                  <YAxis dataKey="label" type="category" width={120} tick={{ fontSize: 12, fill: '#9ca3af' }} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
+                    labelStyle={{ color: '#fff' }}
+                  />
                   <Bar dataKey="count" fill={COLORS.primary} />
                 </BarChart>
               </ResponsiveContainer>
@@ -399,9 +402,9 @@ const Dashboard = () => {
         </Card>
 
         {/* Ganhos vs Perdidas */}
-        <Card>
+        <Card className="bg-gray-900 border-gray-800">
           <CardHeader>
-            <CardTitle>Ganhos vs Perdidas</CardTitle>
+            <CardTitle className="text-white">Ganhos vs Perdidas</CardTitle>
           </CardHeader>
           <CardContent>
             {metrics.wonInPeriod === 0 && metrics.lostInPeriod === 0 ? (
@@ -425,7 +428,9 @@ const Dashboard = () => {
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -435,9 +440,9 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Pipeline de Pedidos */}
-        <Card>
+        <Card className="bg-gray-900 border-gray-800">
           <CardHeader>
-            <CardTitle>Pipeline de Pedidos</CardTitle>
+            <CardTitle className="text-white">Pipeline de Pedidos</CardTitle>
           </CardHeader>
           <CardContent>
             {ordersPipeline.length === 0 ? (
@@ -447,10 +452,13 @@ const Dashboard = () => {
             ) : (
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={ordersPipeline} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis dataKey="label" type="category" width={120} tick={{ fontSize: 12 }} />
-                  <Tooltip />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis type="number" stroke="#9ca3af" />
+                  <YAxis dataKey="label" type="category" width={120} tick={{ fontSize: 12, fill: '#9ca3af' }} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
+                    labelStyle={{ color: '#fff' }}
+                  />
                   <Bar dataKey="count" fill={COLORS.info} />
                 </BarChart>
               </ResponsiveContainer>
@@ -459,9 +467,9 @@ const Dashboard = () => {
         </Card>
 
         {/* Evolução por Período */}
-        <Card>
+        <Card className="bg-gray-900 border-gray-800">
           <CardHeader>
-            <CardTitle>Evolução</CardTitle>
+            <CardTitle className="text-white">Evolução</CardTitle>
           </CardHeader>
           <CardContent>
             {evolution.length === 0 ? (
@@ -471,10 +479,13 @@ const Dashboard = () => {
             ) : (
               <ResponsiveContainer width="100%" height={250}>
                 <LineChart data={evolution}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                  <YAxis />
-                  <Tooltip />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#9ca3af' }} />
+                  <YAxis stroke="#9ca3af" />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
+                    labelStyle={{ color: '#fff' }}
+                  />
                   <Legend />
                   <Line type="monotone" dataKey="leads" stroke={COLORS.primary} name="Leads" strokeWidth={2} />
                   <Line type="monotone" dataKey="ordersDelivered" stroke={COLORS.success} name="Entregues" strokeWidth={2} />
@@ -486,13 +497,13 @@ const Dashboard = () => {
       </div>
 
       {/* INTELIGÊNCIA DE PRODUTOS */}
-      <div className="mt-8 pt-8 border-t">
+      <div className="mt-8 pt-8 border-t border-gray-800">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <BarChart3 size={24} />
+          <h2 className="text-2xl font-bold flex items-center gap-2 text-white">
+            <BarChart3 size={24} className="text-green-500" />
             Inteligência de Produtos
           </h2>
-          <Button onClick={loadProductsData} variant="outline" size="sm">
+          <Button onClick={loadProductsData} variant="outline" size="sm" className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white">
             <RefreshCw size={16} className="mr-2" />
             Atualizar
           </Button>
@@ -503,58 +514,58 @@ const Dashboard = () => {
 
         {/* KPIs de Produtos */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6 mt-6">
-          <Card>
+          <Card className="bg-gray-900 border-gray-800">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Produtos Ativos</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-gray-300">Produtos Ativos</CardTitle>
+              <Package className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{productsOverview.totalActiveProducts}</div>
-              <p className="text-xs text-muted-foreground mt-1">Cadastrados</p>
+              <div className="text-2xl font-bold text-white">{productsOverview.totalActiveProducts}</div>
+              <p className="text-xs text-gray-500 mt-1">Cadastrados</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-gray-900 border-gray-800">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Com Oportunidades</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-gray-300">Com Oportunidades</CardTitle>
+              <TrendingUp className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{productsOverview.productsWithOpportunities}</div>
-              <p className="text-xs text-muted-foreground mt-1">Produtos trabalhados</p>
+              <div className="text-2xl font-bold text-white">{productsOverview.productsWithOpportunities}</div>
+              <p className="text-xs text-gray-500 mt-1">Produtos trabalhados</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-gray-900 border-gray-800">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Sem Movimentação</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-gray-300">Sem Movimentação</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-yellow-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{productsOverview.productsWithoutActivity}</div>
-              <p className="text-xs text-muted-foreground mt-1">Produtos inativos</p>
+              <div className="text-2xl font-bold text-yellow-500">{productsOverview.productsWithoutActivity}</div>
+              <p className="text-xs text-gray-500 mt-1">Produtos inativos</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-gray-900 border-gray-800">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total de Vendas</CardTitle>
-              <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-gray-300">Total de Vendas</CardTitle>
+              <ShoppingCart className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{salesOverview.totalSales}</div>
-              <p className="text-xs text-muted-foreground mt-1">Pedidos entregues</p>
+              <div className="text-2xl font-bold text-green-500">{salesOverview.totalSales}</div>
+              <p className="text-xs text-gray-500 mt-1">Pedidos entregues</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-gray-900 border-gray-800">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Taxa de Conversão Média</CardTitle>
-              <Percent className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-gray-300">Taxa de Conversão Média</CardTitle>
+              <Percent className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{salesOverview.averageConversionRate.toFixed(1)}%</div>
-              <p className="text-xs text-muted-foreground mt-1">Média por produto</p>
+              <div className="text-2xl font-bold text-green-500">{salesOverview.averageConversionRate.toFixed(1)}%</div>
+              <p className="text-xs text-gray-500 mt-1">Média por produto</p>
             </CardContent>
           </Card>
         </div>
@@ -562,9 +573,9 @@ const Dashboard = () => {
         {/* Gráficos de Produtos */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           {/* Top 10 Produtos Mais Trabalhados */}
-          <Card>
+          <Card className="bg-gray-900 border-gray-800">
             <CardHeader>
-              <CardTitle>Top 10 Produtos Mais Trabalhados</CardTitle>
+              <CardTitle className="text-white">Top 10 Produtos Mais Trabalhados</CardTitle>
             </CardHeader>
             <CardContent>
               {mostWorkedProducts.length === 0 ? (
@@ -574,16 +585,18 @@ const Dashboard = () => {
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={mostWorkedProducts} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <XAxis type="number" stroke="#9ca3af" />
                     <YAxis 
                       dataKey="name" 
                       type="category" 
                       width={150} 
-                      tick={{ fontSize: 12 }} 
+                      tick={{ fontSize: 12, fill: '#9ca3af' }} 
                     />
                     <Tooltip 
                       formatter={(value: number) => [`${value} oportunidades`, 'Volume']}
+                      contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
+                      labelStyle={{ color: '#fff' }}
                     />
                     <Bar dataKey="opportunity_count" fill={COLORS.primary} />
                   </BarChart>
@@ -593,9 +606,9 @@ const Dashboard = () => {
           </Card>
 
           {/* Top 10 Produtos Mais Vendidos */}
-          <Card>
+          <Card className="bg-gray-900 border-gray-800">
             <CardHeader>
-              <CardTitle>Top 10 Produtos Mais Vendidos</CardTitle>
+              <CardTitle className="text-white">Top 10 Produtos Mais Vendidos</CardTitle>
             </CardHeader>
             <CardContent>
               {bestSellingProducts.length === 0 ? (
@@ -605,16 +618,18 @@ const Dashboard = () => {
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={bestSellingProducts} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <XAxis type="number" stroke="#9ca3af" />
                     <YAxis 
                       dataKey="name" 
                       type="category" 
                       width={150} 
-                      tick={{ fontSize: 12 }} 
+                      tick={{ fontSize: 12, fill: '#9ca3af' }} 
                     />
                     <Tooltip 
                       formatter={(value: number) => [`${value} vendas`, 'Volume']}
+                      contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
+                      labelStyle={{ color: '#fff' }}
                     />
                     <Bar dataKey="sales_count" fill={COLORS.success} />
                   </BarChart>
@@ -625,15 +640,16 @@ const Dashboard = () => {
         </div>
 
         {/* Conversão por Produto - Limitado a 10 */}
-        <Card className="mb-6">
+        <Card className="mb-6 bg-gray-900 border-gray-800">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Conversão por Produto</CardTitle>
+              <CardTitle className="text-white">Conversão por Produto</CardTitle>
               {productConversions.length > 10 && (
                 <Button 
                   variant="outline" 
                   size="sm" 
                   asChild
+                  className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
                 >
                   <a href="/app/products-dashboard">Ver mais</a>
                 </Button>
@@ -649,26 +665,26 @@ const Dashboard = () => {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Produto</TableHead>
-                      <TableHead>Categoria</TableHead>
-                      <TableHead className="text-right">Oportunidades</TableHead>
-                      <TableHead className="text-right">Vendas</TableHead>
-                      <TableHead className="text-right">Taxa de Conversão</TableHead>
+                    <TableRow className="border-gray-800 hover:bg-gray-800">
+                      <TableHead className="text-gray-400">Produto</TableHead>
+                      <TableHead className="text-gray-400">Categoria</TableHead>
+                      <TableHead className="text-right text-gray-400">Oportunidades</TableHead>
+                      <TableHead className="text-right text-gray-400">Vendas</TableHead>
+                      <TableHead className="text-right text-gray-400">Taxa de Conversão</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {productConversions.slice(0, 10).map((product) => (
-                      <TableRow key={product.id}>
-                        <TableCell className="font-medium">{product.name}</TableCell>
-                        <TableCell>{product.category_name}</TableCell>
-                        <TableCell className="text-right">{product.opportunities_count}</TableCell>
-                        <TableCell className="text-right">{product.sales_count}</TableCell>
+                      <TableRow key={product.id} className="border-gray-800 hover:bg-gray-800">
+                        <TableCell className="font-medium text-white">{product.name}</TableCell>
+                        <TableCell className="text-gray-400">{product.category_name}</TableCell>
+                        <TableCell className="text-right text-gray-300">{product.opportunities_count}</TableCell>
+                        <TableCell className="text-right text-gray-300">{product.sales_count}</TableCell>
                         <TableCell className="text-right">
                           <span className={`font-medium ${
-                            product.conversion_rate >= 50 ? 'text-green-600' :
-                            product.conversion_rate >= 20 ? 'text-yellow-600' :
-                            'text-red-600'
+                            product.conversion_rate >= 50 ? 'text-green-500' :
+                            product.conversion_rate >= 20 ? 'text-yellow-500' :
+                            'text-red-500'
                           }`}>
                             {product.conversion_rate.toFixed(1)}%
                           </span>
@@ -680,7 +696,7 @@ const Dashboard = () => {
                 {productConversions.length > 10 && (
                   <div className="mt-4 text-center text-sm text-gray-500">
                     +{productConversions.length - 10} produtos restantes.{' '}
-                    <a href="/app/products-dashboard" className="text-blue-600 hover:underline">
+                    <a href="/app/products-dashboard" className="text-green-500 hover:underline">
                       Ver todos
                     </a>
                   </div>
@@ -691,11 +707,11 @@ const Dashboard = () => {
         </Card>
 
         {/* Produtos Sem Movimentação - Limitado a 5 */}
-        <Card>
+        <Card className="bg-gray-900 border-gray-800">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <AlertTriangle size={20} className="text-orange-500" />
+              <CardTitle className="flex items-center gap-2 text-white">
+                <AlertTriangle size={20} className="text-yellow-500" />
                 Produtos Sem Movimentação
               </CardTitle>
               {productsWithoutActivity.length > 5 && (
@@ -703,6 +719,7 @@ const Dashboard = () => {
                   variant="outline" 
                   size="sm" 
                   asChild
+                  className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
                 >
                   <a href="/app/products-dashboard">Ver mais</a>
                 </Button>
@@ -720,17 +737,17 @@ const Dashboard = () => {
                   {productsWithoutActivity.slice(0, 5).map((product) => (
                     <div 
                       key={product.id}
-                      className="border rounded-lg p-4 bg-orange-50 border-orange-200"
+                      className="border rounded-lg p-4 bg-yellow-900/20 border-yellow-800"
                     >
-                      <div className="font-medium text-sm mb-1">{product.name}</div>
-                      <div className="text-xs text-gray-600">{product.category_name}</div>
+                      <div className="font-medium text-sm mb-1 text-white">{product.name}</div>
+                      <div className="text-xs text-gray-400">{product.category_name}</div>
                     </div>
                   ))}
                 </div>
                 {productsWithoutActivity.length > 5 && (
                   <div className="mt-4 text-center text-sm text-gray-500">
                     +{productsWithoutActivity.length - 5} produtos restantes.{' '}
-                    <a href="/app/products-dashboard" className="text-blue-600 hover:underline">
+                    <a href="/app/products-dashboard" className="text-green-500 hover:underline">
                       Ver todos
                     </a>
                   </div>
@@ -742,13 +759,13 @@ const Dashboard = () => {
       </div>
 
       {/* RADAR DE LEADS */}
-      <div className="mt-8 pt-8 border-t">
+      <div className="mt-8 pt-8 border-t border-gray-800">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <Flame size={24} />
+          <h2 className="text-2xl font-bold flex items-center gap-2 text-white">
+            <Flame size={24} className="text-green-500" />
             Radar de Leads
           </h2>
-          <Button onClick={loadLeadsRadar} variant="outline" size="sm">
+          <Button onClick={loadLeadsRadar} variant="outline" size="sm" className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white">
             <RefreshCw size={16} className="mr-2" />
             Atualizar Radar
           </Button>
@@ -758,13 +775,13 @@ const Dashboard = () => {
       </div>
 
       {/* RADAR DE PIPELINE */}
-      <div className="mt-8 pt-8 border-t">
+      <div className="mt-8 pt-8 border-t border-gray-800">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <Truck size={24} />
+          <h2 className="text-2xl font-bold flex items-center gap-2 text-white">
+            <Truck size={24} className="text-green-500" />
             Radar de Pipeline
           </h2>
-          <Button onClick={loadPipelineRadar} variant="outline" size="sm">
+          <Button onClick={loadPipelineRadar} variant="outline" size="sm" className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white">
             <RefreshCw size={16} className="mr-2" />
             Atualizar Radar
           </Button>

@@ -37,6 +37,12 @@ import {
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 
+interface CategoryOption {
+  id: string;
+  name: string;
+  label: string;
+}
+
 const Users = () => {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -204,10 +210,10 @@ const Users = () => {
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case Role.MASTER: return 'bg-purple-100 text-purple-800';
-      case Role.GESTOR: return 'bg-blue-100 text-blue-800';
-      case Role.ESTOQUE: return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case Role.MASTER: return 'bg-purple-900/50 text-purple-300 border-purple-700';
+      case Role.GESTOR: return 'bg-blue-900/50 text-blue-300 border-blue-700';
+      case Role.ESTOQUE: return 'bg-orange-900/50 text-orange-300 border-orange-700';
+      default: return 'bg-gray-800 text-gray-300 border-gray-700';
     }
   };
 
@@ -228,10 +234,10 @@ const Users = () => {
     return (
       <div className="p-8">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3" />
+          <div className="h-8 bg-gray-800 rounded w-1/3" />
           <div className="space-y-3">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-20 bg-gray-200 rounded" />
+              <div key={i} className="h-20 bg-gray-800 rounded" />
             ))}
           </div>
         </div>
@@ -243,30 +249,30 @@ const Users = () => {
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Gestão de Usuários</h1>
-          <p className="text-gray-600 text-sm mt-1">
+          <h1 className="text-2xl font-bold text-white">Gestão de Usuários</h1>
+          <p className="text-gray-400 text-sm mt-1">
             Gerencie as permissões e roles dos usuários do sistema
           </p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={loadUsers} variant="outline" size="sm">
+          <Button onClick={loadUsers} variant="outline" size="sm" className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white">
             <RefreshCw size={16} className="mr-2" />
             Atualizar
           </Button>
-          <Button onClick={() => setCreateModalOpen(true)}>
+          <Button onClick={() => setCreateModalOpen(true)} className="bg-green-600 hover:bg-green-700">
             <Plus size={16} className="mr-2" />
             Novo Usuário
           </Button>
         </div>
       </div>
 
-      <Card>
+      <Card className="bg-gray-900 border-gray-800">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-white">
             <Shield size={20} />
             Lista de Usuários
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-gray-400">
             Total de {users.length} usuários cadastrados
           </CardDescription>
         </CardHeader>
@@ -280,22 +286,22 @@ const Users = () => {
               {users.map((user) => (
                 <div
                   key={user.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-800 transition-colors border-gray-800"
                 >
                   <div className="flex items-center gap-4 flex-1">
                     {/* Avatar */}
-                    <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                    <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center">
                       <UserIcon size={20} className="text-gray-500" />
                     </div>
 
                     {/* User Info */}
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">
+                        <span className="font-medium text-white">
                           {isCurrentUser(user.id) ? 'Você' : `ID: ${user.id.slice(0, 8)}...`}
                         </span>
                         {isCurrentUser(user.id) && (
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-xs border-gray-700 text-gray-300">
                             Eu
                           </Badge>
                         )}
@@ -311,12 +317,12 @@ const Users = () => {
                         {getRoleLabel(user.role)}
                       </Badge>
                       {user.is_active === false && (
-                        <Badge variant="destructive" className="text-xs">
+                        <Badge variant="destructive" className="text-xs bg-red-900/50 text-red-300 border-red-700">
                           Inativo
                         </Badge>
                       )}
                       {user.must_change_password && (
-                        <Badge variant="outline" className="text-xs border-orange-300 text-orange-700">
+                        <Badge variant="outline" className="text-xs border-orange-700 text-orange-400">
                           Trocar Senha
                         </Badge>
                       )}
@@ -333,10 +339,10 @@ const Users = () => {
                           onValueChange={(value) => handleRoleChange(user.id, value as Role)}
                           disabled={updatingUserId === user.id}
                         >
-                          <SelectTrigger className="w-32">
+                          <SelectTrigger className="w-32 bg-gray-800 border-gray-700 text-white">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="bg-gray-900 border-gray-700">
                             <SelectItem value={Role.GESTOR}>Gestor</SelectItem>
                             <SelectItem value={Role.ESTOQUE}>Estoque</SelectItem>
                             <SelectItem value={Role.MASTER}>Master</SelectItem>
@@ -349,6 +355,7 @@ const Users = () => {
                             disabled={updatingUserId === user.id}
                             size="sm"
                             variant="default"
+                            className="bg-green-600 hover:bg-green-700"
                           >
                             {updatingUserId === user.id ? (
                               'Salvando...'
@@ -367,6 +374,7 @@ const Users = () => {
                             disabled={updatingUserId === user.id}
                             size="sm"
                             variant="ghost"
+                            className="text-gray-400 hover:text-white hover:bg-gray-800"
                           >
                             <X size={14} />
                           </Button>
@@ -378,6 +386,7 @@ const Users = () => {
                           disabled={updatingUserId === user.id}
                           size="sm"
                           variant={user.is_active === false ? "default" : "outline"}
+                          className={user.is_active === false ? "bg-green-600 hover:bg-green-700" : "border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"}
                           title={user.is_active === false ? "Ativar usuário" : "Desativar usuário"}
                         >
                           {user.is_active === false ? "Ativar" : "Desativar"}
@@ -391,6 +400,7 @@ const Users = () => {
                             size="sm"
                             variant="ghost"
                             title="Forçar troca de senha"
+                            className="text-yellow-500 hover:text-yellow-400 hover:bg-gray-800"
                           >
                            <AlertTriangle size={14} />
                           </Button>
@@ -399,7 +409,7 @@ const Users = () => {
                     )}
 
                     {isCurrentUser(user.id) && (
-                      <div className="ml-4 text-sm text-gray-400 italic">
+                      <div className="ml-4 text-sm text-gray-500 italic">
                         Não é possível alterar seus próprios dados
                       </div>
                     )}
@@ -413,11 +423,11 @@ const Users = () => {
 
       {/* Confirmation Dialog for Master Role */}
       <AlertDialog open={confirmDialog.open} onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-gray-900 border-gray-800">
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar promoção a Master</AlertDialogTitle>
-            <AlertDialogDescription>
-              Você está prestes a promover o usuário <strong>{confirmDialog.userName}</strong> ao nível de acesso <strong>Master</strong>.
+            <AlertDialogTitle className="text-white">Confirmar promoção a Master</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Você está prestes a promover o usuário <strong className="text-white">{confirmDialog.userName}</strong> ao nível de acesso <strong className="text-green-400">Master</strong>.
               <br /><br />
               Esta ação concede permissões administrativas completas, incluindo a gestão de outros usuários.
               <br /><br />
@@ -425,8 +435,11 @@ const Users = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmMaster}>
+            <AlertDialogCancel className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmMaster}
+              className="bg-green-600 hover:bg-green-700"
+            >
               Confirmar Promoção
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -435,17 +448,17 @@ const Users = () => {
 
       {/* Create User Modal */}
       <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] bg-gray-900 border-gray-800">
           <DialogHeader>
-            <DialogTitle>Novo Usuário</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-white">Novo Usuário</DialogTitle>
+            <DialogDescription className="text-gray-400">
               Crie um novo usuário para acessar o sistema.
             </DialogDescription>
           </DialogHeader>
           
           <form onSubmit={handleCreateUser} className="space-y-4 mt-4">
             <div className="space-y-2">
-              <Label htmlFor="create_email">Email *</Label>
+              <Label htmlFor="create_email" className="text-gray-300">Email *</Label>
               <Input
                 id="create_email"
                 type="email"
@@ -454,11 +467,12 @@ const Users = () => {
                 onChange={(e) => setCreateFormData({ ...createFormData, email: e.target.value })}
                 disabled={creatingUser}
                 required
+                className="bg-gray-800 border-gray-700 text-white"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="create_password">Senha *</Label>
+              <Label htmlFor="create_password" className="text-gray-300">Senha *</Label>
               <div className="relative">
                 <Input
                   id="create_password"
@@ -469,11 +483,12 @@ const Users = () => {
                   disabled={creatingUser}
                   required
                   minLength={6}
+                  className="bg-gray-800 border-gray-700 text-white"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
                   aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -482,16 +497,16 @@ const Users = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="create_role">Role *</Label>
+              <Label htmlFor="create_role" className="text-gray-300">Role *</Label>
               <Select
                 value={createFormData.role}
                 onValueChange={(value) => setCreateFormData({ ...createFormData, role: value as Role })}
                 disabled={creatingUser}
               >
-                <SelectTrigger id="create_role">
+                <SelectTrigger id="create_role" className="bg-gray-800 border-gray-700 text-white">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-gray-900 border-gray-700">
                   <SelectItem value={Role.GESTOR}>Gestor</SelectItem>
                   <SelectItem value={Role.ESTOQUE}>Estoque</SelectItem>
                   <SelectItem value={Role.MASTER}>Master</SelectItem>
@@ -506,7 +521,7 @@ const Users = () => {
                 onCheckedChange={(checked) => setCreateFormData({ ...createFormData, must_change_password: checked })}
                 disabled={creatingUser}
               />
-              <Label htmlFor="must_change_password" className="cursor-pointer">
+              <Label htmlFor="must_change_password" className="cursor-pointer text-gray-300">
                 Exigir troca de senha no primeiro acesso
               </Label>
             </div>
@@ -517,10 +532,11 @@ const Users = () => {
                 variant="outline"
                 onClick={() => setCreateModalOpen(false)}
                 disabled={creatingUser}
+                className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={creatingUser}>
+              <Button type="submit" disabled={creatingUser} className="bg-green-600 hover:bg-green-700">
                 {creatingUser ? (
                   <>
                     <RefreshCw size={16} className="mr-2 animate-spin" />

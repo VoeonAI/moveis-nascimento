@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MessageCircle, MapPin, Phone, Loader2 } from 'lucide-react';
-import { installerService } from '@/services/installersService';
+import { installerService } from '@/services/installerService';
+import HomeHeader from '@/components/home/HomeHeader';
 
 export default function Montadores() {
   const [installers, setInstallers] = useState<any[]>([]);
@@ -32,8 +33,11 @@ export default function Montadores() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gray-50">
+      {/* Header Público */}
+      <HomeHeader />
+
+      <div className="max-w-6xl mx-auto py-12 px-4">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Nossos Montadores</h1>
           <p className="text-lg text-gray-600">

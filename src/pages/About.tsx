@@ -4,8 +4,7 @@ import { supabase } from '@/core/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+import { { Label } from '@/components/ui/label';
 import { 
   MessageCircle, 
   ChevronRight, 
@@ -25,6 +24,7 @@ import {
   Home
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
+import HomeHeader from '@/components/home/HomeHeader';
 
 // Story Timeline Component
 const StoryTimeline = () => {
@@ -66,7 +66,7 @@ const StoryTimeline = () => {
       description: 'Inauguração da filial em Extrema - MG, marcando uma nova fase de crescimento e consolidação da marca na região.',
       icon: MapPin,
       color: 'purple',
-      image: 'https://kbpkdnptzvsvoujirfwe.supabase.co/storage/v1/object/public/historia/Loja-Nova.jpg'
+      image: 'https://kbpkdnptzvsvoujirfwe.supabase.co.co/storage/v1/object/public/historia/Loja-Nova.jpg'
     },
     {
       id: 5,
@@ -321,6 +321,9 @@ const About = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Header Público */}
+      <HomeHeader />
+
       {/* Hero Institucional */}
       <section className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-24 overflow-hidden">
         <div className="absolute inset-0 opacity-10">
@@ -338,8 +341,8 @@ const About = () => {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
               <Link to="/catalog">
                 <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 text-lg font-semibold rounded-xl">
+                  <Sparkles size={20} className="mr-2" />
                   Ver Catálogo
-                  <Sparkles size={20} className="ml-2" />
                 </Button>
               </Link>
               <Button
@@ -570,9 +573,7 @@ const About = () => {
               </Button>
               <Button type="submit" disabled={submitting}>
                 {submitting ? (
-                  <>
-                    Enviando...
-                  </>
+                  <Enviando...
                 ) : (
                   'Enviar Mensagem'
                 )}

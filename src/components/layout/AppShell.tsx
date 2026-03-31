@@ -82,15 +82,14 @@ const AppShell = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className="min-h-screen bg-gray-100">
       {/* Mobile Header */}
-      <div className="lg:hidden bg-black border-b border-gray-800 px-4 py-3 flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-white">Painel</h1>
+      <div className="lg:hidden bg-white border-b px-4 py-3 flex items-center justify-between">
+        <h1 className="text-lg font-semibold">Painel</h1>
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="text-white hover:bg-gray-800"
         >
           {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
         </Button>
@@ -100,22 +99,22 @@ const AppShell = () => {
         {/* Sidebar */}
         <aside className={`
           fixed lg:static inset-y-0 left-0 z-50
-          w-64 bg-black border-r border-gray-800
+          w-64 bg-white border-r
           transform transition-transform duration-200 ease-in-out
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}>
           <div className="h-full flex flex-col">
             {/* Logo */}
-            <div className="p-6 border-b border-gray-800">
-              <h1 className="text-xl font-bold text-white">Painel Interno</h1>
+            <div className="p-6 border-b">
+              <h1 className="text-xl font-bold text-gray-900">Painel Interno</h1>
             </div>
 
             {/* Profile Warning - só mostra se não está carregando E profile é null */}
             {!profileLoading && !profile && (
               <div className="p-4">
-                <Alert variant="destructive" className="bg-red-900/20 border-red-800">
+                <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertDescription className="text-xs text-red-300">
+                  <AlertDescription className="text-xs">
                     Perfil não configurado. Contate o administrador.
                   </AlertDescription>
                 </Alert>
@@ -127,7 +126,7 @@ const AppShell = () => {
               {profileLoading ? (
                 // Skeleton enquanto carrega profile
                 Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full bg-gray-800" />
+                  <Skeleton key={i} className="h-12 w-full" />
                 ))
               ) : (
                 // Renderiza menu filtrado por role
@@ -145,8 +144,8 @@ const AppShell = () => {
                           flex items-center gap-3 px-4 py-3 rounded-lg
                           transition-colors
                           ${location.pathname === item.path
-                            ? 'bg-green-600 text-white'
-                            : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                            ? 'bg-blue-50 text-blue-600'
+                            : 'text-gray-700 hover:bg-gray-100'
                           }
                         `}
                       >
@@ -167,21 +166,21 @@ const AppShell = () => {
             </nav>
 
             {/* User Info */}
-            <div className="p-4 border-t border-gray-800">
+            <div className="p-4 border-t">
               {profileLoading ? (
                 <div className="space-y-2">
-                  <Skeleton className="h-10 w-full bg-gray-800" />
-                  <Skeleton className="h-10 w-full bg-gray-800" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
                 </div>
               ) : (
                 <>
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center text-green-500 font-semibold">
+                    <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
                       {profile?.email?.[0]?.toUpperCase() || '?'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate text-white">{profile?.email}</p>
-                      <p className="text-xs text-gray-400 capitalize">
+                      <p className="text-sm font-medium truncate">{profile?.email}</p>
+                      <p className="text-xs text-gray-500 capitalize">
                         {profile?.role || 'Sem role'}
                       </p>
                     </div>
@@ -189,7 +188,7 @@ const AppShell = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
+                    className="w-full"
                     onClick={signOut}
                   >
                     <LogOut size={16} className="mr-2" />
@@ -204,7 +203,7 @@ const AppShell = () => {
         {/* Overlay for mobile */}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 bg-black/80 z-40 lg:hidden"
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}

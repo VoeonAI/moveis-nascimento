@@ -95,26 +95,26 @@ Posso te ajudar com valores ou condições?`;
   };
 
   return (
-    <Card className="bg-gray-900 border-gray-800">
+    <Card className="bg-gradient-to-br from-green-50 to-white border-green-200">
       <CardContent className="p-6">
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div className="space-y-2 flex-1">
             {lastOpportunity?.products && (
               <div className="flex items-center gap-2">
-                <Package size={16} className="text-green-500" />
+                <Package size={16} className="text-green-600" />
                 <div>
                   <p className="text-xs text-gray-500 uppercase tracking-wide">Último Interesse</p>
-                  <p className="font-semibold text-white">{lastOpportunity.products.name}</p>
+                  <p className="font-semibold text-gray-900">{lastOpportunity.products.name}</p>
                 </div>
               </div>
             )}
             
             {lastMessage && (
               <div className="flex items-start gap-2">
-                <MessageSquare size={16} className="text-green-500 mt-0.5" />
+                <MessageSquare size={16} className="text-blue-600 mt-0.5" />
                 <div className="flex-1">
                   <p className="text-xs text-gray-500 uppercase tracking-wide">Última Mensagem</p>
-                  <p className="text-sm text-gray-300 line-clamp-2">{lastMessage}</p>
+                  <p className="text-sm text-gray-700 line-clamp-2">{lastMessage}</p>
                 </div>
               </div>
             )}
@@ -277,7 +277,7 @@ const CRM = () => {
     
     // Priority 2: Follow-up Hoje (amarelo/âmbar)
     if (isFollowUpToday(lead)) {
-      return { label: 'Follow Hoje', variant: 'default' as const, className: 'bg-yellow-500 text-white hover:bg-yellow-600', icon: <CalendarIcon size={12} className="mr-1" /> };
+      return { label: 'Follow Hoje', variant: 'default' as const, className: 'bg-amber-500 text-white hover:bg-amber-600', icon: <CalendarIcon size={12} className="mr-1" /> };
     }
     
     // Priority 3: Novo Interesse (verde)
@@ -698,26 +698,26 @@ const CRM = () => {
 
   const getStageColor = (stage: string) => {
     switch (stage) {
-      case OpportunityStage.NEW_INTEREST: return 'bg-blue-900/50 text-blue-300 border-blue-700';
-      case OpportunityStage.TALKING_AI: return 'bg-purple-900/50 text-purple-300 border-purple-700';
-      case OpportunityStage.TALKING_HUMAN: return 'bg-orange-900/50 text-orange-300 border-orange-700';
-      case OpportunityStage.PROPOSAL_SENT: return 'bg-yellow-900/50 text-yellow-300 border-yellow-700';
-      case OpportunityStage.WON: return 'bg-green-900/50 text-green-300 border-green-700';
-      case OpportunityStage.LOST: return 'bg-red-900/50 text-red-300 border-red-700';
-      default: return 'bg-gray-800 text-gray-300 border-gray-700';
+      case OpportunityStage.NEW_INTEREST: return 'bg-blue-100 text-blue-800';
+      case OpportunityStage.TALKING_AI: return 'bg-purple-100 text-purple-800';
+      case OpportunityStage.TALKING_HUMAN: return 'bg-orange-100 text-orange-800';
+      case OpportunityStage.PROPOSAL_SENT: return 'bg-yellow-100 text-yellow-800';
+      case OpportunityStage.WON: return 'bg-green-100 text-green-800';
+      case OpportunityStage.LOST: return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getTimelineIcon = (type: string) => {
     switch (type) {
-      case 'note': return <MessageSquare size={16} className="text-green-500" />;
+      case 'note': return <MessageSquare size={16} className="text-blue-500" />;
       case 'opportunity_created': return <Package size={16} className="text-green-500" />;
-      case 'opportunity_stage_changed': return <ArrowLeft size={16} className="text-yellow-500 rotate-180" />;
+      case 'opportunity_stage_changed': return <ArrowLeft size={16} className="text-orange-500 rotate-180" />;
       case 'followup_set': return <CalendarIcon size={16} className="text-purple-500" />;
       case 'lead_archived': return <Archive size={16} className="text-gray-500" />;
-      case 'lead_restored': return <ArchiveRestore size={16} className="text-green-500" />;
+      case 'lead_restored': return <ArchiveRestore size={16} className="text-blue-500" />;
       case 'opportunity_archived': return <Archive size={16} className="text-gray-500" />;
-      case 'opportunity_restored': return <ArchiveRestore size={16} className="text-green-500" />;
+      case 'opportunity_restored': return <ArchiveRestore size={16} className="text-blue-500" />;
       default: return <Clock size={16} className="text-gray-500" />;
     }
   };
@@ -747,7 +747,7 @@ const CRM = () => {
   };
 
   if (loading) {
-    return <div className="p-8 text-gray-400">Carregando CRM...</div>;
+    return <div className="p-8">Carregando CRM...</div>;
   }
 
   return (
@@ -773,49 +773,47 @@ const CRM = () => {
 
       {/* New Lead Manual Modal */}
       <Dialog open={newLeadModalOpen} onOpenChange={setNewLeadModalOpen}>
-        <DialogContent className="sm:max-w-[500px] bg-gray-900 border-gray-800">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle className="text-white">Novo Lead Manual</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogTitle>Novo Lead Manual</DialogTitle>
+            <DialogDescription>
               Cadastre um lead proveniente de outro canal (telefone, loja, etc.)
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 mt-4">
             <div className="space-y-2">
-              <Label htmlFor="lead_name" className="text-gray-300">Nome *</Label>
+              <Label htmlFor="lead_name">Nome *</Label>
               <Input
                 id="lead_name"
                 value={newLeadData.name}
                 onChange={(e) => setNewLeadData({ ...newLeadData, name: e.target.value })}
                 disabled={creatingLead}
-                className="bg-gray-800 border-gray-700 text-white"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="lead_phone" className="text-gray-300">Telefone *</Label>
+              <Label htmlFor="lead_phone">Telefone *</Label>
               <Input
                 id="lead_phone"
                 value={newLeadData.phone}
                 onChange={(e) => setNewLeadData({ ...newLeadData, phone: e.target.value })}
                 disabled={creatingLead}
                 placeholder="(00) 00000-0000"
-                className="bg-gray-800 border-gray-700 text-white"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="lead_channel" className="text-gray-300">Origem *</Label>
+              <Label htmlFor="lead_channel">Origem *</Label>
               <Select
                 value={newLeadData.channel}
                 onValueChange={(value) => setNewLeadData({ ...newLeadData, channel: value })}
                 disabled={creatingLead}
               >
-                <SelectTrigger id="lead_channel" className="bg-gray-800 border-gray-700 text-white">
+                <SelectTrigger id="lead_channel">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-900 border-gray-700">
+                <SelectContent>
                   <SelectItem value="manual">Manual (CRM)</SelectItem>
                   <SelectItem value="whatsapp">WhatsApp</SelectItem>
                   <SelectItem value="telefone">Telefone</SelectItem>
@@ -826,28 +824,27 @@ const CRM = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="lead_notes" className="text-gray-300">Observação</Label>
+              <Label htmlFor="lead_notes">Observação</Label>
               <Textarea
                 id="lead_notes"
                 value={newLeadData.notes}
                 onChange={(e) => setNewLeadData({ ...newLeadData, notes: e.target.value })}
                 disabled={creatingLead}
                 rows={3}
-                className="bg-gray-800 border-gray-700 text-white"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="lead_product" className="text-gray-300">Produto de Interesse (opcional)</Label>
+              <Label htmlFor="lead_product">Produto de Interesse (opcional)</Label>
               <Select
                 value={newLeadData.product_id}
                 onValueChange={(value) => setNewLeadData({ ...newLeadData, product_id: value })}
                 disabled={creatingLead}
               >
-                <SelectTrigger id="lead_product" className="bg-gray-800 border-gray-700 text-white">
+                <SelectTrigger id="lead_product">
                   <SelectValue placeholder="Selecione um produto" />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-900 border-gray-700">
+                <SelectContent>
                   {products.map((product) => (
                     <SelectItem key={product.id} value={product.id}>
                       {product.name}
@@ -864,7 +861,7 @@ const CRM = () => {
                 onCheckedChange={(checked) => setNewLeadData({ ...newLeadData, createOpportunity: checked })}
                 disabled={creatingLead}
               />
-              <Label htmlFor="create_opportunity" className="cursor-pointer text-gray-300">
+              <Label htmlFor="create_opportunity" className="cursor-pointer">
                 Criar oportunidade junto (inicia em "Falando com Humano")
               </Label>
             </div>
@@ -874,11 +871,10 @@ const CRM = () => {
                 variant="outline"
                 onClick={() => setNewLeadModalOpen(false)}
                 disabled={creatingLead}
-                className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
               >
                 Cancelar
               </Button>
-              <Button onClick={handleCreateManualLead} disabled={creatingLead} className="bg-green-600 hover:bg-green-700">
+              <Button onClick={handleCreateManualLead} disabled={creatingLead}>
                 {creatingLead ? 'Criando...' : 'Criar Lead'}
               </Button>
             </div>
@@ -890,9 +886,9 @@ const CRM = () => {
         // List View
         <div>
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold text-white">Gestão de Leads</h1>
+            <h1 className="text-2xl font-bold">Gestão de Leads</h1>
             <div className="flex gap-2">
-              <Button onClick={() => setNewLeadModalOpen(true)} className="bg-green-600 hover:bg-green-700">
+              <Button onClick={() => setNewLeadModalOpen(true)}>
                 <Plus size={16} className="mr-2" />
                 Novo Lead
               </Button>
@@ -901,13 +897,12 @@ const CRM = () => {
                   onClick={() => setShowArchived(!showArchived)}
                   variant={showArchived ? "default" : "outline"}
                   size="sm"
-                  className={showArchived ? "bg-green-600 hover:bg-green-700" : "border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"}
                 >
                   <Archive size={16} className="mr-2" />
                   {showArchived ? 'Ocultar Arquivados' : 'Ver Arquivados'}
                 </Button>
               )}
-              <Button onClick={loadLeads} variant="outline" size="sm" className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white">
+              <Button onClick={loadLeads} variant="outline" size="sm">
                 <RefreshCw size={16} className="mr-2" />
                 Atualizar
               </Button>
@@ -917,16 +912,16 @@ const CRM = () => {
           {/* Filters */}
           <div className="flex items-center gap-4 mb-6">
             <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)}>
-              <TabsList className="bg-gray-900 border-gray-800">
-                <TabsTrigger value="all" className="text-gray-300 data-[state=active]:bg-green-600 data-[state=active]:text-white">Todos ({leads.length})</TabsTrigger>
-                <TabsTrigger value="new" className="text-gray-300 data-[state=active]:bg-green-600 data-[state=active]:text-white">Novos ({leads.filter(l => isNewLead(l) || hasNewInterest(l)).length})</TabsTrigger>
-                <TabsTrigger value="followup" className="text-gray-300 data-[state=active]:bg-green-600 data-[state=active]:text-white">Follow-up ({leads.filter(l => l.follow_up_needed).length})</TabsTrigger>
-                <TabsTrigger value="status" className="text-gray-300 data-[state=active]:bg-green-600 data-[state=active]:text-white">Por Status</TabsTrigger>
+              <TabsList>
+                <TabsTrigger value="all">Todos ({leads.length})</TabsTrigger>
+                <TabsTrigger value="new">Novos ({leads.filter(l => isNewLead(l) || hasNewInterest(l)).length})</TabsTrigger>
+                <TabsTrigger value="followup">Follow-up ({leads.filter(l => l.follow_up_needed).length})</TabsTrigger>
+                <TabsTrigger value="status">Por Status</TabsTrigger>
             </TabsList>
             </Tabs>
 
             {(filter !== 'all' || statusFilter !== 'all') && (
-              <Button onClick={clearFilters} variant="ghost" size="sm" className="text-gray-400 hover:text-white hover:bg-gray-800">
+              <Button onClick={clearFilters} variant="ghost" size="sm">
                 <X size={14} className="mr-1" />
                 Limpar filtros
               </Button>
@@ -936,10 +931,10 @@ const CRM = () => {
           {filter === 'status' && (
             <div className="mb-4">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-64 bg-gray-900 border-gray-700 text-white">
+                <SelectTrigger className="w-64">
                   <SelectValue placeholder="Selecione o status" />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-900 border-gray-700">
+                <SelectContent>
                   <SelectItem value="all">Todos os status</SelectItem>
                   <SelectItem value="new_interest">Primeiro contato</SelectItem>
                   <SelectItem value="talking_ai">Falando com IA</SelectItem>
@@ -954,12 +949,12 @@ const CRM = () => {
 
           {/* Error Banner with Retry */}
           {error && (
-            <Alert variant="destructive" className="mb-6 bg-red-900/20 border-red-800">
+            <Alert variant="destructive" className="mb-6">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle className="text-red-300">Erro ao carregar dados</AlertTitle>
-              <AlertDescription className="flex items-center justify-between mt-2 text-red-300">
+              <AlertTitle>Erro ao carregar dados</AlertTitle>
+              <AlertDescription className="flex items-center justify-between mt-2">
                 <span>{error}</span>
-                <Button onClick={loadLeads} variant="outline" size="sm" className="ml-4 border-red-700 text-red-300 hover:bg-red-900 hover:text-white">
+                <Button onClick={loadLeads} variant="outline" size="sm" className="ml-4">
                   <RefreshCw size={14} className="mr-1" />
                   Tentar Novamente
                 </Button>
@@ -968,7 +963,7 @@ const CRM = () => {
           )}
 
           {filteredLeads.length === 0 && !error ? (
-            <Card className="bg-gray-900 border-gray-800">
+            <Card>
               <CardContent className="p-12 text-center text-gray-500">
                 Nenhum lead encontrado.
               </CardContent>
@@ -981,14 +976,14 @@ const CRM = () => {
                 return (
                   <Card 
                     key={lead.id} 
-                    className={`cursor-pointer hover:shadow-md transition-shadow bg-gray-900 border-gray-800 hover:border-gray-700 ${lead.archived ? 'opacity-60' : ''}`}
+                    className={`cursor-pointer hover:shadow-md transition-shadow ${lead.archived ? 'opacity-60' : ''}`}
                     onClick={() => handleSelectLead(lead.id)}
                   >
                     <CardHeader>
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <User size={16} className="text-gray-500" />
-                          <CardTitle className="text-lg text-white">{lead.name}</CardTitle>
+                          <CardTitle className="text-lg">{lead.name}</CardTitle>
                         </div>
                         <div className="flex gap-1">
                           {primaryBadge && (
@@ -998,7 +993,7 @@ const CRM = () => {
                             </Badge>
                           )}
                           {lead.archived && (
-                            <Badge variant="outline" className="text-gray-500 border-gray-700">
+                            <Badge variant="outline" className="text-gray-500">
                               <Archive size={12} className="mr-1" />
                               Arquivado
                             </Badge>
@@ -1006,7 +1001,7 @@ const CRM = () => {
                         </div>
                       </div>
                       {lead.phone && (
-                        <CardDescription className="flex items-center gap-2 text-gray-400">
+                        <CardDescription className="flex items-center gap-2">
                           <Phone size={14} />
                           {lead.phone}
                         </CardDescription>
@@ -1016,8 +1011,8 @@ const CRM = () => {
                       {/* Último Produto e Data */}
                       {lead.last_opportunity?.products && (
                         <div className="flex items-center gap-2 text-sm">
-                          <Package size={14} className="text-green-500" />
-                          <span className="font-medium text-white truncate flex-1">
+                          <Package size={14} className="text-green-600" />
+                          <span className="font-medium text-gray-900 truncate flex-1">
                             {lead.last_opportunity.products.name}
                           </span>
                           <span className="text-xs text-gray-500">
@@ -1029,8 +1024,8 @@ const CRM = () => {
                       {/* Última Mensagem */}
                       {lead.last_message && (
                         <div className="flex items-start gap-2 text-sm">
-                          <MessageSquare size={14} className="text-green-500 mt-0.5" />
-                          <p className="text-gray-400 line-clamp-2 flex-1">
+                          <MessageSquare size={14} className="text-blue-500 mt-0.5" />
+                          <p className="text-gray-700 line-clamp-2 flex-1">
                             {lead.last_message}
                           </p>
                         </div>
@@ -1038,7 +1033,7 @@ const CRM = () => {
 
                       {/* Status e Data */}
                       <div className="flex items-center justify-between">
-                        <Badge variant="outline" className="capitalize border-gray-700 text-gray-300">
+                        <Badge variant="outline" className="capitalize">
                           {getLeadStatusLabel(lead.status)}
                         </Badge>
                         <span className="text-xs text-gray-500">
@@ -1048,7 +1043,7 @@ const CRM = () => {
 
                       {/* Follow-up Info */}
                       {lead.follow_up_needed && (
-                        <div className="text-xs text-yellow-500 flex items-center gap-1 font-medium">
+                        <div className="text-xs text-orange-600 flex items-center gap-1 font-medium">
                           <AlertCircle size={12} />
                           {lead.follow_up_at 
                             ? `Follow-up: ${format(new Date(lead.follow_up_at), 'dd/MM')}`
@@ -1073,7 +1068,6 @@ const CRM = () => {
                 setSelectedLeadId(null);
                 setLeadDetails(null);
               }}
-              className="text-gray-300 hover:text-white hover:bg-gray-800"
             >
               <ArrowLeft size={16} className="mr-2" />
               Voltar para Lista
@@ -1082,18 +1076,18 @@ const CRM = () => {
             {leadDetails && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white">
+                  <Button variant="outline" size="sm">
                     <MoreHorizontal size={16} />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-gray-900 border-gray-800">
+                <DropdownMenuContent align="end">
                   {leadDetails.lead.archived ? (
-                    <DropdownMenuItem onClick={() => handleArchiveLead(leadDetails.lead.id, false)} className="text-gray-300 hover:bg-gray-800 focus:bg-gray-800">
+                    <DropdownMenuItem onClick={() => handleArchiveLead(leadDetails.lead.id, false)}>
                       <ArchiveRestore size={16} className="mr-2" />
                       Restaurar Lead
                     </DropdownMenuItem>
                   ) : (
-                    <DropdownMenuItem onClick={() => handleArchiveLead(leadDetails.lead.id, true)} className="text-gray-300 hover:bg-gray-800 focus:bg-gray-800">
+                    <DropdownMenuItem onClick={() => handleArchiveLead(leadDetails.lead.id, true)}>
                       <Archive size={16} className="mr-2" />
                       Arquivar Lead
                     </DropdownMenuItem>
@@ -1102,7 +1096,7 @@ const CRM = () => {
                   {isMaster && leadDetails.lead.archived && !leadsWithOrders.has(leadDetails.lead.id) && (
                     <DropdownMenuItem 
                       onClick={() => handleDeleteLead(leadDetails.lead.id)}
-                      className="text-red-400 hover:bg-gray-800 focus:bg-gray-800"
+                      className="text-red-600"
                     >
                       <Trash2 size={16} className="mr-2" />
                       Excluir Permanentemente
@@ -1112,7 +1106,7 @@ const CRM = () => {
                   {isMaster && leadDetails.lead.archived && leadsWithOrders.has(leadDetails.lead.id) && (
                     <div className="px-2 py-1.5 text-sm text-gray-500 flex items-start gap-2">
                       <Info size={14} className="mt-0.5 flex-shrink-0" />
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs">
                         Lead arquivado possui pedidos vinculados. Não é possível excluir.
                       </span>
                     </div>
@@ -1121,7 +1115,7 @@ const CRM = () => {
                   {isMaster && (
                     <DropdownMenuItem 
                       onClick={handleHardDeleteLead}
-                      className="text-red-400 font-semibold hover:bg-gray-800 focus:bg-gray-800"
+                      className="text-red-600 font-semibold"
                     >
                       <Trash2 size={16} className="mr-2" />
                       Excluir Definitivamente (Hard Delete)
@@ -1142,20 +1136,20 @@ const CRM = () => {
                 storeWhatsApp={storeWhatsApp}
               />
 
-              <Card className="bg-gray-900 border-gray-800">
+              <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-white">
+                  <CardTitle className="flex items-center gap-2">
                     <User size={20} />
                     {leadDetails.lead.name}
                     {leadDetails.lead.archived && (
-                      <Badge variant="outline" className="ml-2 border-gray-700 text-gray-400">
+                      <Badge variant="outline" className="ml-2">
                         <Archive size={12} className="mr-1" />
                         Arquivado
                       </Badge>
                     )}
                   </CardTitle>
                   {leadDetails.lead.phone && (
-                    <CardDescription className="flex items-center gap-2 mt-2 text-gray-400">
+                    <CardDescription className="flex items-center gap-2 mt-2">
                       <Phone size={16} />
                       {leadDetails.lead.phone}
                     </CardDescription>
@@ -1165,16 +1159,16 @@ const CRM = () => {
                   <CardContent>
                     <div className="flex items-start gap-2">
                       <MessageSquare size={16} className="text-gray-500 mt-1" />
-                      <p className="text-sm text-gray-300">{leadDetails.lead.notes}</p>
+                      <p className="text-sm text-gray-700">{leadDetails.lead.notes}</p>
                     </div>
                   </CardContent>
                 )}
               </Card>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="bg-gray-900 border-gray-800">
+                <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg text-white">Anotações</CardTitle>
+                    <CardTitle className="text-lg">Anotações</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <Textarea
@@ -1182,23 +1176,22 @@ const CRM = () => {
                       value={noteText}
                       onChange={(e) => setNoteText(e.target.value)}
                       rows={4}
-                      className="bg-gray-800 border-gray-700 text-white placeholder-gray-500"
                     />
-                    <Button onClick={handleSaveNote} disabled={savingNote || !noteText.trim()} className="bg-green-600 hover:bg-green-700">
+                    <Button onClick={handleSaveNote} disabled={savingNote || !noteText.trim()}>
                       {savingNote ? 'Salvando...' : 'Salvar Nota'}
                     </Button>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gray-900 border-gray-800">
+                <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg text-white">Follow-up</CardTitle>
+                    <CardTitle className="text-lg">Follow-up</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <AlertCircle size={16} className="text-yellow-500" />
-                        <span className="font-medium text-gray-300">Precisa de follow-up?</span>
+                        <AlertCircle size={16} className="text-orange-500" />
+                        <span className="font-medium">Precisa de follow-up?</span>
                       </div>
                       <Switch
                         checked={followUpNeeded}
@@ -1208,15 +1201,15 @@ const CRM = () => {
 
                     {followUpNeeded && (
                       <div>
-                        <label className="text-sm font-medium mb-2 block text-gray-300">Data do follow-up</label>
+                        <label className="text-sm font-medium mb-2 block">Data do follow-up</label>
                         <Popover>
                           <PopoverTrigger asChild>
-                            <Button variant="outline" className="w-full justify-start text-left bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white">
+                            <Button variant="outline" className="w-full justify-start text-left">
                               <CalendarIcon size={16} className="mr-2" />
                               {followUpDate ? format(followUpDate, 'dd/MM/yyyy') : 'Selecione uma data'}
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0 bg-gray-900 border-gray-800">
+                          <PopoverContent className="w-auto p-0">
                             <Calendar
                               mode="single"
                               selected={followUpDate}
@@ -1231,9 +1224,9 @@ const CRM = () => {
                 </Card>
               </div>
 
-              <Card className="bg-gray-900 border-gray-800">
+              <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg text-white">Linha do Tempo</CardTitle>
+                  <CardTitle className="text-lg">Linha do Tempo</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {leadDetails.timeline.length === 0 ? (
@@ -1246,7 +1239,7 @@ const CRM = () => {
                             {getTimelineIcon(event.type)}
                           </div>
                           <div className="flex-1">
-                            <p className="text-sm text-gray-200">{getTimelineMessage(event)}</p>
+                            <p className="text-sm text-gray-900">{getTimelineMessage(event)}</p>
                             <p className="x text-xs text-gray-500 mt-1">
                               {format(new Date(event.created_at), "dd/MM/yyyy 'às' HH:mm")}
                             </p>
@@ -1259,10 +1252,10 @@ const CRM = () => {
               </Card>
 
               <div>
-                <h2 className="text-xl font-semibold mb-4 text-white">Oportunidades</h2>
+                <h2 className="text-xl font-semibold mb-4">Oportunidades</h2>
                 
                 {leadDetails.opportunities.length === 0 ? (
-                  <Card className="bg-gray-900 border-gray-800">
+                  <Card>
                     <CardContent className="p-8 text-center text-gray-500">
                       Nenhuma oportunidade associada.
                     </CardContent>
@@ -1270,31 +1263,31 @@ const CRM = () => {
                 ) : (
                   <div className="space-y-4">
                     {leadDetails.opportunities.map((opp) => (
-                      <Card key={opp.id} className="bg-gray-900 border-gray-800">
+                      <Card key={opp.id}>
                         <CardContent className="p-6">
                           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div className="flex-1 space-y-2">
                               {opp.products?.name ? (
                                 <div className="flex items-center gap-2">
                                   <Package size={16} className="text-gray-500" />
-                                  <span className="font-medium text-white">{opp.products.name}</span>
+                                  <span className="font-medium">{opp.products.name}</span>
                                 </div>
                               ) : opp.product_id ? (
                                 <div className="flex items-center gap-2">
                                   <Package size={16} className="text-gray-500" />
-                                  <span className="font-medium text-gray-400">Produto removido (ID: {opp.product_id.slice(0, 8)}...)</span>
+                                  <span className="font-medium text-gray-600">Produto removido (ID: {opp.product_id.slice(0, 8)}...)</span>
                                 </div>
                               ) : null}
 
                               <div className="flex items-center gap-2">
                                 <Clock size={16} className="text-gray-500" />
-                                <span className="text-sm text-gray-400">
+                                <span className="text-sm text-gray-500">
                                   Criada em {new Date(opp.created_at).toLocaleDateString()}
                                 </span>
                               </div>
                               
                               <div className="flex items-center gap-3">
-                                <span className="text-sm font-medium text-gray-300">Estágio:</span>
+                                <span className="text-sm font-medium">Estágio:</span>
                                 <Badge className={getStageColor(opp.stage)}>
                                   {OPPORTUNITY_STAGE_LABELS[opp.stage as OpportunityStage] || opp.stage.replace(/_/g, ' ')}
                                 </Badge>
@@ -1307,10 +1300,10 @@ const CRM = () => {
                                 onValueChange={(value) => handleStageChange(opp.id, value)}
                                 disabled={updatingStage === opp.id}
                               >
-                                <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                                <SelectTrigger>
                                   <SelectValue placeholder="Mudar estágio" />
                                 </SelectTrigger>
-                                <SelectContent className="bg-gray-900 border-gray-700">
+                                <SelectContent>
                                   <SelectItem value={OpportunityStage.NEW_INTEREST}>Primeiro contato</SelectItem>
                                   <SelectItem value={OpportunityStage.TALKING_AI}>Falando com IA</SelectItem>
                                   <SelectItem value={OpportunityStage.TALKING_HUMAN}>Falando com Humano</SelectItem>
@@ -1325,7 +1318,7 @@ const CRM = () => {
                                   onClick={() => handleArchiveOpportunity(opp.id, !opp.archived)}
                                   variant="outline"
                                   size="sm"
-                                  className="flex-1 border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
+                                  className="flex-1"
                                 >
                                   <Archive size={14} className="mr-1" />
                                   {opp.archived ? 'Restaurar' : 'Arquivar'}
@@ -1335,13 +1328,13 @@ const CRM = () => {
                                     onClick={() => handleDeleteOpportunity(opp.id)}
                                     variant="ghost"
                                     size="sm"
-                                    className="text-red-400 hover:text-red-300 hover:bg-gray-800"
+                                    className="text-red-600 hover:text-red-700"
                                   >
                                     <Trash2 size={14} />
                                   </Button>
                                 )}
                                 {isMaster && opportunitiesWithOrders.has(opp.id) && (
-                                  <div className="flex items-center gap-1 text-xs text-gray-500 px-2 py-1 bg-gray-800 rounded">
+                                  <div className="flex items-center gap-1 text-xs text-gray-500 px-2 py-1 bg-gray-100 rounded">
                                     <Info size={12} />
                                     <span>Possui pedido</span>
                                   </div>

@@ -45,6 +45,12 @@ const HomeHeader = () => {
             >
               Sobre Nós
             </Link>
+            <Link 
+              to="/montadores"
+              className="text-white hover:text-green-400 font-medium transition-colors"
+            >
+              Montadores
+            </Link>
             <Button 
               onClick={handleWhatsAppClick}
               className="bg-green-600 hover:bg-green-700 text-white font-medium"
@@ -90,6 +96,12 @@ const HomeHeader = () => {
               className="block w-full text-left text-white hover:text-green-400 font-medium py-2"
             >
               Sobre Nós
+            </Link>
+            <Link 
+              to="/montadores"
+              className="block w-full text-left text-white hover:text-green-400 font-medium py-2"
+            >
+              Montadores
             </Link>
             <Button 
               onClick={handleWhatsAppClick}

@@ -23,6 +23,7 @@ import NotFound from "./pages/NotFound";
 import HomeNew from "./pages/HomeNew";
 import About from "./pages/About";
 import SiteContent from "./pages/app/SiteContent";
+import Montadores from "./pages/public/Montadores";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,9 @@ const App = () => (
             
             {/* Sobre Nós */}
             <Route path="/sobre" element={<About />} />
+            
+            {/* Montadores */}
+            <Route path="/montadores" element={<Montadores />} />
             
             {/* Alias /home: Aponta para a Home Oficial */}
             <Route path="/home" element={<HomeNew />} />
@@ -102,7 +106,7 @@ const App = () => (
               } />
               
               <Route path="installers" element={
-                <PermissionGate allowedRoles={[Role.MASTER]}>
+                <PermissionGate allowedRoles={[Role.MASTER, Role.GESTOR]}>
                   <Installers />
                 </PermissionGate>
               } />

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { RefreshCw, Users, Plus, Loader2 } from 'lucide-react';
-import { installerService } from '@/services/installersService';
+import { installersService } from '@/services/installersService';
 import { showSuccess, showError } from '@/utils/toast';
 
 export default function Installers() {
@@ -25,7 +25,7 @@ export default function Installers() {
   const loadInstallers = async () => {
     setLoading(true);
     try {
-      const data = await installerService.getActiveInstallers();
+      const data = await installersService.getActiveInstallers();
       setInstallers(data);
     } catch (error) {
       console.error('[Installers] Erro ao carregar:', error);
@@ -64,7 +64,7 @@ export default function Installers() {
 
     setSaving(true);
     try {
-      await installerService.createInstaller({
+      await installersService.createInstaller({
         name: formData.name.trim(),
         phone: formData.phone.trim(),
         city: formData.city.trim() || undefined,
@@ -84,7 +84,7 @@ export default function Installers() {
 
   const handleDeactivate = async (id: string) => {
     try {
-      await installerService.toggleInstallerStatus(id, false);
+      await installersService.toggleInstallerStatus(id, false);
       showSuccess('Montador desativado com sucesso');
       await loadInstallers();
     } catch (error: any) {
@@ -92,7 +92,6 @@ export default function Installers() {
       showError(error.message || 'Erro ao desativar montador');
     }
   };
-
   
   return (
     
@@ -213,7 +212,7 @@ export default function Installers() {
               <Input
                 id="installer_city"
                 value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                onChange={((e) => setFormData({ ...formData, city: e.target.value })}
                 placeholder="Ex: São Paulo"
                 disabled={saving}
               />

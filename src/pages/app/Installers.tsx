@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { RefreshCw, Users, Plus, Loader2 } from 'lucide-react';
-import { installersService } from '@/services/installersService';
+import { installerService } from '@/services/installersService';
 import { showSuccess, showError } from '@/utils/toast';
 
 export default function Installers() {
@@ -25,7 +25,7 @@ export default function Installers() {
   const loadInstallers = async () => {
     setLoading(true);
     try {
-      const data = await installersService.getActiveInstallers();
+      const data = await installerService.getActiveInstallers();
       setInstallers(data);
     } catch (error) {
       console.error('[Installers] Erro ao carregar:', error);
@@ -64,7 +64,7 @@ export default function Installers() {
 
     setSaving(true);
     try {
-      await installersService.createInstaller({
+      await installerService.createInstaller({
         name: formData.name.trim(),
         phone: formData.phone.trim(),
         city: formData.city.trim() || undefined,
@@ -84,7 +84,7 @@ export default function Installers() {
 
   const handleDeactivate = async (id: string) => {
     try {
-      await installersService.toggleInstallerStatus(id, false);
+      await installerService.toggleInstallerStatus(id, false);
       showSuccess('Montador desativado com sucesso');
       await loadInstallers();
     } catch (error: any) {
@@ -92,8 +92,10 @@ export default function Installers() {
       showError(error.message || 'Erro ao desativar montador');
     }
   };
+
   
   return (
+    
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <div>

@@ -16,6 +16,18 @@ export const installerService = {
     return data || [];
   },
 
+  async toggleInstallerStatus(id: string, active: boolean) {
+  const { data, error } = await supabase
+    .from('installers')
+    .update({ active })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+},
+
   async createInstaller(payload: {
     name: string;
     phone: string;

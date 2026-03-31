@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { RefreshCw, Phone, MapPin, Users, Plus, Loader2 } from 'lucide-react';
+import { RefreshCw, Users, Plus, Loader2 } from 'lucide-react';
 import { installerService } from '@/services/installersService';
 import { showSuccess, showError } from '@/utils/toast';
 
@@ -82,6 +82,17 @@ export default function Installers() {
     }
   };
 
+  const handleDeactivate = async (id: string) => {
+    try {
+      await installerService.toggleInstallerStatus(id, false);
+      showSuccess('Montador desativado com sucesso');
+      await loadInstallers();
+    } catch (error: any) {
+      console.error('[Installers] Erro ao desativar:', error);
+      showError(error.message || 'Erro ao desativar montador');
+    }
+  };
+
   
   return (
     
@@ -145,6 +156,15 @@ export default function Installers() {
                         </div>
                       )}
                     </div>
+                    {installer.active && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeactivate(installer.id)}
+                      >
+                        Desativar
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}

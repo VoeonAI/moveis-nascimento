@@ -60,17 +60,19 @@ const handleSearch = () => {
               Sobre Nós
             </Link>
             <Link 
-              to="/montadores"
+              to="/about"
               className="text-white hover:text-green-400 font-medium transition-colors"
             >
               Montadores
             </Link>
-            <Button 
-              onClick={handleWhatsAppClick}
-              className="bg-green-600 hover:bg-green-700 text-white font-medium"
+            <Link
+             to="/montadores"
+              className="text-white hover:text-green-400 font-medium transition-colors"
             >
               Fale com o Nas
             </Button>
+            onClick={handleWhatsAppClick}
+              className="bg-green-600 hover:bg-green-700 text-white font-medium"
           </nav>
 
           {/* Search Bar */}

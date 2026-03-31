@@ -16,17 +16,19 @@ export const installerService = {
     return data || [];
   },
 
-  async toggleInstallerStatus(id: string, active: boolean) {
-  const { data, error } = await supabase
-    .from('installers')
-    .update({ active })
-    .eq('id', id)
-    .select()
-    .single();
+  async getAllInstallers() {
+    const { data, error } = await supabase
+      .from('installers')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-  if (error) throw error;
-  return data;
-},
+    if (error) {
+      console.error('[installerService] erro:', error);
+      return [];
+    }
+
+    return data || [];
+  },
 
   async createInstaller(payload: {
     name: string;
@@ -48,5 +50,17 @@ export const installerService = {
     }
 
     return data;
+  },
+
+  async toggleInstallerStatus(id: string, active: boolean) {
+    const { error } = await supabase
+      .from('installers')
+      .update({ active })
+      .eq('id', id);
+
+    if (error) {
+      console.error('[installerService] erro ao alterar status:', error);
+      throw error;
+    }
   },
 };

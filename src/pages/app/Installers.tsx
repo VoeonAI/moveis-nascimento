@@ -1,17 +1,18 @@
 import { Badge } from "@/components/ui/badge";
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { RefreshCw, Users, Plus, Loader2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { RefreshCw, Users, Plus, Loader2, Eye, EyeOff } from 'lucide-react';
 import { installerService } from '@/services/installersService';
 import { showSuccess, showError } from '@/utils/toast';
 
 export default function Installers() {
   const [installers, setInstallers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showInactive, setShowInactive] = useState(false);
   
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -25,7 +26,9 @@ export default function Installers() {
   const loadInstallers = async () => {
     setLoading(true);
     try {
-      const data = await installerService.getActiveInstallers();
+      const data = showInactive 
+        ? await installerService.getAllInstallers()
+        : await installerService.getActiveInstallers();
       setInstallers(data);
     } catch (error) {
       console.error('[Installers] Erro ao carregar:', error);
@@ -37,7 +40,7 @@ export default function Installers() {
 
   useEffect(() => {
     loadInstallers();
-  }, []);
+  }, [showInactive]);
 
   const handleOpenModal = () => {
     setFormData({ name: '', phone: '', city: '' });
@@ -72,7 +75,7 @@ export default function Installers() {
       
       showSuccess('Montador cadastrado com sucesso');
       setModalOpen(false);
-      setFormData({ name: '', phone: '', city: '' });
+           setFormData({ name: '', phone: '', city: '' });
       await loadInstallers();
     } catch (error: any) {
       console.error('[Installers] Erro ao salvar:', error);
@@ -82,20 +85,18 @@ export default function Installers() {
     }
   };
 
-  const handleDeactivate = async (id: string) => {
+  const handleToggleActive = async (id: string, currentActive: boolean) => {
     try {
-      await installerService.toggleInstallerStatus(id, false);
-      showSuccess('Montador desativado com sucesso');
+      await installerService.toggleInstallerStatus(id, !currentActive);
+      showSuccess(currentActive ? 'Montador desativado com sucesso' : 'Montador ativado com sucesso');
       await loadInstallers();
     } catch (error: any) {
-      console.error('[Installers] Erro ao desativar:', error);
-      showError(error.message || 'Erro ao desativar montador');
+      console.error('[Installers] Erro ao alterar status:', error);
+      showError(error.message || 'Erro ao alterar status');
     }
   };
-
   
   return (
-    
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -126,6 +127,23 @@ export default function Installers() {
                 {installers.length} montador{installers.length !== 1 ? 'es' : ''} cadastrado{installers.length !== 1 ? 's' : ''}
               </CardDescription>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowInactive(!showInactive)}
+            >
+              {showInactive ? (
+                <>
+                  <EyeOff size={16} className="mr-2" />
+                  Ocultar Inativos
+                </>
+              ) : (
+                <>
+                  <Eye size={16} className="mr-2" />
+                  Mostrar Inativos
+                </>
+              )}
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -156,15 +174,13 @@ export default function Installers() {
                         </div>
                       )}
                     </div>
-                    {installer.active && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeactivate(installer.id)}
-                      >
-                        Desativar
-                      </Button>
-                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleToggleActive(installer.id, installer.active)}
+                    >
+                      {installer.active ? 'Desativar' : 'Ativar'}
+                    </Button>
                   </div>
                 </div>
               ))}

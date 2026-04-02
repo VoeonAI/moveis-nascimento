@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/products/ProductCard';
 import HomeHeader from '@/components/home/HomeHeader';
+import { supabase } from '@/core/supabaseClient';
 
 const Index = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -21,6 +22,7 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('newest');
+  const [whatsappNumber, setWhatsappNumber] = useState('');
   const { profile } = useAuth();
   const [searchParams] = useSearchParams();
   const searchFromUrl = searchParams.get('search') || '';
@@ -29,6 +31,25 @@ const Index = () => {
   setSearchQuery(searchFromUrl);
 }, [searchFromUrl]);
 
+  useEffect(() => {
+    const loadWhatsappNumber = async () => {
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'store_whatsapp_e164')
+        .single();
+
+      if (error) {
+        console.error('Erro ao carregar WhatsApp da loja:', error);
+        return;
+      }
+
+      setWhatsappNumber(data?.value || '');
+    };
+
+    loadWhatsappNumber();
+  }, []);
+
   // Check if user can see internal price
   const canSeeInternalPrice = [Role.MASTER, Role.GESTOR, Role.ESTOQUE].includes(profile?.role ?? "");
 
@@ -36,6 +57,20 @@ const Index = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  const handleWhatsAppClick = () => {
+    if (!whatsappNumber) {
+      console.error('WhatsApp da loja não configurado.');
+      return;
+    }
+
+    const normalized = whatsappNumber.replace(/\D/g, '');
+    const message = encodeURIComponent(
+      'Oi, eu estava navegando pelo site e gostaria de ajuda.'
+    );
+
+    window.open(`https://wa.me/${normalized}?text=${message}`, '_blank');
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -175,7 +210,7 @@ const Index = () => {
             </div>
             <Button 
               className="bg-green-600 hover:bg-green-700 text-white"
-              onClick={() => window.open('https://wa.me/5511999999999', '_blank')}
+              onClick={handleWhatsAppClick}
             >
               Falar com Nas
             </Button>

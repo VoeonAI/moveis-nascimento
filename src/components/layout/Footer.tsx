@@ -42,6 +42,7 @@ const Footer = () => {
                   <div>
                     <p className="font-medium text-white">Joanópolis - SP</p>
                     <p className="text-sm">Av. Principal, 1234<br/>Centro - Joanópolis/SP</p>
+                    <p className="text-sm mt-1">(11) 99806-2990</p>
                   </div>
                 </div>
               </li>
@@ -51,6 +52,7 @@ const Footer = () => {
                   <div>
                     <p className="font-medium text-white">Extrema - MG</p>
                     <p className="text-sm">Rua das Flores, 567<br/>Centro - Extrema/MG</p>
+                    <p className="text-sm mt-1">(35) 3435-2244</p>
                   </div>
                 </div>
               </li>
@@ -61,10 +63,6 @@ const Footer = () => {
           <div>
             <h4 className="font-semibold mb-4 text-lg">Contato</h4>
             <ul className="space-y-3 text-gray-400 mb-6">
-              <li className="flex items-center gap-2">
-                <Phone size={16} className="text-green-400" />
-                <span>(11) 99999-9999</span>
-              </li>
               <li className="flex items-center gap-2">
                 <Mail size={16} className="text-green-400" />
                 <span>contato@moveisnascimento.com.br</span>

@@ -98,7 +98,7 @@ const Users = () => {
       setConfirmDialog({
         open: true,
         userId,
-        userName: `ID: ${userId.slice(0, 8)}...`,
+        userName: getUserName(targetUser),
         newRole,
       });
       return;
@@ -224,6 +224,17 @@ const Users = () => {
     return currentUser?.id === userId;
   };
 
+  const getUserName = (user: UserProfile) => {
+    // Fallback: name → email → id reduzido
+    if ((user as any).name) {
+      return (user as any).name;
+    }
+    if (user.email) {
+      return user.email;
+    }
+    return `ID: ${user.id.slice(0, 8)}...`;
+  };
+
   if (loading) {
     return (
       <div className="p-8">
@@ -292,7 +303,7 @@ const Users = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className="font-medium">
-                          {isCurrentUser(user.id) ? 'Você' : `ID: ${user.id.slice(0, 8)}...`}
+                          {isCurrentUser(user.id) ? 'Você' : getUserName(user)}
                         </span>
                         {isCurrentUser(user.id) && (
                           <Badge variant="outline" className="text-xs">

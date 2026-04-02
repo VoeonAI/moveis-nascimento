@@ -43,12 +43,12 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
                 <RefreshCw size={14} className="mr-2" />
                 Recarregar
               </Button>
-              <Button 
-                size="sm" 
+              <Button
+                size="sm"
                 variant="destructive"
                 onClick={async () => {
                   await signOut();
-                  navigate('/app/login');
+                  navigate('/login');
                 }}
               >
                 <LogOut size={14} className="mr-2" />
@@ -77,7 +77,7 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
   }
 
   if (!user) {
-    return <Navigate to="/app/login" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   if (!profile) {
@@ -157,25 +157,25 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
                     </>
                   )}
                 </Button>
-              )}
-              
-              <Button 
-                size="sm" 
-                variant="destructive"
-                onClick={async () => {
-                  await signOut();
-                  navigate('/app/login');
-                }}
-              >
-                <LogOut size={14} className="mr-2" />
-                Sair
-              </Button>
-            </div>
-          </Alert>
-        </div>
+            )}
+            
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={async () => {
+                await signOut();
+                navigate('/login');
+              }}
+            >
+              <LogOut size={14} className="mr-2" />
+              Sair
+            </Button>
+          </div>
+        </Alert>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   return <>{children}</>;
 };

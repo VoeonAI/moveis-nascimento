@@ -42,6 +42,7 @@ const Users = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
+  const [showInactive, setShowInactive] = useState(false);
   
   // Temporary state for role changes
   const [pendingRoleChanges, setPendingRoleChanges] = useState<Record<string, Role>>({});
@@ -135,6 +136,12 @@ const Users = () => {
   };
 
   const handleToggleActive = async (userId: string, isActive: boolean) => {
+    // Não permitir desativar o próprio usuário
+    if (!isActive && isCurrentUser(userId)) {
+      showError('Você não pode desativar seu próprio usuário');
+      return;
+    }
+
     if (!confirm(`Tem certeza que deseja ${isActive ? 'ativar' : 'desativar'} este usuário?`)) {
       return;
     }
@@ -276,152 +283,173 @@ const Users = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield size={20} />
-            Lista de Usuários
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Shield size={20} />
+              Lista de Usuários
+            </CardTitle>
+            <Button
+              onClick={() => setShowInactive(!showInactive)}
+              variant={showInactive ? "default" : "outline"}
+              size="sm"
+            >
+              {showInactive ? "Ver Ativos" : "Ver Desativados"}
+            </Button>
+          </div>
           <CardDescription>
-            Total de {users.length} usuários cadastrados
+            {showInactive 
+              ? `${users.filter(u => u.is_active === false).length} usuários desativados`
+              : `${users.filter(u => u.is_active !== false).length} usuários ativos`}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {users.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              Nenhum usuário encontrado
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {users.map((user) => (
-                <div
-                  key={user.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center gap-4 flex-1">
-                    {/* Avatar */}
-                    <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                      <UserIcon size={20} className="text-gray-500" />
-                    </div>
+          {(() => {
+            const filteredUsers = showInactive 
+              ? users.filter(u => u.is_active === false)
+              : users.filter(u => u.is_active !== false);
 
-                    {/* User Info */}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">
-                          {isCurrentUser(user.id) ? 'Você' : getUserName(user)}
-                        </span>
-                        {isCurrentUser(user.id) && (
-                          <Badge variant="outline" className="text-xs">
-                            Eu
+            if (filteredUsers.length === 0) {
+              return (
+                <div className="text-center py-12 text-gray-500">
+                  {showInactive ? 'Nenhum usuário desativado' : 'Nenhum usuário ativo'}
+                </div>
+              );
+            }
+
+            return (
+              <div className="space-y-3">
+                {filteredUsers.map((user) => (
+                  <div
+                    key={user.id}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-4 flex-1">
+                      {/* Avatar */}
+                      <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                        <UserIcon size={20} className="text-gray-500" />
+                      </div>
+
+                      {/* User Info */}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">
+                            {isCurrentUser(user.id) ? 'Você' : getUserName(user)}
+                          </span>
+                          {isCurrentUser(user.id) && (
+                            <Badge variant="outline" className="text-xs">
+                              Eu
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-sm text-gray-500 mt-1">
+                          Criado em {new Date(user.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
+
+                      {/* Status Badges */}
+                      <div className="flex gap-2">
+                        <Badge className={getRoleBadgeColor(user.role)}>
+                          {getRoleLabel(user.role)}
+                        </Badge>
+                        {user.is_active === false && (
+                          <Badge variant="destructive" className="text-xs">
+                            Inativo
+                          </Badge>
+                        )}
+                        {user.must_change_password && (
+                          <Badge variant="outline" className="text-xs border-orange-300 text-orange-700">
+                            Trocar Senha
                           </Badge>
                         )}
                       </div>
-                      <div className="text-sm text-gray-500 mt-1">
-                        Criado em {new Date(user.created_at).toLocaleDateString()}
-                      </div>
                     </div>
 
-                    {/* Status Badges */}
-                    <div className="flex gap-2">
-                      <Badge className={getRoleBadgeColor(user.role)}>
-                        {getRoleLabel(user.role)}
-                      </Badge>
-                      {user.is_active === false && (
-                        <Badge variant="destructive" className="text-xs">
-                          Inativo
-                        </Badge>
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 ml-4">
+                      {!isCurrentUser(user.id) && (
+                        <>
+                          {/* Role Selector */}
+                          <Select
+                            value={pendingRoleChanges[user.id] ?? user.role}
+                            onValueChange={(value) => handleRoleChange(user.id, value as Role)}
+                            disabled={updatingUserId === user.id}
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={Role.GESTOR}>Gestor</SelectItem>
+                              <SelectItem value={Role.ESTOQUE}>Estoque</SelectItem>
+                              <SelectItem value={Role.MASTER}>Master</SelectItem>
+                            </SelectContent>
+                          </Select>
+
+                          {pendingRoleChanges[user.id] && pendingRoleChanges[user.id] !== user.role && (
+                            <Button
+                              onClick={() => handleSaveRole(user.id)}
+                              disabled={updatingUserId === user.id}
+                              size="sm"
+                              variant="default"
+                            >
+                              {updatingUserId === user.id ? (
+                                'Salvando...'
+                              ) : (
+                                <>
+                                  <Check size={14} className="mr-1" />
+                                  Salvar
+                                </>
+                              )}
+                            </Button>
+                          )}
+
+                          {pendingRoleChanges[user.id] && pendingRoleChanges[user.id] !== user.role && (
+                            <Button
+                              onClick={() => handleRoleChange(user.id, user.role)}
+                              disabled={updatingUserId === user.id}
+                              size="sm"
+                              variant="ghost"
+                            >
+                              <X size={14} />
+                            </Button>
+                          )}
+
+                          {/* Toggle Active */}
+                          <Button
+                            onClick={() => handleToggleActive(user.id, user.is_active !== false)}
+                            disabled={updatingUserId === user.id}
+                            size="sm"
+                            variant={user.is_active === false ? "default" : "outline"}
+                            title={user.is_active === false ? "Ativar usuário" : "Desativar usuário"}
+                          >
+                            {user.is_active === false ? "Reativar" : "Desativar"}
+                          </Button>
+
+                          {/* Force Password Change */}
+                          {!user.must_change_password && !showInactive && (
+                            <Button
+                              onClick={() => handleForcePasswordChange(user.id)}
+                              disabled={updatingUserId === user.id}
+                              size="sm"
+                              variant="ghost"
+                              title="Forçar troca de senha"
+                            >
+                             <AlertTriangle size={14} />
+                            </Button>
+                          )}
+                        </>
                       )}
-                      {user.must_change_password && (
-                        <Badge variant="outline" className="text-xs border-orange-300 text-orange-700">
-                          Trocar Senha
-                        </Badge>
+
+                      {isCurrentUser(user.id) && (
+                        <div className="ml-4 text-sm text-gray-400 italic">
+                          Não é possível alterar seus próprios dados
+                        </div>
                       )}
                     </div>
                   </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 ml-4">
-                    {!isCurrentUser(user.id) && (
-                      <>
-                        {/* Role Selector */}
-                        <Select
-                          value={pendingRoleChanges[user.id] ?? user.role}
-                          onValueChange={(value) => handleRoleChange(user.id, value as Role)}
-                          disabled={updatingUserId === user.id}
-                        >
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={Role.GESTOR}>Gestor</SelectItem>
-                            <SelectItem value={Role.ESTOQUE}>Estoque</SelectItem>
-                            <SelectItem value={Role.MASTER}>Master</SelectItem>
-                          </SelectContent>
-                        </Select>
-
-                        {pendingRoleChanges[user.id] && pendingRoleChanges[user.id] !== user.role && (
-                          <Button
-                            onClick={() => handleSaveRole(user.id)}
-                            disabled={updatingUserId === user.id}
-                            size="sm"
-                            variant="default"
-                          >
-                            {updatingUserId === user.id ? (
-                              'Salvando...'
-                            ) : (
-                              <>
-                                <Check size={14} className="mr-1" />
-                                Salvar
-                              </>
-                            )}
-                          </Button>
-                        )}
-
-                        {pendingRoleChanges[user.id] && pendingRoleChanges[user.id] !== user.role && (
-                          <Button
-                            onClick={() => handleRoleChange(user.id, user.role)}
-                            disabled={updatingUserId === user.id}
-                            size="sm"
-                            variant="ghost"
-                          >
-                            <X size={14} />
-                          </Button>
-                        )}
-
-                        {/* Toggle Active */}
-                        <Button
-                          onClick={() => handleToggleActive(user.id, user.is_active !== false)}
-                          disabled={updatingUserId === user.id}
-                          size="sm"
-                          variant={user.is_active === false ? "default" : "outline"}
-                          title={user.is_active === false ? "Ativar usuário" : "Desativar usuário"}
-                        >
-                          {user.is_active === false ? "Ativar" : "Desativar"}
-                        </Button>
-
-                        {/* Force Password Change */}
-                        {!user.must_change_password && (
-                          <Button
-                            onClick={() => handleForcePasswordChange(user.id)}
-                            disabled={updatingUserId === user.id}
-                            size="sm"
-                            variant="ghost"
-                            title="Forçar troca de senha"
-                          >
-                           <AlertTriangle size={14} />
-                          </Button>
-                        )}
-                      </>
-                    )}
-
-                    {isCurrentUser(user.id) && (
-                      <div className="ml-4 text-sm text-gray-400 italic">
-                        Não é possível alterar seus próprios dados
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
 

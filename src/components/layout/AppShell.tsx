@@ -106,7 +106,11 @@ const AppShell = () => {
           <div className="h-full flex flex-col">
             {/* Logo */}
             <div className="p-6 border-b">
-              <h1 className="text-xl font-bold text-gray-900">Painel Interno</h1>
+              <img
+                src="https://kbpkdnptzvsvoujirfwe.supabase.co/storage/v1/object/public/logo-variacoes/Moveis-nascimento---logo-site.png"
+                alt="Móveis Nascimento"
+                className="h-12 w-auto"
+              />
             </div>
 
             {/* Profile Warning - só mostra se não está carregando E profile é null */}

@@ -1,0 +1,298 @@
+{
+  "base_url": "https://kbpkdnptzvsvoujirfwe.supabase.co/functions/v1/",
+  "headers": {
+    "Content-Type": "application/json",
+    "x-agent-token": "SUBSTITUIR_PELO_SEU_TOKEN_HASH"
+  },
+  "endpoints": {
+    "1_criar_lead": {
+      "method": "POST",
+      "url": "agent_create_lead",
+      "body": {
+        "name": "Teste Integração IA",
+        "phone": "11999999999",
+        "channel": "site",
+        "status": "new_interest",
+        "notes": "Lead criado para validação de endpoints"
+      },
+      "expected_response": {
+        "ok": true,
+        "message": "Lead created successfully",
+        "lead": {
+          "id": "uuid-sera-gerado",
+          "name": "Teste Integração IA",
+          "phone": "11999999999",
+          "channel": "site",
+          "status": "new_interest",
+          "created_at": "2024-01-01T12:00:00.000Z"
+        }
+      },
+      "database_check": "SELECT * FROM leads WHERE name = 'Teste Integração IA' ORDER BY created_at DESC LIMIT 1;",
+      "required_scope": "leads:write"
+    },
+    "2_atualizar_status_lead": {
+      "method": "POST",
+      "url": "agent_update_lead_status",
+      "body": {
+        "lead_id": "SUBSTITUIR_PELO_ID_DO_LEAD",
+        "status": "talking_human"
+      },
+      "expected_response": {
+        "ok": true,
+        "message": "Lead status updated successfully",
+        "lead_id": "uuid-do-lead",
+        "old_status": "new_interest",
+        "new_status": "talking_human"
+      },
+      "database_check": "SELECT id, name, status FROM leads WHERE id = 'uuid-do-lead';",
+      "required_scope": "leads:update"
+    },
+    "3_adicionar_nota_lead": {
+      "method": "POST",
+      "url": "agent_add_lead_note",
+      "body": {
+        "lead_id": "SUBSTITUIR_PELO_ID_DO_LEAD",
+        "message": "Nota de teste validada via n8n"
+      },
+      "expected_response": {
+        "ok": true,
+        "message": "Lead note added successfully",
+        "lead_id": "uuid-do-lead",
+        "note": {
+          "id": "uuid-da-nota",
+          "message": "Nota de teste validada via n8n",
+          "created_at": "2024-01-01T12:00:00.000Z"
+        }
+      },
+      "database_check": "SELECT * FROM lead_timeline WHERE lead_id = 'uuid-do-lead' ORDER BY created_at DESC LIMIT 1;",
+      "required_scope": "leads:write"
+    },
+    "4_buscar_status_pedido": {
+      "method": "GET",
+      "url": "agent_get_order_status",
+      "query_params": {
+        "order_id": "SUBSTITUIR_POR_ORDER_ID_VALIDO"
+      },
+      "expected_response": {
+        "ok": true,
+        "order": {
+          "id": "uuid-do-pedido",
+          "status": {
+            "technical": "assembly",
+            "friendly": "Em Montagem"
+          },
+          "created_at": "2024-01-01T12:00:00.000Z",
+          "updated_at": "2024-01-02T10:00:00.000Z"
+        },
+        "customer": {
+          "id": "uuid-do-lead",
+          "name": "Nome do Cliente",
+          "phone": "11999999999"
+        },
+        "opportunity": {
+          "id": "uuid-da-oportunidade",
+          "stage": {
+            "technical": "won",
+            "friendly": "Ganho"
+          },
+          "product": {
+            "name": "Nome do Produto"
+          }
+        }
+      },
+      "database_check": "SELECT * FROM orders WHERE id = 'uuid-do-pedido';",
+      "required_scope": "leads:read ou products:read"
+    },
+    "5_buscar_montadores": {
+      "method": "GET",
+      "url": "agent_get_assemblers",
+      "query_params": {
+        "city": "São Paulo",
+        "limit": "10"
+      },
+      "expected_response": {
+        "ok": true,
+        "assemblers": [
+          {
+            "id": "uuid-do-montador-1",
+            "name": "Nome do Montador",
+            "phone": "11999999999",
+            "city": "São Paulo",
+            "bio": "Biografia do montador",
+            "photo_url": "https://url-da-foto.jpg"
+          }
+        ],
+        "count": 1
+      },
+      "database_check": "SELECT * FROM installers WHERE active = true ORDER BY sort_order ASC LIMIT 10;",
+      "required_scope": "leads:read ou products:read",
+      "alternative_queries": [
+        "Sem filtro: GET agent_get_assemblers",
+        "Por cidade: GET agent_get_assemblers?city=Campinas",
+        "Limit: GET agent_get_assemblers?limit=5"
+      ]
+    },
+    "6_buscar_produtos": {
+      "method": "GET",
+      "url": "agent_products_search",
+      "query_params": {
+        "q": "solar",
+        "category": "modulos-solares",
+        "limit": "10"
+      },
+      "expected_response": {
+        "ok": true,
+        "products": [
+          {
+            "id": "uuid-do-produto",
+            "name": "Módulo Solar 400W",
+            "short_description": "Descrição do produto...",
+            "category_slug": "modulos-solares",
+            "category_name": "Módulos Solares",
+            "image": "https://url-da-imagem.jpg",
+            "public_url": "https://site.com/product/uuid-do-produto"
+          }
+        ],
+        "count": 1
+      },
+      "database_check": "SELECT * FROM products WHERE active = true LIMIT 10;",
+      "required_scope": "products:read",
+      "alternative_queries": [
+        "Todos os produtos: GET agent_products_search",
+        "Busca simples: GET agent_products_search?q=solar",
+        "Por categoria: GET agent_products_search?category=modulos-solares",
+        "Limit: GET agent_products_search?limit=5"
+      ]
+    },
+    "7_buscar_produto_por_id": {
+      "method": "GET",
+      "url": "agent_product_by_id",
+      "query_params": {
+        "id": "SUBSTITUIR_POR_PRODUCT_ID_VALIDO"
+      },
+      "expected_response": {
+        "ok": true,
+        "product": {
+          "id": "uuid-do-produto",
+          "name": "Módulo Solar 400W",
+          "description": "Descrição completa do produto...",
+          "images": ["url1.jpg", "url2.jpg"],
+          "categories": [
+            {
+              "id": "uuid-da-categoria",
+              "name": "Módulos Solares",
+              "slug": "modulos-solares"
+            }
+          ],
+          "public_url": "https://site.com/product/uuid-do-produto",
+          "private": null
+        }
+      },
+      "database_check": "SELECT * FROM products WHERE id = 'uuid-do-produto';",
+      "required_scope": "products:read",
+      "note": "Campo 'private' só será preenchido se o token tiver scope 'products:read_private'"
+    }
+  },
+  "error_test_cases": {
+    "sem_token": {
+      "description": "Testar sem header x-agent-token",
+      "expected": {
+        "ok": false,
+        "error": "Missing x-agent-token header"
+      }
+    },
+    "token_invalido": {
+      "description": "Usar token hash inválido",
+      "x-agent-token": "token_invalido_teste_12345",
+      "expected": {
+        "ok": false,
+        "error": "Invalid or inactive token"
+      }
+    },
+    "sem_permissao": {
+      "description": "Usar token sem scope necessário",
+      "instruction": "Criar token sem o scope necessário para o endpoint",
+      "expected": {
+        "ok": false,
+        "error": "Insufficient permissions"
+      }
+    },
+    "parametros_faltando": {
+      "description": "Não enviar campos obrigatórios",
+      "instruction": "Remover campos obrigatórios do body ou query params",
+      "expected": {
+        "ok": false,
+        "error": "Missing required field: X"
+      }
+    },
+    "id_inexistente": {
+      "description": "Usar ID que não existe no banco",
+      "test_ids": [
+        "00000000-0000-0000-0000-000000000000",
+        "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      ],
+      "expected": {
+        "ok": false,
+        "error": "Lead not found ou Order not found ou Product not found"
+      }
+    }
+  },
+  "lead_status_options": {
+    "new_interest": "Novo Interesse",
+    "talking_ai": "Falando com IA",
+    "talking_human": "Falando com Humano",
+    "proposal_sent": "Proposta Enviada",
+    "won": "Ganho",
+    "lost": "Perdido"
+  },
+  "order_stage_options": {
+    "order_created": "Pedido Criado",
+    "preparing_order": "Preparando Pedido",
+    "assembly": "Em Montagem",
+    "ready_to_ship": "Pronto para Envio",
+    "delivery_route": "Em Rota de Entrega",
+    "delivered": "Entregue",
+    "canceled": "Cancelado"
+  },
+  "channel_options": {
+    "site": "Site",
+    "whatsapp": "WhatsApp",
+    "instagram": "Instagram",
+    "facebook": "Facebook",
+    "google": "Google"
+  },
+  "setup_checklist": [
+    "✅ Criar token de agente no banco",
+    "✅ Configurar scopes do token (leads:read, leads:write, leads:update, products:read)",
+    "✅ Obter token_hash do token criado",
+    "✅ Ter pelo menos um pedido (order) no banco",
+    "✅ Ter pelo menos um produto (product) no banco",
+    "✅ Ter pelo menos um montador ativo (installer) no banco",
+    "✅ Substituir SUBSTITUIR_PELO_SEU_TOKEN_HASH neste JSON",
+    "✅ Substituir IDs placeholder (SUBSTITUIR_POR_...) após cada teste"
+  ],
+  "validation_steps": {
+    "para_cada_endpoint": [
+      "Enviar request com payload correto",
+      "Validar que response.ok é true",
+      "Validar que campos esperados estão presentes",
+      "Executar database_check no Supabase",
+      "Comparar resultado do banco com response",
+      "Registrar resultado (✅ ou ❌)"
+    ],
+    "para_testes_de_erro": [
+      "Aplicar condição de erro (sem token, token inválido, etc)",
+      "Enviar request",
+      "Validar que response.ok é false",
+      "Validar que message de erro está correta",
+      "Registrar resultado (✅ ou ❌)"
+    ]
+  },
+  "notes": [
+    "Todos os endpoints retornam status HTTP 200 mesmo em erros",
+    "Use o campo 'ok' na resposta para determinar sucesso/falha",
+    "IDs retornados em um teste devem ser usados nos próximos",
+    "Sempre valide no banco de dados após cada teste",
+    "Logs de cada endpoint aparecem no console com prefixo [nome-do-endpoint]"
+  ]
+}

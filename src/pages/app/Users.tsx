@@ -415,7 +415,7 @@ const Users = () => {
 
                           {/* Toggle Active */}
                           <Button
-                            onClick={() => handleToggleActive(user.id, user.is_active !== false)}
+                            onClick={() => handleToggleActive(user.id, !!user.is_active ? false : true)}
                             disabled={updatingUserId === user.id}
                             size="sm"
                             variant={user.is_active === false ? "default" : "outline"}

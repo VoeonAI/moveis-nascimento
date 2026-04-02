@@ -58,7 +58,7 @@ const App = () => (
             <Route path="/new-home" element={<HomeNew />} />
             
             {/* Login Route Alias */}
-            <Route path="/login" element={<Navigate to="/app/login" replace />} />
+            <Route path="/login" element={<Login />} />
             
             {/* Internal Routes */}
             <Route

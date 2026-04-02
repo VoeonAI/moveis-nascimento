@@ -2,9 +2,7 @@ import { supabase } from '@/core/supabaseClient';
 import { Profile } from '@/types';
 import { Role } from '@/constants/domain';
 
-export interface UserProfile extends Profile {
-  email?: string;
-}
+export interface UserProfile extends Profile {}
 
 export const usersService = {
   async listProfiles(): Promise<UserProfile[]> {
@@ -27,6 +25,7 @@ export const usersService = {
   },
 
   async createUser(data: {
+    name: string;
     email: string;
     password: string;
     role: Role;

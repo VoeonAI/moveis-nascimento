@@ -57,6 +57,7 @@ const Users = () => {
   // Create User Modal State
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createFormData, setCreateFormData] = useState({
+    name: '',
     email: '',
     password: '',
     role: Role.GESTOR,
@@ -166,8 +167,8 @@ const Users = () => {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!createFormData.email.trim() || !createFormData.password.trim()) {
-      showError('Email e senha são obrigatórios');
+    if (!createFormData.name.trim() || !createFormData.email.trim() || !createFormData.password.trim()) {
+      showError('Nome, email e senha são obrigatórios');
       return;
     }
 
@@ -179,6 +180,7 @@ const Users = () => {
     setCreatingUser(true);
     try {
       await usersService.createUser({
+        name: createFormData.name,
         email: createFormData.email,
         password: createFormData.password,
         role: createFormData.role,
@@ -188,6 +190,7 @@ const Users = () => {
       showSuccess('Usuário criado com sucesso');
       setCreateModalOpen(false);
       setCreateFormData({
+        name: '',
         email: '',
         password: '',
         role: Role.GESTOR,
@@ -226,8 +229,8 @@ const Users = () => {
 
   const getUserName = (user: UserProfile) => {
     // Fallback: name → email → id reduzido
-    if ((user as any).name) {
-      return (user as any).name;
+    if (user.name) {
+      return user.name;
     }
     if (user.email) {
       return user.email;
@@ -455,6 +458,19 @@ const Users = () => {
           </DialogHeader>
           
           <form onSubmit={handleCreateUser} className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="create_name">Nome *</Label>
+              <Input
+                id="create_name"
+                type="text"
+                placeholder="Nome completo"
+                value={createFormData.name}
+                onChange={(e) => setCreateFormData({ ...createFormData, name: e.target.value })}
+                disabled={creatingUser}
+                required
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="create_email">Email *</Label>
               <Input

@@ -65,11 +65,11 @@ serve(async (req) => {
     }
 
     // 5. Parse request body
-    const { email, password, role, must_change_password } = await req.json()
+    const { name, email, password, role, must_change_password } = await req.json()
 
-    if (!email || !password || !role) {
+    if (!name || !email || !password || !role) {
       return new Response(
-        JSON.stringify({ ok: false, error: 'Missing required fields: email, password, role' }),
+        JSON.stringify({ ok: false, error: 'Missing required fields: name, email, password, role' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -95,6 +95,7 @@ serve(async (req) => {
       email_confirm: true, // Auto-confirm email to avoid invite flow
       user_metadata: {
         created_by: user.id,
+        name,
       }
     })
 
@@ -117,6 +118,7 @@ serve(async (req) => {
     const { error: updateError } = await supabase
       .from('profiles')
       .update({ 
+        name,
         role,
         must_change_password: must_change_password ?? true,
         updated_at: new Date().toISOString()

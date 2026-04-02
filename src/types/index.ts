@@ -2,9 +2,12 @@ import { OpportunityStage, OrderStage, Role } from '@/constants/domain';
 
 export interface Profile {
   id: string;
-  email: string;
+  email?: string;
   role: Role;
   created_at: string;
+  name?: string;
+  is_active?: boolean;
+  must_change_password?: boolean;
 }
 
 export interface Product {

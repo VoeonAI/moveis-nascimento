@@ -39,7 +39,7 @@ serve(async (req) => {
     if (authError || !user) {
       return new Response(
         JSON.stringify({ ok: false, error: 'Invalid or expired token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -53,14 +53,14 @@ serve(async (req) => {
     if (profileError || !callerProfile) {
       return new Response(
         JSON.stringify({ ok: false, error: 'Profile not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     if (callerProfile.role !== 'master') {
       return new Response(
         JSON.stringify({ ok: false, error: 'Forbidden: Only master users can create users' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -70,7 +70,7 @@ serve(async (req) => {
     if (!name || !email || !password || !role) {
       return new Response(
         JSON.stringify({ ok: false, error: 'Missing required fields: name, email, password, role' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -79,7 +79,7 @@ serve(async (req) => {
     if (!validRoles.includes(role)) {
       return new Response(
         JSON.stringify({ ok: false, error: `Invalid role. Must be one of: ${validRoles.join(', ')}` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -103,14 +103,14 @@ serve(async (req) => {
       console.error('[admin_create_user] Auth creation error:', createError.message)
       return new Response(
         JSON.stringify({ ok: false, error: createError.message || 'Failed to create auth user' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     if (!authData.user) {
       return new Response(
         JSON.stringify({ ok: false, error: 'Failed to create auth user: No user data returned' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -131,7 +131,7 @@ serve(async (req) => {
       // Or return error? Let's return error to ensure consistency.
       return new Response(
         JSON.stringify({ ok: false, error: 'Auth user created but failed to update profile' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -151,7 +151,7 @@ serve(async (req) => {
     console.error('[admin_create_user] Unexpected error:', error)
     return new Response(
       JSON.stringify({ ok: false, error: 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })

@@ -1,4 +1,5 @@
-import React from 'react';
+import { supabase } from '@/core/supabaseClient';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,9 +15,43 @@ const DEFAULT_HIGHLIGHT = 'merece o melhor.';
 const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=1920&q=80';
 
 const HeroBanner = ({ title, highlightWord, imageUrl }: HeroBannerProps) => {
+  const [whatsappNumber, setWhatsappNumber] = useState('');
   const finalTitle = title?.trim() ? title.trim() : DEFAULT_TITLE;
   const finalHighlight = highlightWord?.trim() ? highlightWord.trim() : DEFAULT_HIGHLIGHT;
   const finalImageUrl = imageUrl?.trim() ? imageUrl.trim() : DEFAULT_IMAGE;
+
+  useEffect(() => {
+    const loadWhatsappNumber = async () => {
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'store_whatsapp_e164')
+        .single();
+
+      if (error) {
+        console.error('Erro ao carregar WhatsApp da loja:', error);
+        return;
+      }
+
+      setWhatsappNumber(data?.value || '');
+    };
+
+    loadWhatsappNumber();
+  }, []);
+
+  const handleWhatsAppClick = () => {
+    if (!whatsappNumber) {
+      console.error('WhatsApp da loja não configurado.');
+      return;
+    }
+
+    const normalized = whatsappNumber.replace(/\D/g, '');
+    const message = encodeURIComponent(
+      'Oi, eu estava navegando pelo site e gostaria de ajuda.'
+    );
+
+    window.open(`https://wa.me/${normalized}?text=${message}`, '_blank');
+  };
 
   const hasHighlight =
     finalHighlight.length > 0 && finalTitle.includes(finalHighlight);
@@ -81,7 +116,7 @@ const HeroBanner = ({ title, highlightWord, imageUrl }: HeroBannerProps) => {
             <Button
               size="lg"
               className="bg-white border-2 border-green-600 text-green-700 hover:bg-green-50 hover:border-green-700 hover:text-green-800 px-8 py-6 text-lg font-semibold rounded-xl transition-all"
-              onClick={() => window.open('https://wa.me/5511999999999', '_blank')}
+              onClick={handleWhatsAppClick}
             >
               <Phone size={20} className="mr-2" />
               Falar com o Nas

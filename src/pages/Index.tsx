@@ -66,7 +66,7 @@ const Index = () => {
 
     const normalized = whatsappNumber.replace(/\D/g, '');
     const message = encodeURIComponent(
-      'Oi, eu estava navegando pelo site e gostaria de ajuda.'
+      'Oi, eu estou vendo o catálogo de produtos no site e quero ajuda pra encontrar um produto.'
     );
 
     window.open(`https://wa.me/${normalized}?text=${message}`, '_blank');

@@ -2,9 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/core/supabaseClient';
 import { Eye, EyeOff } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -47,29 +44,29 @@ const Login = () => {
 
         <form onSubmit={handleLogin} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-gray-700">Email</Label>
-            <Input
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
+            <input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="seu@email.com"
               required
-              className="border-gray-300 focus:border-green-500 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="password" className="text-gray-700">Senha</Label>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700">Senha</label>
             <div className="relative">
-              <Input
+              <input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                className="border-gray-300 focus:border-green-500 focus:ring-green-500 pr-10"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent pr-10"
               />
               <button
                 type="button"
@@ -82,13 +79,13 @@ const Login = () => {
             </div>
           </div>
 
-          <Button
+          <button
             type="submit"
             disabled={loading}
-            className="w-full bg-green-600 hover:bg-green-700 text-white py-3 font-semibold"
+            className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-md font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Entrando...' : 'Entrar'}
-          </Button>
+          </button>
         </form>
       </div>
     </div>

@@ -1,0 +1,272 @@
+{
+  "base_url": "https://kbpkdnptzvsvoujirfwe.supabase.co/functions/v1/",
+  "headers": {
+    "Content-Type": "application/json",
+    "x-agent-token": "SUBSTITUIR_PELO_SEU_TOKEN_HASH"
+  },
+  "required_scope": "orders:read",
+  "endpoints": {
+    "1_buscar_pedidos_por_telefone": {
+      "method": "GET",
+      "url": "agent_find_recent_orders_by_phone",
+      "query_params": {
+        "phone": "5511999999999"
+      },
+      "phone_formats_test": [
+        {
+          "description": "Formato E.164 completo",
+          "phone": "5511999999999"
+        },
+        {
+          "description": "Formato brasileiro sem código país",
+          "phone": "11999999999"
+        },
+        {
+          "description": "Formato brasileiro formatado",
+          "phone": "(11) 99999-9999"
+        },
+        {
+          "description": "Com + e espaços",
+          "phone": "+55 11 99999-9999"
+        }
+      ],
+      "expected_response": {
+        "ok": true,
+        "orders": [
+          {
+            "order_id": "uuid-do-pedido-1",
+            "product_name": "Em Montagem",
+            "created_at": "2024-01-15T10:30:00.000Z",
+            "order_stage": "assembly",
+            "updated_at": "2024-01-16T14:20:00.000Z"
+          },
+          {
+            "order_id": "uuid-do-pedido-2",
+            "product_name": "Pronto para Envio",
+            "created_at": "2024-01-10T09:00:00.000Z",
+            "order_stage": "ready_to_ship",
+            "updated_at": "2024-01-12T16:45:00.000Z"
+          }
+        ],
+        "count": 2
+      },
+      "expected_response_empty": {
+        "ok": true,
+        "orders": [],
+        "count": 0
+      },
+      "database_check": "SELECT id, customer_phone, current_stage, internal_code, created_at, updated_at FROM orders WHERE customer_phone = '5511999999999' AND created_at >= NOW() - INTERVAL '90 days' ORDER BY created_at DESC;",
+      "rules": [
+        "Apenas pedidos dos últimos 90 dias",
+        "Ordenados do mais recente para o mais antigo",
+        "Máximo de 50 resultados",
+        "Telefone normalizado automaticamente"
+      ]
+    },
+    "2_buscar_status_pedido": {
+      "method": "GET",
+      "url": "agent_get_order_status",
+      "query_params": {
+        "order_id": "SUBSTITUIR_POR_ORDER_ID_VALIDO"
+      },
+      "expected_response": {
+        "ok": true,
+        "order": {
+          "order_id": "uuid-do-pedido",
+          "status": "assembly",
+          "label": "Em Montagem",
+          "updated_at": "2024-01-16T14:20:00.000Z",
+          "product_name": "PED-2024-001"
+        }
+      },
+      "database_check": "SELECT id, current_stage, updated_at, internal_code, created_at FROM orders WHERE id = 'uuid-do-pedido';",
+      "status_mappings": {
+        "order_created": "Pedido Criado",
+        "preparing_order": "Preparando Pedido",
+        "assembly": "Em Montagem",
+        "ready_to_ship": "Pronto para Envio",
+        "delivery_route": "Em Rota de Entrega",
+        "delivered": "Entregue",
+        "canceled": "Cancelado"
+      }
+    }
+  },
+  "error_test_cases": {
+    "sem_token": {
+      "description": "Testar sem header x-agent-token",
+      "expected": {
+        "ok": false,
+        "error": "Missing x-agent-token header"
+      }
+    },
+    "token_invalido": {
+      "description": "Usar token hash inválido",
+      "x-agent-token": "token_invalido_teste_12345",
+      "expected": {
+        "ok": false,
+        "error": "Invalid or inactive token"
+      }
+    },
+    "sem_permissao": {
+      "description": "Usar token sem scope orders:read",
+      "instruction": "Criar token sem o scope orders:read",
+      "expected": {
+        "ok": false,
+        "error": "Insufficient permissions"
+      }
+    },
+    "parametro_faltando_endpoint1": {
+      "endpoint": "agent_find_recent_orders_by_phone",
+      "description": "Não enviar parâmetro phone",
+      "instruction": "GET agent_find_recent_orders_by_phone (sem query params)",
+      "expected": {
+        "ok": false,
+        "error": "Missing required parameter: phone"
+      }
+    },
+    "parametro_faltando_endpoint2": {
+      "endpoint": "agent_get_order_status",
+      "description": "Não enviar parâmetro order_id",
+      "instruction": "GET agent_get_order_status (sem query params)",
+      "expected": {
+        "ok": false,
+        "error": "Missing required parameter: order_id"
+      }
+    },
+    "id_inexistente": {
+      "endpoint": "agent_get_order_status",
+      "description": "Usar order_id que não existe no banco",
+      "test_ids": [
+        "00000000-0000-0000-0000-000000000000",
+        "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      ],
+      "expected": {
+        "ok": false,
+        "error": "Order not found"
+      }
+    }
+  },
+  "setup_checklist": [
+    "✅ Criar token de agente no banco com scope orders:read",
+    "✅ Obter token_hash do token criado",
+    "✅ Ter pelo menos um pedido (order) no banco com customer_phone preenchido",
+    "✅ Verificar que o pedido foi criado nos últimos 90 dias",
+    "✅ Substituir SUBSTITUIR_PELO_SEU_TOKEN_HASH neste JSON",
+    "✅ Substituir SUBSTITUIR_POR_ORDER_ID_VALIDO após primeiro teste"
+  ],
+  "validation_steps": {
+    "endpoint_1_buscar_pedidos": [
+      "Enviar request GET com telefone em qualquer formato",
+      "Validar que response.ok é true",
+      "Validar que response.orders é um array",
+      "Validar que os pedidos são dos últimos 90 dias",
+      "Validar que estão ordenados por created_at DESC",
+      "Executar database_check no Supabase",
+      "Comparar resultado do banco com response",
+      "Registrar resultado (✅ ou ❌)",
+      "Testar com diferentes formatos de telefone",
+      "Todos os formatos devem retornar o mesmo resultado"
+    ],
+    "endpoint_2_buscar_status": [
+      "Usar order_id obtido no Endpoint 1",
+      "Enviar request GET",
+      "Validar que response.ok é true",
+      "Validar que response.order.order_id está correto",
+      "Validar que response.order.status confere com banco",
+      "Validar que response.order.label está em português",
+      "Validar que response.order.updated_at confere com banco",
+      "Executar database_check no Supabase",
+      "Comparar resultado do banco com response",
+      "Registrar resultado (✅ ou ❌)"
+    ]
+  },
+  "phone_normalization_tests": [
+    {
+      "input": "5511999999999",
+      "expected_output": "5511999999999",
+      "description": "E.164 completo - mantém igual"
+    },
+    {
+      "input": "11999999999",
+      "expected_output": "5511999999999",
+      "description": "Sem código país - adiciona 55"
+    },
+    {
+      "input": "(11) 99999-9999",
+      "expected_output": "5511999999999",
+      "description": "Formatado - remove caracteres especiais e adiciona 55"
+    },
+    {
+      "input": "+55 11 99999-9999",
+      "expected_output": "5511999999999",
+      "description": "Com + e espaços - remove + e espaços, adiciona 55"
+    },
+    {
+      "input": "011999999999",
+      "expected_output": "5511999999999",
+      "description": "Com 0 no início - remove 0 e adiciona 55"
+    }
+  ],
+  "sql_setup_queries": {
+    "create_test_token": {
+      "description": "Criar token de teste com scope orders:read",
+      "query": "INSERT INTO agent_tokens (name, token_hash, scopes, active) VALUES ('Token Teste Rastreio', 'seu_token_hash_aqui', ARRAY['orders:read'], true) RETURNING id, name, token_hash, scopes;"
+    },
+    "create_test_orders": {
+      "description": "Criar pedidos de teste",
+      "query": "INSERT INTO orders (customer_phone, current_stage, internal_code, customer_name) VALUES ('5511999999999', 'assembly', 'PED-TESTE-001', 'Cliente Teste 1'), ('5511999999999', 'ready_to_ship', 'PED-TESTE-002', 'Cliente Teste 1'), ('5511888888888', 'delivery_route', 'PED-TESTE-003', 'Cliente Teste 2') RETURNING id, created_at;"
+    },
+    "check_existing_orders": {
+      "description": "Verificar pedidos existentes no banco",
+      "query": "SELECT id, customer_phone, current_stage, created_at FROM orders ORDER BY created_at DESC LIMIT 10;"
+    }
+  },
+  "notes": [
+    "Todos os endpoints retornam status HTTP 200 mesmo em erros",
+    "Use o campo 'ok' na resposta para determinar sucesso/falha",
+    "IDs retornados em um teste devem ser usados nos próximos",
+    "Sempre valide no banco de dados após cada teste",
+    "Logs de cada endpoint aparecem no console com prefixo [nome-do-endpoint]",
+    "Apenas pedidos dos últimos 90 dias são retornados",
+    "Telefone é normalizado automaticamente para formato E.164",
+    "Pedidos são sempre ordenados do mais recente para o mais antigo"
+  ],
+  "n8n_workflow_example": {
+    "description": "Exemplo de workflow n8n para testar os endpoints",
+    "nodes": [
+      {
+        "name": "Set Variables",
+        "type": "set",
+        "values": {
+          "TOKEN_HASH": "seu_token_hash_aqui",
+          "TEST_PHONE": "5511999999999"
+        }
+      },
+      {
+        "name": "Find Orders by Phone",
+        "type": "httpRequest",
+        "method": "GET",
+        "url": "https://kbpkdnptzvsvoujirfwe.supabase.co/functions/v1/agent_find_recent_orders_by_phone?phone={{ $json.TEST_PHONE }}",
+        "headers": {
+          "x-agent-token": "{{ $json.TOKEN_HASH }}"
+        }
+      },
+      {
+        "name": "Check Orders Count",
+        "type": "if",
+        "condition": "{{ $json.orders.length > 0 }}",
+        "true_path": "Get Order Status",
+        "false_path": "No Orders Found"
+      },
+      {
+        "name": "Get Order Status",
+        "type": "httpRequest",
+        "method": "GET",
+        "url": "https://kbpkdnptzvsvoujirfwe.supabase.co/functions/v1/agent_get_order_status?order_id={{ $('Find Orders by Phone').item.json.orders[0].order_id }}",
+        "headers": {
+          "x-agent-token": "{{ $json.TOKEN_HASH }}"
+        }
+      }
+    ]
+  }
+}

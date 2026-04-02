@@ -17,6 +17,28 @@ const ORDER_STAGE_LABELS: Record<string, string> = {
   'canceled': 'Cancelado',
 }
 
+/**
+ * Normalize phone number to E.164 format (Brazil)
+ * Removes all non-numeric characters and adds country code if needed
+ */
+function normalizePhone(phone: string): string {
+  // Remove all non-numeric characters
+  let cleaned = phone.replace(/\D/g, '')
+  
+  // If starts with 55 (Brazil country code), keep it
+  // If starts with 0 (like 011), remove the 0 and add 55
+  // Otherwise, add 55 prefix
+  if (!cleaned.startsWith('55')) {
+    if (cleaned.startsWith('0')) {
+      cleaned = '55' + cleaned.substring(1)
+    } else {
+      cleaned = '55' + cleaned
+    }
+  }
+  
+  return cleaned
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -68,57 +90,65 @@ serve(async (req) => {
       .update({ last_used_at: new Date().toISOString() })
       .eq('id', tokenData.id)
 
-    // Get order_id from query params
+    // Get phone from query params
     const url = new URL(req.url)
-    const orderId = url.searchParams.get('order_id')
+    const phone = url.searchParams.get('phone')
 
-    if (!orderId) {
+    if (!phone) {
       return new Response(
-        JSON.stringify({ ok: false, error: 'Missing required parameter: order_id' }),
+        JSON.stringify({ ok: false, error: 'Missing required parameter: phone' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Fetch order
-    const { data: order, error: orderError } = await supabase
+    // Normalize phone
+    const normalizedPhone = normalizePhone(phone)
+
+    // Calculate 90 days ago
+    const ninetyDaysAgo = new Date()
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+
+    // Fetch orders from the last 90 days
+    const { data: orders, error: ordersError } = await supabase
       .from('orders')
-      .select('id, current_stage, updated_at, internal_code, created_at')
-      .eq('id', orderId)
-      .single()
+      .select('id, customer_phone, current_stage, created_at, updated_at')
+      .eq('customer_phone', normalizedPhone)
+      .gte('created_at', ninetyDaysAgo.toISOString())
+      .order('created_at', { ascending: false })
+      .limit(50)
 
-    if (orderError || !order) {
+    if (ordersError) {
+      console.error('[agent_find_recent_orders_by_phone] Query error:', ordersError)
       return new Response(
-        JSON.stringify({ ok: false, error: 'Order not found' }),
+        JSON.stringify({ ok: false, error: 'Failed to fetch orders' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Build status and label
-    const currentStage = order.current_stage
-    const stageLabel = ORDER_STAGE_LABELS[currentStage] || currentStage
-    
-    // Use internal_code as product_name if available, otherwise use stage label
-    const productName = order.internal_code || stageLabel
-
-    // Build response according to contract
-    const response = {
-      ok: true,
-      order: {
+    // Transform response
+    const transformedOrders = (orders || []).map(order => {
+      const stageLabel = ORDER_STAGE_LABELS[order.current_stage] || order.current_stage
+      
+      return {
         order_id: order.id,
-        status: currentStage,
-        label: stageLabel,
+        product_name: stageLabel, // Using stage label as product name for now
+        created_at: order.created_at,
+        order_stage: order.current_stage,
         updated_at: order.updated_at,
-        product_name: productName,
-      },
-    }
+      }
+    })
 
     return new Response(
-      JSON.stringify(response),
+      JSON.stringify({
+        ok: true,
+        orders: transformedOrders,
+        count: transformedOrders.length,
+      }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
-    console.error('[agent_get_order_status] Unexpected error:', error)
+    console.error('[agent_find_recent_orders_by_phone] Unexpected error:', error)
     return new Response(
       JSON.stringify({ ok: false, error: 'Internal server error' }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/products/ProductCard';
 import HomeHeader from '@/components/home/HomeHeader';
+import Footer from '@/components/layout/Footer';
 import { supabase } from '@/core/supabaseClient';
 
 const Index = () => {
@@ -310,6 +311,8 @@ const Index = () => {
           </div>
         )}
       </div>
+
+      <Footer />
     </div>
   );
 };

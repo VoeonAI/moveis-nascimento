@@ -1,4 +1,5 @@
 import HomeHeader from '@/components/home/HomeHeader';
+import Footer from '@/components/layout/Footer';
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -89,6 +90,8 @@ export default function Montadores() {
           </div>
         )}
       </div>
+
+      <Footer />
     </div>
   );
 }

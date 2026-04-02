@@ -1,4 +1,5 @@
 import HomeHeader from '@/components/home/HomeHeader';
+import Footer from '@/components/layout/Footer';
 import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/core/supabaseClient';
@@ -584,6 +585,8 @@ const About = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      <Footer />
     </div>
   );
 };

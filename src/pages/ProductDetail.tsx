@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, Copy, MessageCircle, AlertCircle, Star, Tag, ArrowRight, X, ZoomIn, Check, Shield, Truck, Wrench, ChevronRight, Heart, Phone, Clock, Award, Sparkles } from 'lucide-react';
 import { productImagesService } from '@/services/productImagesService';
 import ProductCard from '@/components/products/ProductCard';
+import Footer from '@/components/layout/Footer';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -708,6 +709,8 @@ const ProductDetail = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      <Footer />
     </div>
   );
 };

@@ -512,7 +512,7 @@ const About = () => {
                             onClick={handleContactClick}
                             size="lg"
                             variant="outline"
-                            className="border-white text-white hover:bg-white hover:text-gray-900 px-8 py-6 text-lg font-semibold rounded-xl">
+                            className="border-green-400 text-green-400 hover:bg-green-400 hover:text-white px-8 py-6 text-lg font-semibold rounded-xl">
                             <MessageCircle size={20} className="mr-2" />Falar com o Nas
                                         </Button>
                     </div>

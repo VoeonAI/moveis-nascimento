@@ -13,7 +13,11 @@ const HomeAmbiences = () => {
   const [webhookSendAmbienceClick, setWebhookSendAmbienceClick] = useState(false);
   const [storeWhatsApp, setStoreWhatsApp] = useState<string>("");
 
+  // 🔴 LOG AO MONTAR O COMPONENTE - DEVE APARECER AO RENDERIZAR
+  console.log('🔴🔴🔴 [HomeAmbiences] COMPONENTE FOI MONTADO! 🔴🔴🔴');
+
   useEffect(() => {
+    console.log('🔴 [HomeAmbiences] useEffect EXECUTADO - Carregando dados...');
     loadAmbiences();
     loadWebhookSettings();
     loadStoreWhatsApp();
@@ -84,6 +88,7 @@ const HomeAmbiences = () => {
   };
 
   const handleAmbienceClick = async (ambience: HomeAmbience, e: React.MouseEvent) => {
+    console.log('🔴🔴🔴 [HomeAmbiences] CLIQUE NO AMBIENTE! ambience.title:', ambience.title);
     console.log('════════════════════════════════════════════════════════════════');
     console.log('[HomeAmbiences] 🔥 CLIQUE NO AMBIENTE DETECTADO');
     console.log('  - ambience.id:', ambience.id);
@@ -147,7 +152,15 @@ const HomeAmbiences = () => {
     console.log('════════════════════════════════════════════════════════════════');
   };
 
-  console.log('[HomeAmbiences] Render:', { loading, error, ambiencesCount: ambiences.length, webhookEnabled, webhookSendAmbienceClick, storeWhatsApp });
+  // 🔴 LOG NO RENDER - DEVE APARECER A CADA RENDER
+  console.log('🔴 [HomeAmbiences] RENDERIZANDO:', {
+    ambiencesCount: ambiences.length,
+    loading,
+    error,
+    webhookEnabled,
+    webhookSendAmbienceClick,
+    storeWhatsApp
+  });
 
   // MARCADOR VISUAL PARA TESTE
   console.log('════════════════════════════════════════════════════════════════');
@@ -157,6 +170,11 @@ const HomeAmbiences = () => {
   return (
     <section className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4">
+        {/* 🔴 MARCADOR TEMPORÁRIO - DEVE APARECER NA TELA */}
+        <div className="bg-red-600 text-white text-center py-2 font-bold text-lg mb-4">
+          🔴 SEÇÃO DE AMBIENTES CARREGADA - {new Date().toLocaleTimeString()}
+        </div>
+
         {/* Header */}
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-800">Ambientes Modulados que inspiram seu lar</h2>

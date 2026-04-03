@@ -50,12 +50,26 @@ export const settingsService = {
 
   async getWebhookEnabled(): Promise<boolean> {
     const value = await this.getSetting('webhook_enabled');
-    return value === 'true';
+    const result = value === 'true';
+    console.log('[settingsService.getWebhookEnabled]', {
+      valueFromDB: value,
+      valueType: typeof value,
+      result: result,
+      resultType: typeof result,
+    });
+    return result;
   },
 
   async getWebhookSendAmbienceClick(): Promise<boolean> {
     const value = await this.getSetting('webhook_send_ambience_click');
-    return value === 'true';
+    const result = value === 'true';
+    console.log('[settingsService.getWebhookSendAmbienceClick]', {
+      valueFromDB: value,
+      valueType: typeof value,
+      result: result,
+      resultType: typeof result,
+    });
+    return result;
   },
 
   async setWebhookSendAmbienceClick(enabled: boolean): Promise<void> {

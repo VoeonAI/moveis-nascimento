@@ -81,9 +81,25 @@ const HomeAmbiences = () => {
     
     const message = `Oi, tenho interesse em modulados para ${ambience.title}.`;
 
+    // 🔍 LOG 1: Valores de configuração lidos
+    console.log('[HomeAmbiences] handleAmbienceClick - Valores de configuração:', {
+      webhookEnabled,
+      webhookSendAmbienceClick,
+      tipoWebhookEnabled: typeof webhookEnabled,
+      tipoWebhookSendAmbienceClick: typeof webhookSendAmbienceClick,
+      condicao: webhookEnabled && webhookSendAmbienceClick,
+    });
+
     // 1. Disparar webhook primeiro (se habilitado) - best-effort
     if (webhookEnabled && webhookSendAmbienceClick) {
+      console.log('[HomeAmbiences] ✅ Condição atendida! Disparando webhook...');
+
       try {
+        console.log('[HomeAmbiences] 🚀 Chamando webhooksService.emit com:', {
+          eventType: WEBHOOK_EVENTS.HOME_AMBIENCE_CLICK,
+          channel: 'site',
+        });
+        
         await webhooksService.emit(
           WEBHOOK_EVENTS.HOME_AMBIENCE_CLICK,
           {
@@ -98,14 +114,21 @@ const HomeAmbiences = () => {
             ambience_id: ambience.id,
           }
         );
-        console.log('[HomeAmbiences] Webhook enviado para:', ambience.title);
+        
+        console.log('[HomeAmbiences] ✅ Webhook enviado para:', ambience.title);
       } catch (error) {
-        console.error('[HomeAmbiences] Erro ao enviar webhook:', error);
+        console.error('[HomeAmbiences] ❌ Erro ao enviar webhook:', error);
         // Não impedir a abertura do WhatsApp se o webhook falhar (best-effort)
       }
+    } else {
+      console.log('[HomeAmbiences] ⚠️ Condição NÃO atendida. Webhook NÃO será disparado.', {
+        webhookEnabled,
+        webhookSendAmbienceClick,
+      });
     }
 
     // 2. Abrir WhatsApp - sempre executa
+    console.log('[HomeAmbiences] 📱 Abrindo WhatsApp...');
     openWhatsApp(message);
   };
 

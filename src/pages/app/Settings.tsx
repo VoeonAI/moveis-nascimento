@@ -111,16 +111,34 @@ export default function Settings() {
   const functionsBaseUrl = "https://" + projectRef + ".supabase.co/functions/v1";
   const searchUrl = functionsBaseUrl + "/agent_products_search";
   const productUrl = functionsBaseUrl + "/agent_product_by_id";
+  const ordersByPhoneUrl = functionsBaseUrl + "/agent_find_recent_orders_by_phone";
+  const orderStatusUrl = functionsBaseUrl + "/agent_get_order_status";
 
   const curlCategoryExample = 'curl -X GET "' + searchUrl + '?category=guarda-roupa&limit=10" -H "x-agent-token: <AGENT_TOKEN>"';
   const curlTextExample = 'curl -X GET "' + searchUrl + '?q=guarda%20roupa&limit=10" -H "x-agent-token: <AGENT_TOKEN>"';
   const curlIdExample = 'curl -X GET "' + productUrl + '?id=uuid-do-produto" -H "x-agent-token: <AGENT_TOKEN>"';
+  const curlOrdersByPhoneExample = 'curl -X GET "' + ordersByPhoneUrl + '?phone=5511999999999" -H "x-agent-token: <AGENT_TOKEN>"';
+  const curlOrderStatusExample = 'curl -X GET "' + orderStatusUrl + '?order_id=UUID" -H "x-agent-token: <AGENT_TOKEN>"';
 
   const n8nConfig = {
     method: "GET",
     url: searchUrl,
     queryParameters: { category: "guarda-roupa", limit: 10 },
     headers: { "x-agent-token": "{{$env.AGENT_TOKEN}}" },
+  };
+
+  const n8nOrdersByPhoneConfig = {
+    method: "GET",
+    url: ordersByPhoneUrl,
+    queryParameters: { phone: "5511999999999" },
+    headers: { "x-agent-token": "{{ $env.AGENT_TOKEN }}" },
+  };
+
+  const n8nOrderStatusConfig = {
+    method: "GET",
+    url: orderStatusUrl,
+    queryParameters: { order_id: "UUID" },
+    headers: { "x-agent-token": "{{ $env.AGENT_TOKEN }}" },
   };
 
   const envelopeConfig = {
@@ -134,6 +152,8 @@ export default function Settings() {
   };
 
   const n8nExample = JSON.stringify(n8nConfig, null, 2);
+  const n8nOrdersByPhoneExample = JSON.stringify(n8nOrdersByPhoneConfig, null, 2);
+  const n8nOrderStatusExample = JSON.stringify(n8nOrderStatusConfig, null, 2);
   const envelopeExample = JSON.stringify(envelopeConfig, null, 2);
 
   // Find first active token
@@ -1120,6 +1140,70 @@ export default function Settings() {
                 <CardContent className="space-y-3">
                   <Label>Payload Envelope v1</Label>
                   <pre className="text-xs bg-gray-900 text-green-400 p-3 rounded overflow-x-auto">{envelopeExample}</pre>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Rastreio de Pedidos</CardTitle>
+                  <CardDescription>API para consultar pedidos por telefone e status do pedido</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle size={16} className="text-amber-600 mt-0.5" />
+                      <div className="text-sm text-amber-800">
+                        <p className="font-medium mb-1">Observações importantes:</p>
+                        <ul className="list-disc list-inside space-y-1 text-xs">
+                          <li>A busca por telefone considera pedidos dos últimos 90 dias</li>
+                          <li>Telefone é normalizado automaticamente (qualquer formato aceito)</li>
+                          <li>order_id é obrigatório para consulta de status</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Endpoint 1: Buscar pedidos por telefone</Label>
+                    <div className="mt-2 p-3 bg-gray-50 rounded-lg font-mono text-sm">
+                      GET /functions/v1/agent_find_recent_orders_by_phone?phone=5511999999999
+                    </div>
+                    <div className="mt-3">
+                      <Label>Exemplo cURL</Label>
+                      <pre className="text-xs bg-gray-900 text-green-400 p-3 rounded overflow-x-auto mt-2">{curlOrdersByPhoneExample}</pre>
+                      <Button variant="outline" size="sm" onClick={() => copyToClipboard(curlOrdersByPhoneExample)} className="mt-2">
+                        <Copy size={14} className="mr-2" />Copiar cURL
+                      </Button>
+                    </div>
+                    <div className="mt-4">
+                      <Label>Exemplo n8n (HTTP Request Node)</Label>
+                      <pre className="text-xs bg-gray-900 text-green-400 p-3 rounded overflow-x-auto mt-2">{n8nOrdersByPhoneExample}</pre>
+                      <Button variant="outline" size="sm" onClick={() => copyToClipboard(n8nOrdersByPhoneExample)} className="mt-2">
+                        <Copy size={14} className="mr-2" />Copiar JSON n8n
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <Label>Endpoint 2: Consultar status do pedido</Label>
+                    <div className="mt-2 p-3 bg-gray-50 rounded-lg font-mono text-sm">
+                      GET /functions/v1/agent_get_order_status?order_id=UUID
+                    </div>
+                    <div className="mt-3">
+                      <Label>Exemplo cURL</Label>
+                      <pre className="text-xs bg-gray-900 text-green-400 p-3 rounded overflow-x-auto mt-2">{curlOrderStatusExample}</pre>
+                      <Button variant="outline" size="sm" onClick={() => copyToClipboard(curlOrderStatusExample)} className="mt-2">
+                        <Copy size={14} className="mr-2" />Copiar cURL
+                      </Button>
+                    </div>
+                    <div className="mt-4">
+                      <Label>Exemplo n8n (HTTP Request Node)</Label>
+                      <pre className="text-xs bg-gray-900 text-green-400 p-3 rounded overflow-x-auto mt-2">{n8nOrderStatusExample}</pre>
+                      <Button variant="outline" size="sm" onClick={() => copyToClipboard(n8nOrderStatusExample)} className="mt-2">
+                        <Copy size={14} className="mr-2" />Copiar JSON n8n
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>

@@ -81,26 +81,57 @@ const HomeAmbiences = () => {
     
     const message = `Oi, tenho interesse em modulados para ${ambience.title}.`;
 
-    // 1. Abrir WhatsApp IMEDIATAMENTE - antes de qualquer operação assíncrona
-    openWhatsApp(message);
-
-    // 2. Disparar webhook depois, de forma assíncrona e sem bloquear (fire-and-forget)
+    // 1. Disparar webhook com fetch keepalive (não bloqueia window.open)
     if (webhookEnabled && webhookSendAmbienceClick) {
-      void webhooksService.emit(
-        WEBHOOK_EVENTS.HOME_AMBIENCE_CLICK,
-        {
-          type: 'modulado_interest',
-          ambience: ambience.title,
-          message,
-        },
-        'site',
-        {
-          page: 'home',
-          section: 'ambiences',
-          ambience_id: ambience.id,
-        }
-      ).catch(err => console.error('[HomeAmbiences] Webhook failed:', err));
+      try {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        
+        // Criar envelope manualmente
+        const envelope = {
+          version: "1.0",
+          event_type: WEBHOOK_EVENTS.HOME_AMBIENCE_CLICK,
+          event_id: crypto.randomUUID(),
+          occurred_at: new Date().toISOString(),
+          source: {
+            app: "moveis-nascimento",
+            env: import.meta.env.MODE,
+            channel: "site",
+          },
+          data: {
+            type: 'modulado_interest',
+            ambience: ambience.title,
+            message,
+          },
+          meta: {
+            page: 'home',
+            section: 'ambiences',
+            ambience_id: ambience.id,
+          },
+        };
+
+        // Enviar webhook com fetch + keepalive (continua mesmo após window.open)
+        const dispatchUrl = `${supabaseUrl}/functions/v1/webhooks_dispatch`;
+        fetch(dispatchUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+            'apikey': supabaseAnonKey,
+          },
+          body: JSON.stringify({
+            envelope,
+            endpointId: null,
+          }),
+          keepalive: true, // 🔥 Permite que a requisição continue mesmo após o popup
+        }).catch(err => console.error('[HomeAmbiences] Webhook failed:', err));
+      } catch (err) {
+        console.error('[HomeAmbiences] Error preparing webhook:', err);
+      }
     }
+
+    // 2. Abrir WhatsApp IMEDIATAMENTE
+    openWhatsApp(message);
   };
 
   return (

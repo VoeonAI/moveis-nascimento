@@ -13,9 +13,6 @@ const HomeAmbiences = () => {
   const [webhookSendAmbienceClick, setWebhookSendAmbienceClick] = useState(false);
   const [storeWhatsApp, setStoreWhatsApp] = useState<string>("");
 
-  // 🔴 LOG AO MONTAR O COMPONENTE - DEVE APARECER AO RENDERIZAR
-  console.log('🔴🔴🔴 [HomeAmbiences] COMPONENTE FOI MONTADO! 🔴🔴🔴');
-
   useEffect(() => {
     loadAmbiences();
     loadWebhookSettings();
@@ -75,89 +72,36 @@ const HomeAmbiences = () => {
     }
 
     const whatsappUrl = `https://wa.me/${storeWhatsApp}?text=${encodeURIComponent(message)}`;
+    console.log('[HomeAmbiences] Abrindo WhatsApp:', { message, whatsappUrl });
     window.open(whatsappUrl, '_blank');
   };
 
-  // 🔴 FUNÇÃO DE TESTE: FETCH DIRETO PARA O DISPATCH
-  const testDirectFetch = async (ambience: HomeAmbience, message: string) => {
-    console.log('[HomeAmbiences.testDirectFetch] 🔧 INICIANDO FETCH DIRETO...');
+  const handleAmbienceClick = (ambience: HomeAmbience, e: React.MouseEvent) => {
+    e.preventDefault();
     
-    try {
-      // Criar envelope manualmente (igual ao buildEnvelope)
-      const envelope = {
-        version: "1.0",
-        event_type: "home_ambience_click",
-        event_id: crypto.randomUUID(),
-        occurred_at: new Date().toISOString(),
-        source: {
-          app: "moveis-nascimento",
-          env: import.meta.env.MODE,
-          channel: "site",
-        },
-        data: {
+    const message = `Oi, tenho interesse em modulados para ${ambience.title}.`;
+
+    // 1. Abrir WhatsApp IMEDIATAMENTE - antes de qualquer operação assíncrona
+    openWhatsApp(message);
+
+    // 2. Disparar webhook depois, de forma assíncrona e sem bloquear (fire-and-forget)
+    if (webhookEnabled && webhookSendAmbienceClick) {
+      void webhooksService.emit(
+        WEBHOOK_EVENTS.HOME_AMBIENCE_CLICK,
+        {
           type: 'modulado_interest',
           ambience: ambience.title,
           message,
         },
-        meta: {
+        'site',
+        {
           page: 'home',
           section: 'ambiences',
           ambience_id: ambience.id,
-        },
-      };
-
-      console.log('[HomeAmbiences.testDirectFetch] Envelope criado:', envelope);
-
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      const dispatchUrl = `${supabaseUrl}/functions/v1/webhooks_dispatch`;
-
-      console.log('[HomeAmbiences.testDirectFetch] URL do dispatch:', dispatchUrl);
-
-      const response = await fetch(dispatchUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseAnonKey}`,
-          'apikey': supabaseAnonKey,
-        },
-        body: JSON.stringify({
-          envelope,
-          endpointId: null,
-        }),
-      });
-
-      console.log('[HomeAmbiences.testDirectFetch] Response status:', response.status);
-      console.log('[HomeAmbiences.testDirectFetch] Response ok:', response.ok);
-
-      const responseData = await response.json();
-      console.log('[HomeAmbiences.testDirectFetch] Response data:', responseData);
-
-      return responseData;
-    } catch (error) {
-      console.error('[HomeAmbiences.testDirectFetch] ❌ ERRO NO FETCH DIRETO:', error);
-      throw error;
+        }
+      ).catch(err => console.error('[HomeAmbiences] Webhook failed:', err));
     }
   };
-
-  const handleAmbienceClick = async (ambience: HomeAmbience, e: React.MouseEvent) => {
-
-  };
-
-  // 🔴 LOG NO RENDER - DEVE APARECER A CADA RENDER
-  console.log('🔴 [HomeAmbiences] RENDERIZANDO:', {
-    ambiencesCount: ambiences.length,
-    loading,
-    error,
-    webhookEnabled,
-    webhookSendAmbienceClick,
-    storeWhatsApp
-  });
-
-  // MARCADOR VISUAL PARA TESTE
-  console.log('════════════════════════════════════════════════════════════════');
-  console.log('[HomeAmbiences] 🔴 MARCADOR VISUAL: COMPONENTE RENDERIZADO');
-  console.log('════════════════════════════════════════════════════════════════');
 
   return (
     <section className="py-20 bg-white">

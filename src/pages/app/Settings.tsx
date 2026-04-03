@@ -114,11 +114,24 @@ export default function Settings() {
   const ordersByPhoneUrl = functionsBaseUrl + "/agent_find_recent_orders_by_phone";
   const orderStatusUrl = functionsBaseUrl + "/agent_get_order_status";
 
+  const createLeadUrl = functionsBaseUrl + "/agent_create_lead";
+  const updateLeadStatusUrl = functionsBaseUrl + "/agent_update_lead_status";
+  const addLeadNoteUrl = functionsBaseUrl + "/agent_add_lead_note";
+  const assemblersUrl = functionsBaseUrl + "/agent_get_assemblers";
+
   const curlCategoryExample = 'curl -X GET "' + searchUrl + '?category=guarda-roupa&limit=10" -H "x-agent-token: <AGENT_TOKEN>"';
   const curlTextExample = 'curl -X GET "' + searchUrl + '?q=guarda%20roupa&limit=10" -H "x-agent-token: <AGENT_TOKEN>"';
   const curlIdExample = 'curl -X GET "' + productUrl + '?id=uuid-do-produto" -H "x-agent-token: <AGENT_TOKEN>"';
   const curlOrdersByPhoneExample = 'curl -X GET "' + ordersByPhoneUrl + '?phone=5511999999999" -H "x-agent-token: <AGENT_TOKEN>"';
   const curlOrderStatusExample = 'curl -X GET "' + orderStatusUrl + '?order_id=UUID" -H "x-agent-token: <AGENT_TOKEN>"';
+
+  const curlCreateLeadExample = 'curl -X POST "' + createLeadUrl + '" \\\n  -H "Content-Type: application/json" \\\n  -H "x-agent-token: <AGENT_TOKEN>" \\\n  -d \'{"name":"João Silva","phone":"11999999999","channel":"whatsapp","status":"new_interest","notes":"Cliente interessado"}\'';
+
+  const curlUpdateLeadStatusExample = 'curl -X POST "' + updateLeadStatusUrl + '" \\\n  -H "Content-Type: application/json" \\\n  -H "x-agent-token: <AGENT_TOKEN>" \\\n  -d \'{"lead_id":"uuid-do-lead","status":"talking_human"}\'';
+
+  const curlAddLeadNoteExample = 'curl -X POST "' + addLeadNoteUrl + '" \\\n  -H "Content-Type: application/json" \\\n  -H "x-agent-token: <AGENT_TOKEN>" \\\n  -d \'{"lead_id":"uuid-do-lead","message":"Cliente retornou o contato"}\'';
+
+  const curlAssemblersExample = 'curl -X GET "' + assemblersUrl + '?city=São+Paulo&limit=20" -H "x-agent-token: <AGENT_TOKEN>"';
 
   const n8nConfig = {
     method: "GET",
@@ -141,6 +154,46 @@ export default function Settings() {
     headers: { "x-agent-token": "{{ $env.AGENT_TOKEN }}" },
   };
 
+  const n8nCreateLeadConfig = {
+    method: "POST",
+    url: createLeadUrl,
+    headers: { "x-agent-token": "{{ $env.AGENT_TOKEN }}" },
+    body: {
+      name: "João Silva",
+      phone: "11999999999",
+      channel: "whatsapp",
+      status: "new_interest",
+      notes: "Cliente interessado"
+    }
+  };
+
+  const n8nUpdateLeadStatusConfig = {
+    method: "POST",
+    url: updateLeadStatusUrl,
+    headers: { "x-agent-token": "{{ $env.AGENT_TOKEN }}" },
+    body: {
+      lead_id: "uuid-do-lead",
+      status: "talking_human"
+    }
+  };
+
+  const n8nAddLeadNoteConfig = {
+    method: "POST",
+    url: addLeadNoteUrl,
+    headers: { "x-agent-token": "{{ $env.AGENT_TOKEN }}" },
+    body: {
+      lead_id: "uuid-do-lead",
+      message: "Cliente retornou o contato"
+    }
+  };
+
+  const n8nAssemblersConfig = {
+    method: "GET",
+    url: assemblersUrl,
+    queryParameters: { city: "São Paulo", limit: 20 },
+    headers: { "x-agent-token": "{{ $env.AGENT_TOKEN }}" },
+  };
+
   const envelopeConfig = {
     version: "1.0",
     event_type: "lead.created",
@@ -154,6 +207,10 @@ export default function Settings() {
   const n8nExample = JSON.stringify(n8nConfig, null, 2);
   const n8nOrdersByPhoneExample = JSON.stringify(n8nOrdersByPhoneConfig, null, 2);
   const n8nOrderStatusExample = JSON.stringify(n8nOrderStatusConfig, null, 2);
+  const n8nCreateLeadExample = JSON.stringify(n8nCreateLeadConfig, null, 2);
+  const n8nUpdateLeadStatusExample = JSON.stringify(n8nUpdateLeadStatusConfig, null, 2);
+  const n8nAddLeadNoteExample = JSON.stringify(n8nAddLeadNoteConfig, null, 2);
+  const n8nAssemblersExample = JSON.stringify(n8nAssemblersConfig, null, 2);
   const envelopeExample = JSON.stringify(envelopeConfig, null, 2);
 
   // Find first active token
@@ -1140,6 +1197,206 @@ export default function Settings() {
                 <CardContent className="space-y-3">
                   <Label>Payload Envelope v1</Label>
                   <pre className="text-xs bg-gray-900 text-green-400 p-3 rounded overflow-x-auto">{envelopeExample}</pre>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Gestão de Leads</CardTitle>
+                  <CardDescription>API para criar, atualizar e gerenciar leads</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle size={16} className="text-blue-600 mt-0.5" />
+                      <div className="text-sm text-blue-800">
+                        <p className="font-medium mb-1">Observações importantes:</p>
+                        <ul className="list-disc list-inside space-y-1 text-xs">
+                          <li>Os status <code className="bg-blue-100 px-1 rounded">talking_ai</code> e <code className="bg-blue-100 px-1 rounded">talking_human</code> são da tabela <code className="bg-blue-100 px-1 rounded">opportunities</code>, não <code className="bg-blue-100 px-1 rounded">leads</code></li>
+                          <li>Operações de escrita criam automaticamente registros na timeline</li>
+                          <li><code className="bg-blue-100 px-1 rounded">last_activity_at</code> é atualizado automaticamente</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Endpoint 1: Criar Lead</Label>
+                    <div className="mt-2 p-3 bg-gray-50 rounded-lg font-mono text-sm">
+                      POST /functions/v1/agent_create_lead
+                    </div>
+                    <div className="mt-3">
+                      <Label>Body (JSON)</Label>
+                      <pre className="text-xs bg-gray-900 text-green-400 p-3 rounded overflow-x-auto mt-2">{`{
+  "name": "João Silva",
+  "phone": "11999999999",
+  "channel": "whatsapp",
+  "status": "new_interest",
+  "notes": "Cliente interessado"
+}`}</pre>
+                    </div>
+                    <div className="mt-3">
+                      <Label>Exemplo cURL</Label>
+                      <pre className="text-xs bg-gray-900 text-green-400 p-3 rounded overflow-x-auto mt-2">{curlCreateLeadExample}</pre>
+                      <Button variant="outline" size="sm" onClick={() => copyToClipboard(curlCreateLeadExample)} className="mt-2">
+                        <Copy size={14} className="mr-2" />Copiar cURL
+                      </Button>
+                    </div>
+                    <div className="mt-4">
+                      <Label>Exemplo n8n (HTTP Request Node)</Label>
+                      <pre className="text-xs bg-gray-900 text-green-400 p-3 rounded overflow-x-auto mt-2">{n8nCreateLeadExample}</pre>
+                      <Button variant="outline" size="sm" onClick={() => copyToClipboard(n8nCreateLeadExample)} className="mt-2">
+                        <Copy size={14} className="mr-2" />Copiar JSON n8n
+                      </Button>
+                    </div>
+                    <div className="mt-4 p-3 bg-gray-100 rounded-lg text-xs">
+                      <p className="font-medium mb-1">Parâmetros:</p>
+                      <ul className="space-y-1 text-gray-600">
+                        <li>• <strong>name</strong> (obrigatório): Nome do cliente</li>
+                        <li>• <strong>phone</strong> (obrigatório): Telefone (qualquer formato)</li>
+                        <li>• <strong>channel</strong> (opcional): site, whatsapp, instagram, facebook, google</li>
+                        <li>• <strong>status</strong> (opcional): new_interest, talking_ai, talking_human, proposal_sent, won, lost</li>
+                        <li>• <strong>notes</strong> (opcional): Observações</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <Label>Endpoint 2: Atualizar Status do Lead</Label>
+                    <div className="mt-2 p-3 bg-gray-50 rounded-lg font-mono text-sm">
+                      POST /functions/v1/agent_update_lead_status
+                    </div>
+                    <div className="mt-3">
+                      <Label>Body (JSON)</Label>
+                      <pre className="text-xs bg-gray-900 text-green-400 p-3 rounded overflow-x-auto mt-2">{`{
+  "lead_id": "uuid-do-lead",
+  "status": "talking_human"
+}`}</pre>
+                    </div>
+                    <div className="mt-3">
+                      <Label>Exemplo cURL</Label>
+                      <pre className="text-xs bg-gray-900 text-green-400 p-3 rounded overflow-x-auto mt-2">{curlUpdateLeadStatusExample}</pre>
+                      <Button variant="outline" size="sm" onClick={() => copyToClipboard(curlUpdateLeadStatusExample)} className="mt-2">
+                        <Copy size={14} className="mr-2" />Copiar cURL
+                      </Button>
+                    </div>
+                    <div className="mt-4">
+                      <Label>Exemplo n8n (HTTP Request Node)</Label>
+                      <pre className="text-xs bg-gray-900 text-green-400 p-3 rounded overflow-x-auto mt-2">{n8nUpdateLeadStatusExample}</pre>
+                      <Button variant="outline" size="sm" onClick={() => copyToClipboard(n8nUpdateLeadStatusExample)} className="mt-2">
+                        <Copy size={14} className="mr-2" />Copiar JSON n8n
+                      </Button>
+                    </div>
+                    <div className="mt-4 p-3 bg-gray-100 rounded-lg text-xs">
+                      <p className="font-medium mb-1">Parâmetros:</p>
+                      <ul className="space-y-1 text-gray-600">
+                        <li>• <strong>lead_id</strong> (obrigatório): UUID do lead</li>
+                        <li>• <strong>status</strong> (obrigatório): Novo status</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <Label>Endpoint 3: Adicionar Nota ao Lead</Label>
+                    <div className="mt-2 p-3 bg-gray-50 rounded-lg font-mono text-sm">
+                      POST /functions/v1/agent_add_lead_note
+                    </div>
+                    <div className="mt-3">
+                      <Label>Body (JSON)</Label>
+                      <pre className="text-xs bg-gray-900 text-green-400 p-3 rounded overflow-x-auto mt-2">{`{
+  "lead_id": "uuid-do-lead",
+  "message": "Cliente retornou o contato"
+}`}</pre>
+                    </div>
+                    <div className="mt-3">
+                      <Label>Exemplo cURL</Label>
+                      <pre className="text-xs bg-gray-900 text-green-400 p-3 rounded overflow-x-auto mt-2">{curlAddLeadNoteExample}</pre>
+                      <Button variant="outline" size="sm" onClick={() => copyToClipboard(curlAddLeadNoteExample)} className="mt-2">
+                        <Copy size={14} className="mr-2" />Copiar cURL
+                      </Button>
+                    </div>
+                    <div className="mt-4">
+                      <Label>Exemplo n8n (HTTP Request Node)</Label>
+                      <pre className="text-xs bg-gray-900 text-green-400 p-3 rounded overflow-x-auto mt-2">{n8nAddLeadNoteExample}</pre>
+                      <Button variant="outline" size="sm" onClick={() => copyToClipboard(n8nAddLeadNoteExample)} className="mt-2">
+                        <Copy size={14} className="mr-2" />Copiar JSON n8n
+                      </Button>
+                    </div>
+                    <div className="mt-4 p-3 bg-gray-100 rounded-lg text-xs">
+                      <p className="font-medium mb-1">Parâmetros:</p>
+                      <ul className="space-y-1 text-gray-600">
+                        <li>• <strong>lead_id</strong> (obrigatório): UUID do lead</li>
+                        <li>• <strong>message</strong> (obrigatório): Conteúdo da nota</li>
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Montadores</CardTitle>
+                  <CardDescription>API para consultar montadores disponíveis</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle size={16} className="text-green-600 mt-0.5" />
+                      <div className="text-sm text-green-800">
+                        <p className="font-medium mb-1">Informações:</p>
+                        <ul className="list-disc list-inside space-y-1 text-xs">
+                          <li>Retorna lista de montadores disponíveis para instalação</li>
+                          <li>Pode filtrar por cidade usando query param</li>
+                          <li>Requer scope <code className="bg-green-100 px-1 rounded">leads:read</code> ou <code className="bg-green-100 px-1 rounded">products:read</code></li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Endpoint 1: Lista de Montadores</Label>
+                    <div className="mt-2 p-3 bg-gray-50 rounded-lg font-mono text-sm">
+                      GET /functions/v1/agent_get_assemblers?city=São+Paulo&limit=20
+                    </div>
+                    <div className="mt-3">
+                      <Label>Exemplo cURL</Label>
+                      <pre className="text-xs bg-gray-900 text-green-400 p-3 rounded overflow-x-auto mt-2">{curlAssemblersExample}</pre>
+                      <Button variant="outline" size="sm" onClick={() => copyToClipboard(curlAssemblersExample)} className="mt-2">
+                        <Copy size={14} className="mr-2" />Copiar cURL
+                      </Button>
+                    </div>
+                    <div className="mt-4">
+                      <Label>Exemplo n8n (HTTP Request Node)</Label>
+                      <pre className="text-xs bg-gray-900 text-green-400 p-3 rounded overflow-x-auto mt-2">{n8nAssemblersExample}</pre>
+                      <Button variant="outline" size="sm" onClick={() => copyToClipboard(n8nAssemblersExample)} className="mt-2">
+                        <Copy size={14} className="mr-2" />Copiar JSON n8n
+                      </Button>
+                    </div>
+                    <div className="mt-4 p-3 bg-gray-100 rounded-lg text-xs">
+                      <p className="font-medium mb-1">Query Params:</p>
+                      <ul className="space-y-1 text-gray-600">
+                        <li>• <strong>city</strong> (opcional): Nome da cidade para filtro</li>
+                        <li>• <strong>limit</strong> (opcional): Limite de resultados (padrão: 20, máx: 50)</li>
+                      </ul>
+                    </div>
+                    <div className="mt-4 p-3 bg-gray-100 rounded-lg text-xs">
+                      <p className="font-medium mb-1">Response:</p>
+                      <pre className="text-xs bg-gray-900 text-green-400 p-3 rounded overflow-x-auto mt-2">{`{
+  "ok": true,
+  "assemblers": [
+    {
+      "id": "uuid",
+      "name": "Carlos Oliveira",
+      "phone": "11988887777",
+      "city": "São Paulo",
+      "bio": "Montador experiente com 10 anos",
+      "photo_url": "https://..."
+    }
+  ],
+  "count": 1
+}`}</pre>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 

@@ -47,7 +47,14 @@ const HomeAmbiences = () => {
       ]);
       setWebhookEnabled(enabled);
       setWebhookSendAmbienceClick(sendAmbienceClick);
-      console.log('[HomeAmbiences] Configurações de webhook:', { enabled, sendAmbienceClick });
+      console.log('════════════════════════════════════════════════════════════════');
+      console.log('[HomeAmbiences] Configurações de webhook CARREGADAS:');
+      console.log('  - enabled:', enabled);
+      console.log('  - sendAmbienceClick:', sendAmbienceClick);
+      console.log('  - Tipo de enabled:', typeof enabled);
+      console.log('  - Tipo de sendAmbienceClick:', typeof sendAmbienceClick);
+      console.log('  - Condição resultante:', enabled && sendAmbienceClick);
+      console.log('════════════════════════════════════════════════════════════════');
     } catch (error) {
       console.error('[HomeAmbiences] Erro ao carregar configurações de webhook:', error);
       // Não falhar se não conseguir carregar configurações
@@ -77,12 +84,18 @@ const HomeAmbiences = () => {
   };
 
   const handleAmbienceClick = async (ambience: HomeAmbience, e: React.MouseEvent) => {
+    console.log('════════════════════════════════════════════════════════════════');
+    console.log('[HomeAmbiences] 🔥 CLIQUE NO AMBIENTE - INÍCIO');
+    console.log('  - ambience.id:', ambience.id);
+    console.log('  - ambience.title:', ambience.title);
+    console.log('════════════════════════════════════════════════════════════════');
+
     e.preventDefault();
     
     const message = `Oi, tenho interesse em modulados para ${ambience.title}.`;
 
     // 🔍 LOG 1: Valores de configuração lidos
-    console.log('[HomeAmbiences] handleAmbienceClick - Valores de configuração:', {
+    console.log('[HomeAmbiences] 📊 Valores de configuração:', {
       webhookEnabled,
       webhookSendAmbienceClick,
       tipoWebhookEnabled: typeof webhookEnabled,

@@ -27,10 +27,14 @@ const Index = () => {
   const { profile } = useAuth();
   const [searchParams] = useSearchParams();
   const searchFromUrl = searchParams.get('search') || '';
+  const categoryFromUrl = searchParams.get('category') || '';
   
   useEffect(() => {
-  setSearchQuery(searchFromUrl);
-}, [searchFromUrl]);
+    setSearchQuery(searchFromUrl);
+    if (categoryFromUrl) {
+      setSelectedCategory(categoryFromUrl);
+    }
+  }, [searchFromUrl, categoryFromUrl]);
 
   useEffect(() => {
     const loadWhatsappNumber = async () => {

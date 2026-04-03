@@ -2,14 +2,19 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Package } from 'lucide-react';
 import { homeAmbiencesService, HomeAmbience } from '@/services/homeAmbiencesService';
+import { settingsService } from '@/services/settingsService';
+import { webhooksService, WEBHOOK_EVENTS } from '@/services/webhooksService';
 
 const HomeAmbiences = () => {
   const [ambiences, setAmbiences] = useState<HomeAmbience[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [webhookEnabled, setWebhookEnabled] = useState(false);
+  const [webhookSendAmbienceClick, setWebhookSendAmbienceClick] = useState(false);
 
   useEffect(() => {
     loadAmbiences();
+    loadWebhookSettings();
   }, []);
 
   const loadAmbiences = async () => {
@@ -32,7 +37,48 @@ const HomeAmbiences = () => {
     }
   };
 
-  console.log('[HomeAmbiences] Render:', { loading, error, ambiencesCount: ambiences.length });
+  const loadWebhookSettings = async () => {
+    try {
+      const [enabled, sendAmbienceClick] = await Promise.all([
+        settingsService.getWebhookEnabled(),
+        settingsService.getWebhookSendAmbienceClick(),
+      ]);
+      setWebhookEnabled(enabled);
+      setWebhookSendAmbienceClick(sendAmbienceClick);
+      console.log('[HomeAmbiences] Configurações de webhook:', { enabled, sendAmbienceClick });
+    } catch (error) {
+      console.error('[HomeAmbiences] Erro ao carregar configurações de webhook:', error);
+      // Não falhar se não conseguir carregar configurações
+    }
+  };
+
+  const handleAmbienceClick = async (ambience: HomeAmbience, e: React.MouseEvent) => {
+    // Verificar se deve enviar webhook
+    if (webhookEnabled && webhookSendAmbienceClick) {
+      try {
+        await webhooksService.emit(
+          WEBHOOK_EVENTS.HOME_AMBIENCE_CLICK,
+          {
+            type: 'modulado_interest',
+            ambience: ambience.title,
+            message: `Oi, tenho interesse em modulados para ${ambience.title}.`,
+          },
+          'site',
+          {
+            page: 'home',
+            section: 'ambiences',
+            ambience_id: ambience.id,
+          }
+        );
+        console.log('[HomeAmbiences] Webhook enviado para:', ambience.title);
+      } catch (error) {
+        console.error('[HomeAmbiences] Erro ao enviar webhook:', error);
+        // Não impedir a navegação se o webhook falhar (best-effort)
+      }
+    }
+  };
+
+  console.log('[HomeAmbiences] Render:', { loading, error, ambiencesCount: ambiences.length, webhookEnabled, webhookSendAmbienceClick });
 
   return (
     <section className="py-20 bg-white">
@@ -76,6 +122,7 @@ const HomeAmbiences = () => {
                 key={ambience.id}
                 to={`/catalog?category=${ambience.category_slug}`}
                 className="group relative overflow-hidden rounded-2xl shadow-md hover:shadow-xl transition-all duration-300"
+                onClick={(e) => handleAmbienceClick(ambience, e)}
               >
                 {/* Imagem */}
                 <div className="aspect-[4/3] overflow-hidden">

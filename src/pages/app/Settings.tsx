@@ -47,6 +47,11 @@ export default function Settings() {
   const [savingWhatsApp, setSavingWhatsApp] = useState(false);
   const [whatsappSaved, setWhatsappSaved] = useState(false);
 
+  // Webhook settings state
+  const [webhookEnabled, setWebhookEnabled] = useState(false);
+  const [webhookSendAmbienceClick, setWebhookSendAmbienceClick] = useState(false);
+  const [savingWebhookSettings, setSavingWebhookSettings] = useState(false);
+
   // Webhook creation/edit state
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEndpoint, setEditingEndpoint] = useState<WebhookEndpoint | null>(null);
@@ -81,7 +86,7 @@ export default function Settings() {
     active: true,
     sort_order: 0,
   });
-  const [savingAmbience, setSavingAmbience] = useState(false);
+  const [savingAmbience] = useState(false);
 
   // Creating new ambience state
   const [creatingAmbience, setCreatingAmbience] = useState(false);
@@ -225,7 +230,7 @@ export default function Settings() {
   async function loadData() {
     setLoading(true);
     try {
-      const [eps, lgs, wa, tokens, hero, ambiences, promo] = await Promise.all([
+      const [eps, lgs, wa, tokens, hero, ambiences, promo, webhookEnabled, webhookSendAmbience] = await Promise.all([
         webhooksManagementService.listEndpoints(),
         isMaster ? webhooksManagementService.listLogs(100) : Promise.resolve([]),
         isMaster ? settingsService.getStoreWhatsApp() : Promise.resolve(null),
@@ -233,12 +238,16 @@ export default function Settings() {
         isMaster ? homeHeroService.getHomeHero() : Promise.resolve(null),
         isMaster ? homeAmbiencesService.listAllAmbiences() : Promise.resolve([]),
         isMaster ? homePromoBannerService.getPromoBanner() : Promise.resolve(null),
+        isMaster ? settingsService.getWebhookEnabled() : Promise.resolve(false),
+        isMaster ? settingsService.getWebhookSendAmbienceClick() : Promise.resolve(false),
       ]);
       setEndpoints(eps);
       setLogs(lgs);
       setAgentTokens(tokens);
       setStoreWhatsApp(wa ?? "");
       setWhatsappSaved(Boolean(wa));
+      setWebhookEnabled(webhookEnabled);
+      setWebhookSendAmbienceClick(webhookSendAmbience);
 
       // Populate Hero State
       if (hero) {
@@ -295,6 +304,19 @@ export default function Settings() {
       showError(e?.message || "Erro ao salvar WhatsApp");
     } finally {
       setSavingWhatsApp(false);
+    }
+  }
+
+  async function handleSaveWebhookAmbienceClick() {
+    setSavingWebhookSettings(true);
+    try {
+      await settingsService.setWebhookSendAmbienceClick(webhookSendAmbienceClick);
+      showSuccess("Configuração de webhook de ambientes atualizada");
+    } catch (e: any) {
+      console.error("[Settings] save webhook ambience click error", e);
+      showError(e?.message || "Erro ao salvar configuração");
+    } finally {
+      setSavingWebhookSettings(false);
     }
   }
 
@@ -596,7 +618,7 @@ export default function Settings() {
     setUploadingPromoImage(true);
     try {
       const publicUrl = await homeAssetsService.uploadPromoImage(file);
-      setPromoBannerFormData(prev => ({ ...prev, image_url: publicUrl }));
+      setPromoBannerFormData(prev => ({ ...promoBannerFormData, image_url: publicUrl }));
       showSuccess("Imagem enviada com sucesso");
     } catch (error: any) {
       console.error("[Settings] promo image upload error", error);
@@ -1117,6 +1139,32 @@ export default function Settings() {
                     </div>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Webhooks de Interação</CardTitle>
+                <CardDescription>Configure quais interações disparam webhooks</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="webhook_send_ambience_click"
+                    checked={webhookSendAmbienceClick}
+                    onCheckedChange={setWebhookSendAmbienceClick}
+                    disabled={savingWebhookSettings}
+                  />
+                  <Label htmlFor="webhook_send_ambience_click" className="cursor-pointer">
+                    Disparar webhook ao clicar em ambientes (modulados)
+                  </Label>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Quando ativado, cliques em ambientes da home disparam o evento <code className="bg-gray-100 px-1 rounded">home_ambience_click</code> para endpoints configurados.
+                </p>
+                <Button onClick={handleSaveWebhookAmbienceClick} disabled={savingWebhookSettings}>
+                  {savingWebhookSettings ? (<><Loader2 size={16} className="mr-2 animate-spin" />Salvando...</>) : (<><Save size={16} className="mr-2" />Salvar</>)}
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>

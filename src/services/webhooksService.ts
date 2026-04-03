@@ -6,6 +6,7 @@ export const WEBHOOK_EVENTS = {
   OPPORTUNITY_STAGE_CHANGED: 'opportunity.stage_changed',
   ORDER_CREATED: 'order.created',
   ORDER_STAGE_CHANGED: 'order.stage_changed',
+  HOME_AMBIENCE_CLICK: 'home_ambience_click',
   WEBHOOK_TEST: 'webhook.test',
 } as const;
 

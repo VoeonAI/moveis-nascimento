@@ -26,6 +26,7 @@ export const WEBHOOK_EVENTS = {
   OPPORTUNITY_CREATED: 'opportunity.created',
   ORDER_CREATED: 'order.created',
   ORDER_STAGE_CHANGED: 'order.stage_changed',
+  HOME_AMBIENCE_CLICK: 'home_ambience_click',
   WEBHOOK_TEST: 'webhook.test',
 } as const;
 
@@ -36,6 +37,7 @@ export const WEBHOOK_EVENT_LABELS: Record<WebhookEventType, string> = {
   [WEBHOOK_EVENTS.ORDER_CREATED]: 'Pedido Criado',
   [WEBHOOK_EVENTS.ORDER_STAGE_CHANGED]: 'Mudança de Estágio do Pedido',
   [WEBHOOK_EVENTS.OPPORTUNITY_CREATED]: 'Nova Oportunidade',
+  [WEBHOOK_EVENTS.HOME_AMBIENCE_CLICK]: 'Clique em Ambiente (Modulados)',
   [WEBHOOK_EVENTS.WEBHOOK_TEST]: 'Teste de Webhook',
 };
 

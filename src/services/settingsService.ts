@@ -47,4 +47,18 @@ export const settingsService = {
   async setStoreWhatsApp(phoneNumber: string): Promise<void> {
     return this.setSetting('store_whatsapp_e164', phoneNumber);
   },
+
+  async getWebhookEnabled(): Promise<boolean> {
+    const value = await this.getSetting('webhook_enabled');
+    return value === 'true';
+  },
+
+  async getWebhookSendAmbienceClick(): Promise<boolean> {
+    const value = await this.getSetting('webhook_send_ambience_click');
+    return value === 'true';
+  },
+
+  async setWebhookSendAmbienceClick(enabled: boolean): Promise<void> {
+    return this.setSetting('webhook_send_ambience_click', enabled ? 'true' : 'false');
+  },
 };

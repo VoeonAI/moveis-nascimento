@@ -43,8 +43,8 @@ export const webhooksService = {
     endpointId?: string
   ) {
     console.log('════════════════════════════════════════════════════════════════');
-    console.log('[webhooksService.emit] 🔥 INICIANDO EMISSÃO DE WEBHOOK');
-    console.log('  - event_type:', eventType);
+    console.log('[webhooksService.emit] 🔥 FUNÇÃO CHAMADA');
+    console.log('  - eventType:', eventType);
     console.log('  - channel:', channel);
     console.log('  - endpointId:', endpointId);
     console.log('  - data:', JSON.stringify(data, null, 2));
@@ -59,12 +59,10 @@ export const webhooksService = {
       console.log('  - event_type:', envelope.event_type);
       console.log('  - event_id:', envelope.event_id);
       console.log('  - occurred_at:', envelope.occurred_at);
-      console.log('  - source:', envelope.source);
-      console.log('  - payload completo:', JSON.stringify(envelope, null, 2));
       console.log('════════════════════════════════════════════════════════════════');
 
       console.log('🚀 INVOCANDO SUPABASE FUNCTION: webhooks_dispatch');
-      console.log('  - URL:', `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/webhooks_dispatch`);
+      console.log('  - SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL);
       
       const { data: responseData, error } = await supabase.functions.invoke('webhooks_dispatch', {
         body: { envelope, endpointId },

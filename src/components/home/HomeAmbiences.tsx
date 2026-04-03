@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowRight, Package } from 'lucide-react';
+import { MessageCircle, Package } from 'lucide-react';
 import { homeAmbiencesService, HomeAmbience } from '@/services/homeAmbiencesService';
 import { settingsService } from '@/services/settingsService';
 import { webhooksService, WEBHOOK_EVENTS } from '@/services/webhooksService';
+import { supabase } from '@/core/supabaseClient';
 
 const HomeAmbiences = () => {
   const [ambiences, setAmbiences] = useState<HomeAmbience[]>([]);
@@ -11,10 +11,12 @@ const HomeAmbiences = () => {
   const [error, setError] = useState<string | null>(null);
   const [webhookEnabled, setWebhookEnabled] = useState(false);
   const [webhookSendAmbienceClick, setWebhookSendAmbienceClick] = useState(false);
+  const [storeWhatsApp, setStoreWhatsApp] = useState<string>("");
 
   useEffect(() => {
     loadAmbiences();
     loadWebhookSettings();
+    loadStoreWhatsApp();
   }, []);
 
   const loadAmbiences = async () => {
@@ -52,8 +54,34 @@ const HomeAmbiences = () => {
     }
   };
 
+  const loadStoreWhatsApp = async () => {
+    try {
+      const whatsappNumber = await settingsService.getStoreWhatsApp();
+      setStoreWhatsApp(whatsappNumber || "");
+      console.log('[HomeAmbiences] WhatsApp carregado:', { whatsappNumber });
+    } catch (error) {
+      console.error('[HomeAmbiences] Erro ao carregar WhatsApp:', error);
+      // Não falhar se não conseguir carregar WhatsApp
+    }
+  };
+
+  const openWhatsApp = (message: string) => {
+    if (!storeWhatsApp) {
+      console.warn('[HomeAmbiences] WhatsApp não configurado');
+      return;
+    }
+
+    const whatsappUrl = `https://wa.me/${storeWhatsApp}?text=${encodeURIComponent(message)}`;
+    console.log('[HomeAmbiences] Abrindo WhatsApp:', { message, whatsappUrl });
+    window.open(whatsappUrl, '_blank');
+  };
+
   const handleAmbienceClick = async (ambience: HomeAmbience, e: React.MouseEvent) => {
-    // Verificar se deve enviar webhook
+    e.preventDefault();
+    
+    const message = `Oi, tenho interesse em modulados para ${ambience.title}.`;
+
+    // 1. Disparar webhook primeiro (se habilitado) - best-effort
     if (webhookEnabled && webhookSendAmbienceClick) {
       try {
         await webhooksService.emit(
@@ -61,7 +89,7 @@ const HomeAmbiences = () => {
           {
             type: 'modulado_interest',
             ambience: ambience.title,
-            message: `Oi, tenho interesse em modulados para ${ambience.title}.`,
+            message,
           },
           'site',
           {
@@ -73,12 +101,15 @@ const HomeAmbiences = () => {
         console.log('[HomeAmbiences] Webhook enviado para:', ambience.title);
       } catch (error) {
         console.error('[HomeAmbiences] Erro ao enviar webhook:', error);
-        // Não impedir a navegação se o webhook falhar (best-effort)
+        // Não impedir a abertura do WhatsApp se o webhook falhar (best-effort)
       }
     }
+
+    // 2. Abrir WhatsApp - sempre executa
+    openWhatsApp(message);
   };
 
-  console.log('[HomeAmbiences] Render:', { loading, error, ambiencesCount: ambiences.length, webhookEnabled, webhookSendAmbienceClick });
+  console.log('[HomeAmbiences] Render:', { loading, error, ambiencesCount: ambiences.length, webhookEnabled, webhookSendAmbienceClick, storeWhatsApp });
 
   return (
     <section className="py-20 bg-white">
@@ -118,11 +149,18 @@ const HomeAmbiences = () => {
         {!loading && !error && ambiences.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {ambiences.map((ambience) => (
-              <Link
+              <div
                 key={ambience.id}
-                to={`/catalog?category=${ambience.category_slug}`}
-                className="group relative overflow-hidden rounded-2xl shadow-md hover:shadow-xl transition-all duration-300"
+                className="group relative overflow-hidden rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer"
                 onClick={(e) => handleAmbienceClick(ambience, e)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleAmbienceClick(ambience, e as any);
+                  }
+                }}
               >
                 {/* Imagem */}
                 <div className="aspect-[4/3] overflow-hidden">
@@ -140,11 +178,11 @@ const HomeAmbiences = () => {
                 <div className="absolute inset-0 flex flex-col justify-end p-6">
                   <h3 className="text-2xl font-bold text-white mb-2">{ambience.title}</h3>
                   <div className="flex items-center gap-2 text-white/90 group-hover:text-white transition-colors">
-                    <span className="font-medium">Ver produtos</span>
-                    <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                    <MessageCircle size={16} className="group-hover:scale-110 transition-transform" />
+                    <span className="font-medium">Falar no WhatsApp</span>
                   </div>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         )}

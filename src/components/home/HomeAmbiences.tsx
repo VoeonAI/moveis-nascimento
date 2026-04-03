@@ -87,6 +87,68 @@ const HomeAmbiences = () => {
     window.open(whatsappUrl, '_blank');
   };
 
+  // 🔴 FUNÇÃO DE TESTE: FETCH DIRETO PARA O DISPATCH
+  const testDirectFetch = async (ambience: HomeAmbience, message: string) => {
+    console.log('[HomeAmbiences.testDirectFetch] 🔧 INICIANDO FETCH DIRETO...');
+    
+    try {
+      // Criar envelope manualmente (igual ao buildEnvelope)
+      const envelope = {
+        version: "1.0",
+        event_type: "home_ambience_click",
+        event_id: crypto.randomUUID(),
+        occurred_at: new Date().toISOString(),
+        source: {
+          app: "moveis-nascimento",
+          env: import.meta.env.MODE,
+          channel: "site",
+        },
+        data: {
+          type: 'modulado_interest',
+          ambience: ambience.title,
+          message,
+        },
+        meta: {
+          page: 'home',
+          section: 'ambiences',
+          ambience_id: ambience.id,
+        },
+      };
+
+      console.log('[HomeAmbiences.testDirectFetch] Envelope criado:', envelope);
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const dispatchUrl = `${supabaseUrl}/functions/v1/webhooks_dispatch`;
+
+      console.log('[HomeAmbiences.testDirectFetch] URL do dispatch:', dispatchUrl);
+
+      const response = await fetch(dispatchUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'apikey': supabaseAnonKey,
+        },
+        body: JSON.stringify({
+          envelope,
+          endpointId: null,
+        }),
+      });
+
+      console.log('[HomeAmbiences.testDirectFetch] Response status:', response.status);
+      console.log('[HomeAmbiences.testDirectFetch] Response ok:', response.ok);
+
+      const responseData = await response.json();
+      console.log('[HomeAmbiences.testDirectFetch] Response data:', responseData);
+
+      return responseData;
+    } catch (error) {
+      console.error('[HomeAmbiences.testDirectFetch] ❌ ERRO NO FETCH DIRETO:', error);
+      throw error;
+    }
+  };
+
   const handleAmbienceClick = async (ambience: HomeAmbience, e: React.MouseEvent) => {
     console.log('🔴🔴🔴 [HomeAmbiences] CLIQUE NO AMBIENTE! ambience.title:', ambience.title);
     console.log('════════════════════════════════════════════════════════════════');
@@ -99,51 +161,43 @@ const HomeAmbiences = () => {
     
     const message = `Oi, tenho interesse em modulados para ${ambience.title}.`;
 
-    // 🔍 LOG 1: Valores de configuração
-    console.log('[HomeAmbiences] 📊 Valores de configuração ATUAIS:');
-    console.log('  - webhookEnabled:', webhookEnabled, '(tipo:', typeof webhookEnabled + ')');
-    console.log('  - webhookSendAmbienceClick:', webhookSendAmbienceClick, '(tipo:', typeof webhookSendAmbienceClick + ')');
-    
-    // Calcula se deve enviar webhook
-    const shouldSendWebhook = webhookEnabled && webhookSendAmbienceClick;
-    console.log('  - shouldSendWebhook:', shouldSendWebhook, '(cálculo:', webhookEnabled, '&&', webhookSendAmbienceClick, ')');
-    console.log('════════════════════════════════════════════════════════════════');
+    // 🔴 REMOVIDA A CONDIÇÃO DE CONFIGURAÇÃO - FORÇAR EMISSÃO
+    console.log('[HomeAmbiences] 🔴 FORÇANDO EMISSÃO DE WEBHOOK (SEM VERIFICAR CONFIGURAÇÃO)');
+    console.log('  - webhookEnabled:', webhookEnabled);
+    console.log('  - webhookSendAmbienceClick:', webhookSendAmbienceClick);
 
-    // 1. Disparar webhook primeiro (se habilitado) - best-effort
-    if (shouldSendWebhook) {
-      console.log('[HomeAmbiences] ✅ CONDIÇÃO ATENDIDA! Iniciando envio de webhook...');
+    try {
+      console.log('[HomeAmbiences] 🚀 ANTES de chamar webhooksService.emit');
+      console.log('  - eventType:', WEBHOOK_EVENTS.HOME_AMBIENCE_CLICK);
+      console.log('  - channel: site');
+      
+      const emitResult = await webhooksService.emit(
+        WEBHOOK_EVENTS.HOME_AMBIENCE_CLICK,
+        {
+          type: 'modulado_interest',
+          ambience: ambience.title,
+          message,
+        },
+        'site',
+        {
+          page: 'home',
+          section: 'ambiences',
+          ambience_id: ambience.id,
+        }
+      );
+      
+      console.log('[HomeAmbiences] ✅ DEPOIS de chamar webhooksService.emit - COMPLETO');
+      console.log('  - Emit retornou:', emitResult);
+      console.log('  - Ambience:', ambience.title);
 
-      try {
-        console.log('[HomeAmbiences] 🚀 ANTES de chamar webhooksService.emit');
-        console.log('  - eventType:', WEBHOOK_EVENTS.HOME_AMBIENCE_CLICK);
-        console.log('  - channel: site');
-        
-        await webhooksService.emit(
-          WEBHOOK_EVENTS.HOME_AMBIENCE_CLICK,
-          {
-            type: 'modulado_interest',
-            ambience: ambience.title,
-            message,
-          },
-          'site',
-          {
-            page: 'home',
-            section: 'ambiences',
-            ambience_id: ambience.id,
-          }
-        );
-        
-        console.log('[HomeAmbiences] ✅ DEPOIS de chamar webhooksService.emit - COMPLETO');
-        console.log('  - Ambience:', ambience.title);
-      } catch (error) {
-        console.error('[HomeAmbiences] ❌ ERRO no catch do webhook:', error);
-        console.error('  - error:', JSON.stringify(error, null, 2));
-        // Não impedir a abertura do WhatsApp se o webhook falhar (best-effort)
-      }
-    } else {
-      console.log('[HomeAmbiences] ⚠️ CONDIÇÃO NÃO ATENDIDA - Webhook NÃO será enviado');
-      console.log('  - webhookEnabled:', webhookEnabled);
-      console.log('  - webhookSendAmbienceClick:', webhookSendAmbienceClick);
+      // 🔴 TESTE FETCH DIRETO PARA O ENDPOINT DO SUPABASE
+      console.log('[HomeAmbiences] 🔧 TESTANDO FETCH DIRETO PARA O DISPATCH...');
+      await testDirectFetch(ambience, message);
+      
+    } catch (error) {
+      console.error('[HomeAmbiences] ❌ ERRO NO CATCH DO WEBHOOK:', error);
+      console.error('  - error:', JSON.stringify(error, null, 2));
+      // Não impedir a abertura do WhatsApp se o webhook falhar (best-effort)
     }
 
     // 2. Abrir WhatsApp - sempre executa

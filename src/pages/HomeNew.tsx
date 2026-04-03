@@ -25,10 +25,7 @@ import { homeHeroService } from '@/services/homeHeroService';
 const HomeNew = () => {
   const [hero, setHero] = useState<null>(null);
 
-  console.log('🔴🔴🔴 [HomeNew] HOME NEW FOI RENDERIZADA! 🟢');
-
   useEffect(() => {
-    console.log('🔴 [HomeNew] useEffect - Carregando hero...');
     const loadHero = async () => {
       try {
         const data = await homeHeroService.getHomeHero();

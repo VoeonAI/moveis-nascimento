@@ -34,18 +34,9 @@ serve(async (req) => {
     let body: any = null
     try {
       body = await req.json()
-      console.log('════════════════════════════════════════════════════════════════');
-      console.log('[webhooks_dispatch] 📦 BODY PARSEADO:');
-      console.log('  - hasEnvelope:', !!body?.envelope);
-      console.log('  - hasEndpointId:', !!body?.endpointId);
-      console.log('  - body completo:', JSON.stringify(body, null, 2));
-      console.log('════════════════════════════════════════════════════════════════');
     } catch (parseError) {
-      console.error('════════════════════════════════════════════════════════════════');
-      console.error('[webhooks_dispatch] ❌ ERRO AO PARSEAR BODY:');
-      console.error('  - parseError:', parseError);
-      console.error('════════════════════════════════════════════════════════════════');
-      
+      console.error('[webhooks_dispatch] Failed to parse request body', parseError)
+
       // Log the error
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!
       const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -103,15 +94,10 @@ serve(async (req) => {
       .eq('active', true)
 
     if (endpointId) {
-      console.log('[webhooks_dispatch] → Buscando endpoint específico:', endpointId)
       query = query.eq('id', endpointId)
     } else {
-      console.log('[webhooks_dispatch] → Buscando por event_type:', event_type)
-      console.log('[webhooks_dispatch] → SQL: contains(events, [', event_type, '])')
       query = query.contains('events', [event_type])
     }
-
-    console.log('[webhooks_dispatch] → Executando query...')
 
     const { data: endpoints, error: endpointsError } = await query
 
@@ -163,18 +149,6 @@ serve(async (req) => {
 
     const results = await Promise.all(
       endpoints.map(async (endpoint) => {
-        console.log('════════════════════════════════════════════════════════════════');
-        console.log('[webhooks_dispatch] 📤 ENVIANDO PARA ENDPOINT:');
-        console.log('  - endpoint.id:', endpoint.id);
-        console.log('  - endpoint.name:', endpoint.name);
-        console.log('  - endpoint.url:', endpoint.url);
-        console.log('  - endpoint.active:', endpoint.active);
-        console.log('  - endpoint.events:', endpoint.events);
-        console.log('  - endpoint.has_secret:', !!endpoint.secret);
-        console.log('  - envelope.event_id:', envelope.event_id);
-        console.log('  - envelope.event_type:', envelope.event_type);
-        console.log('════════════════════════════════════════════════════════════════');
-
         let statusCode: number | null = null
         let success = false
         let error: string | null = null
@@ -184,19 +158,13 @@ serve(async (req) => {
         const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s timeout
 
         try {
-          console.log('[webhooks_dispatch] → Executando fetch(' + endpoint.url + ')');
-
           const headers: Record<string, string> = {
             'Content-Type': 'application/json',
           }
 
           if (endpoint.secret) {
             headers['X-Webhook-Secret'] = endpoint.secret
-            console.log('[webhooks_dispatch] → Header X-Webhook-Secret adicionado');
           }
-
-          console.log('[webhooks_dispatch] → Headers:', JSON.stringify(headers, null, 2));
-          console.log('[webhooks_dispatch] → Body (envelope):', JSON.stringify(envelope, null, 2));
 
           const response = await fetch(endpoint.url, {
             method: 'POST',
@@ -209,21 +177,11 @@ serve(async (req) => {
           statusCode = response.status
           success = response.ok
 
-          console.log('════════════════════════════════════════════════════════════════');
-          console.log('[webhooks_dispatch] ✅ FETCH CONCLUÍDO:');
-          console.log('  - status:', response.status);
-          console.log('  - ok:', response.ok);
-          console.log('  - statusText:', response.statusText);
-          console.log('  - headers:', Object.fromEntries(response.headers.entries()));
-          console.log('════════════════════════════════════════════════════════════════');
-
           // Try to read response body (limit size)
           try {
             const text = await response.text()
             responsePreview = text.length > 500 ? text.slice(0, 500) + '...' : text
-            console.log('[webhooks_dispatch] → Response body:', responsePreview);
-          } catch (e) {
-            console.error('[webhooks_dispatch] → Erro ao ler response body:', e);
+          } catch {
             responsePreview = null
           }
 
@@ -232,22 +190,14 @@ serve(async (req) => {
             event_id: envelope.event_id,
             status: statusCode,
             success,
-          });
+          })
         } catch (err: any) {
           clearTimeout(timeoutId)
           error = err?.message || 'Network error'
           if (err.name === 'AbortError') {
             error = 'Timeout (10s)'
           }
-          
-          console.error('════════════════════════════════════════════════════════════════');
-          console.error('[webhooks_dispatch] ❌ ERRO NO FETCH:');
-          console.error('  - endpoint:', endpoint.url);
-          console.error('  - error:', error);
-          console.error('  - error.name:', err.name);
-          console.error('  - error.message:', err.message);
-          console.error('  - error.stack:', err.stack);
-          console.error('════════════════════════════════════════════════════════════════');
+          console.error(`[webhooks_dispatch] Failed to dispatch to ${endpoint.url}:`, error)
         }
 
         // Log attempt with envelope

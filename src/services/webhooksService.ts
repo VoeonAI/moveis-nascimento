@@ -42,70 +42,26 @@ export const webhooksService = {
     meta?: Record<string, any>,
     endpointId?: string
   ) {
-    console.log('════════════════════════════════════════════════════════════════');
-    console.log('[webhooksService.emit] 🔥 FUNÇÃO CHAMADA');
-    console.log('  - eventType:', eventType);
-    console.log('  - channel:', channel);
-    console.log('  - endpointId:', endpointId);
-    console.log('  - data:', JSON.stringify(data, null, 2));
-    console.log('  - meta:', JSON.stringify(meta, null, 2));
-    console.log('════════════════════════════════════════════════════════════════');
-
     try {
       const envelope = buildEnvelope(eventType, data, channel, meta);
-      
-      console.log('📦 ENVELOPE CRIADO:');
-      console.log('  - version:', envelope.version);
-      console.log('  - event_type:', envelope.event_type);
-      console.log('  - event_id:', envelope.event_id);
-      console.log('  - occurred_at:', envelope.occurred_at);
-      console.log('════════════════════════════════════════════════════════════════');
 
-      console.log('🚀 INVOCANDO SUPABASE FUNCTION: webhooks_dispatch');
-      console.log('  - SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL);
-      
       const { data: responseData, error } = await supabase.functions.invoke('webhooks_dispatch', {
         body: { envelope, endpointId },
       });
 
-      console.log('════════════════════════════════════════════════════════════════');
-      console.log('📬 RESPOSTA DO SUPABASE:');
-      console.log('  - error:', error);
-      console.log('  - responseData:', JSON.stringify(responseData, null, 2));
-      console.log('════════════════════════════════════════════════════════════════');
-
       if (error) {
-        console.error('❌ ERRO AO INVOCAÇÃO DA EDGE FUNCTION:');
-        console.error('  - error:', error);
-        console.error('  - message:', error.message);
-        console.error('  - status:', error.status);
+        console.warn('[webhooksService.emit] Error invoking webhooks_dispatch:', error);
         return;
       }
 
       if (!responseData?.ok) {
-        console.error('❌ ERRO RETORNADO PELA EDGE FUNCTION:');
-        console.error('  - ok:', responseData?.ok);
-        console.error('  - error:', responseData?.error);
-        console.error('  - results:', responseData?.results);
+        console.warn('[webhooksService.emit] webhooks_dispatch returned error:', responseData.error);
         return;
       }
 
-      console.log('✅ WEBHOOK ENVIADO COM SUCESSO!');
-      console.log('  - event_type:', eventType);
-      console.log('  - endpoints encontrados:', responseData.results?.length || 0);
-      console.log('  - channel:', channel);
-      
-      if (responseData.results && responseData.results.length > 0) {
-        console.log('  - resultados:', JSON.stringify(responseData.results, null, 2));
-      }
-      console.log('════════════════════════════════════════════════════════════════');
+      console.log('[webhooksService.emit] Dispatched', eventType, 'to', responseData.results?.length || 0, 'endpoints', '(channel:', channel + ')');
     } catch (error) {
-      console.error('════════════════════════════════════════════════════════════════');
-      console.error('⚠️ ERRO INESPERADO NO CATCH DO webhooksService.emit:');
-      console.error('  - error:', error);
-      console.error('  - message:', (error as any)?.message);
-      console.error('  - stack:', (error as any)?.stack);
-      console.error('════════════════════════════════════════════════════════════════');
+      console.warn('[webhooksService.emit] Unexpected error:', error);
       // Never fail the main flow - best-effort
     }
   },

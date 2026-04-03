@@ -17,7 +17,6 @@ const HomeAmbiences = () => {
   console.log('🔴🔴🔴 [HomeAmbiences] COMPONENTE FOI MONTADO! 🔴🔴🔴');
 
   useEffect(() => {
-    console.log('🔴 [HomeAmbiences] useEffect EXECUTADO - Carregando dados...');
     loadAmbiences();
     loadWebhookSettings();
     loadStoreWhatsApp();
@@ -51,14 +50,7 @@ const HomeAmbiences = () => {
       ]);
       setWebhookEnabled(enabled);
       setWebhookSendAmbienceClick(sendAmbienceClick);
-      console.log('════════════════════════════════════════════════════════════════');
-      console.log('[HomeAmbiences] Configurações de webhook CARREGADAS:');
-      console.log('  - enabled:', enabled);
-      console.log('  - sendAmbienceClick:', sendAmbienceClick);
-      console.log('  - Tipo de enabled:', typeof enabled);
-      console.log('  - Tipo de sendAmbienceClick:', typeof sendAmbienceClick);
-      console.log('  - Condição resultante:', enabled && sendAmbienceClick);
-      console.log('════════════════════════════════════════════════════════════════');
+      console.log('[HomeAmbiences] Configurações de webhook:', { enabled, sendAmbienceClick });
     } catch (error) {
       console.error('[HomeAmbiences] Erro ao carregar configurações de webhook:', error);
       // Não falhar se não conseguir carregar configurações
@@ -83,7 +75,6 @@ const HomeAmbiences = () => {
     }
 
     const whatsappUrl = `https://wa.me/${storeWhatsApp}?text=${encodeURIComponent(message)}`;
-    console.log('[HomeAmbiences] Abrindo WhatsApp:', { message, whatsappUrl });
     window.open(whatsappUrl, '_blank');
   };
 
@@ -150,60 +141,7 @@ const HomeAmbiences = () => {
   };
 
   const handleAmbienceClick = async (ambience: HomeAmbience, e: React.MouseEvent) => {
-    console.log('🔴🔴🔴 [HomeAmbiences] CLIQUE NO AMBIENTE! ambience.title:', ambience.title);
-    console.log('════════════════════════════════════════════════════════════════');
-    console.log('[HomeAmbiences] 🔥 CLIQUE NO AMBIENTE DETECTADO');
-    console.log('  - ambience.id:', ambience.id);
-    console.log('  - ambience.title:', ambience.title);
-    console.log('════════════════════════════════════════════════════════════════');
 
-    e.preventDefault();
-    
-    const message = `Oi, tenho interesse em modulados para ${ambience.title}.`;
-
-    // 🔴 REMOVIDA A CONDIÇÃO DE CONFIGURAÇÃO - FORÇAR EMISSÃO
-    console.log('[HomeAmbiences] 🔴 FORÇANDO EMISSÃO DE WEBHOOK (SEM VERIFICAR CONFIGURAÇÃO)');
-    console.log('  - webhookEnabled:', webhookEnabled);
-    console.log('  - webhookSendAmbienceClick:', webhookSendAmbienceClick);
-
-    try {
-      console.log('[HomeAmbiences] 🚀 ANTES de chamar webhooksService.emit');
-      console.log('  - eventType:', WEBHOOK_EVENTS.HOME_AMBIENCE_CLICK);
-      console.log('  - channel: site');
-      
-      const emitResult = await webhooksService.emit(
-        WEBHOOK_EVENTS.HOME_AMBIENCE_CLICK,
-        {
-          type: 'modulado_interest',
-          ambience: ambience.title,
-          message,
-        },
-        'site',
-        {
-          page: 'home',
-          section: 'ambiences',
-          ambience_id: ambience.id,
-        }
-      );
-      
-      console.log('[HomeAmbiences] ✅ DEPOIS de chamar webhooksService.emit - COMPLETO');
-      console.log('  - Emit retornou:', emitResult);
-      console.log('  - Ambience:', ambience.title);
-
-      // 🔴 TESTE FETCH DIRETO PARA O ENDPOINT DO SUPABASE
-      console.log('[HomeAmbiences] 🔧 TESTANDO FETCH DIRETO PARA O DISPATCH...');
-      await testDirectFetch(ambience, message);
-      
-    } catch (error) {
-      console.error('[HomeAmbiences] ❌ ERRO NO CATCH DO WEBHOOK:', error);
-      console.error('  - error:', JSON.stringify(error, null, 2));
-      // Não impedir a abertura do WhatsApp se o webhook falhar (best-effort)
-    }
-
-    // 2. Abrir WhatsApp - sempre executa
-    console.log('[HomeAmbiences] 📱 Abrindo WhatsApp...');
-    openWhatsApp(message);
-    console.log('════════════════════════════════════════════════════════════════');
   };
 
   // 🔴 LOG NO RENDER - DEVE APARECER A CADA RENDER
@@ -224,11 +162,6 @@ const HomeAmbiences = () => {
   return (
     <section className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4">
-        {/* 🔴 MARCADOR TEMPORÁRIO - DEVE APARECER NA TELA */}
-        <div className="bg-red-600 text-white text-center py-2 font-bold text-lg mb-4">
-          🔴 SEÇÃO DE AMBIENTES CARREGADA - {new Date().toLocaleTimeString()}
-        </div>
-
         {/* Header */}
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-800">Ambientes Modulados que inspiram seu lar</h2>

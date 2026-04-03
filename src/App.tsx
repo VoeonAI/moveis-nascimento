@@ -24,6 +24,7 @@ import HomeNew from "./pages/HomeNew";
 import About from "./pages/About";
 import SiteContent from "./pages/app/SiteContent";
 import Montadores from "./pages/public/Montadores";
+import TestWebhookAmbiente from "./pages/test-webhook-ambiente";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +57,9 @@ const App = () => (
             
             {/* Preview /new-home: Mantido por compatibilidade */}
             <Route path="/new-home" element={<HomeNew />} />
+            
+            {/* Temporário: Teste isolado de webhook de ambiente */}
+            <Route path="/test-webhook-ambiente" element={<TestWebhookAmbiente />} />
             
             {/* Login Route Alias */}
             <Route path="/login" element={<Login />} />

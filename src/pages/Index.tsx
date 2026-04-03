@@ -19,6 +19,7 @@ const Index = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [allCategories, setAllCategories] = useState<any[]>([]); // Todas as categorias, incluindo subcategorias
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -63,6 +64,26 @@ const Index = () => {
     loadData();
   }, []);
 
+  // Helper para obter slugs de uma categoria pai e suas subcategorias
+  const getCategorySlugs = (parentSlug: string): string[] => {
+    if (!allCategories || allCategories.length === 0) return [parentSlug];
+    
+    const parentCategory = allCategories.find((cat: any) => cat.slug === parentSlug);
+    if (!parentCategory) return [parentSlug];
+    
+    // Incluir o próprio pai
+    const slugs = [parentSlug];
+    
+    // Incluir todas as subcategorias (parent_id aponta para o pai)
+    allCategories.forEach((cat: any) => {
+      if (cat.parent_id === parentCategory.id) {
+        slugs.push(cat.slug);
+      }
+    });
+    
+    return slugs;
+  };
+
   const handleWhatsAppClick = () => {
     if (!whatsappNumber) {
       console.error('WhatsApp da loja não configurado.');
@@ -85,7 +106,10 @@ const Index = () => {
         categoriesService.listActiveCategories(),
       ]);
       
-      // Filter to show only root categories (parent_id is null)
+      // Carregar todas as categorias (não apenas as raiz)
+      setAllCategories(categoriesData);
+      
+      // Filtrar apenas categorias raiz para exibir na barrinha (parent_id is null)
       const rootCategories = categoriesData.filter((cat: any) => !cat.parent_id);
       setCategories(rootCategories);
       setAllProducts(productsData);
@@ -103,10 +127,11 @@ const Index = () => {
   useEffect(() => {
     let filtered = [...allProducts];
 
-    // Category filter
+    // Category filter - filtrar por categoria pai incluindo subcategorias
     if (selectedCategory !== 'all') {
+      const categorySlugs = getCategorySlugs(selectedCategory);
       filtered = filtered.filter(p => 
-        p.categories?.some(cat => cat.slug === selectedCategory)
+        p.categories?.some(cat => categorySlugs.includes(cat.slug))
       );
     }
 
@@ -137,7 +162,7 @@ const Index = () => {
     });
 
     setProducts(filtered);
-  }, [allProducts, selectedCategory, searchQuery, sortBy]);
+  }, [allProducts, selectedCategory, searchQuery, sortBy, allCategories]);
 
   // Handle category chip click
   const handleCategoryClick = (slug: string) => {

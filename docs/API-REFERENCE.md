@@ -8,35 +8,171 @@
 
 ## 📋 Índice
 
-1. [Gerenciamento de Leads](#gerenciamento-de-leads)
-2. [Consulta de Produtos](#consulta-de-produtos)
-3. [Rastreio de Pedidos](#rastreio-de-pedidos)
-4. [Consultas Diversas](#consultas-diversas)
+1. [Produtos](#produtos)
+2. [Pedidos](#pedidos)
+3. [Leads](#leads)
+4. [Montadores](#montadores)
 5. [Scopes](#scopes)
 6. [Erros Comuns](#erros-comuns)
 
 ---
 
-## 📝 Gerenciamento de Leads
+## Produtos
 
-### 1. Criar Lead
+### 1. Buscar Produtos
+
+**Endpoint:** `agent_products_search`  
+**Método:** `GET`  
+**Scope:** `products:read`
+
+**Query Params:**
+- `q` (opcional): Termo de busca
+- `category` (opcional): Slug da categoria
+- `limit` (opcional, padrão: 10, máx: 50): Quantidade
+
+**Response:**
+```json
+{
+  "ok": true,
+  "products": [
+    {
+      "id": "uuid",
+      "name": "Módulo Solar 400W",
+      "short_description": "...",
+      "category_slug": "modulos-solares",
+      "category_name": "Módulos Solares",
+      "image": "url",
+      "public_url": "url"
+    }
+  ],
+  "count": 1
+}
+```
+
+---
+
+### 2. Produto por ID
+
+**Endpoint:** `agent_product_by_id`  
+**Método:** `GET`  
+**Scope:** `products:read` (+ `products:read_private` opcional)
+
+**Query Params:**
+- `id` (obrigatório): UUID do produto
+
+**Response:**
+```json
+{
+  "ok": true,
+  "product": {
+    "id": "uuid",
+    "name": "Módulo Solar 400W",
+    "description": "...",
+    "images": ["url1", "url2"],
+    "categories": [...],
+    "public_url": "url",
+    "private": {
+      "internal_code": "...",
+      "price": 1500.00,
+      "stock_status": "disponivel"
+    } // null se não tiver scope
+  }
+}
+```
+
+---
+
+## Pedidos
+
+### 3. Buscar Pedidos por Telefone
+
+**Endpoint:** `agent_find_recent_orders_by_phone`  
+**Método:** `GET`  
+**Scope:** `orders:read`
+
+**Query Params:**
+- `phone` (obrigatório): Telefone em qualquer formato
+
+**Regras:**
+- Apenas últimos 90 dias
+- Ordenado mais recente → mais antigo
+- Telefone normalizado automaticamente
+
+**Response:**
+```json
+{
+  "ok": true,
+  "orders": [
+    {
+      "order_id": "uuid",
+      "product_name": "Em Montagem",
+      "created_at": "...",
+      "order_stage": "assembly",
+      "updated_at": "..."
+    }
+  ],
+  "count": 1
+}
+```
+
+---
+
+### 4. Status do Pedido
+
+**Endpoint:** `agent_get_order_status`  
+**Método:** `GET`  
+**Scope:** `orders:read`
+
+**Query Params:**
+- `order_id` (obrigatório): UUID do pedido
+
+**Status Possíveis:**
+- `order_created` - Pedido Criado
+- `preparing_order` - Preparando Pedido
+- `assembly` - Em Montagem
+- `ready_to_ship` - Pronto para Envio
+- `delivery_route` - Em Rota de Entrega
+- `delivered` - Entregue
+- `canceled` - Cancelado
+
+**Response:**
+```json
+{
+  "ok": true,
+  "order": {
+    "order_id": "uuid",
+    "status": "assembly",
+    "label": "Em Montagem",
+    "updated_at": "...",
+    "product_name": "PED-2024-001"
+  }
+}
+```
+
+---
+
+## Leads
+
+### 5. Criar Lead
 
 **Endpoint:** `agent_create_lead`  
 **Método:** `POST`  
 **Scope:** `leads:write`
 
-**Request:**
-```bash
-POST /agent_create_lead
-Headers: { "x-agent-token": "...", "Content-Type": "application/json" }
-Body: {
+**Body:**
+```json
+{
   "name": "João Silva",
   "phone": "11999999999",
   "channel": "site",
   "status": "new_interest",
-  "notes": "Lead criado via IA"
+  "notes": "..."
 }
 ```
+
+**Valores Opcionais:**
+- `channel`: `site`, `whatsapp`, `instagram`, `facebook`, `google`
+- `status`: `new_interest`, `talking_ai`, `talking_human`, `proposal_sent`, `won`, `lost`
 
 **Response:**
 ```json
@@ -49,25 +185,23 @@ Body: {
     "phone": "11999999999",
     "channel": "site",
     "status": "new_interest",
-    "created_at": "2024-01-01T12:00:00.000Z"
+    "created_at": "..."
   }
 }
 ```
 
 ---
 
-### 2. Atualizar Status do Lead
+### 6. Atualizar Status do Lead
 
 **Endpoint:** `agent_update_lead_status`  
 **Método:** `POST`  
 **Scope:** `leads:update`
 
-**Request:**
-```bash
-POST /agent_update_lead_status
-Headers: { "x-agent-token": "...", "Content-Type": "application/json" }
-Body: {
-  "lead_id": "uuid-do-lead",
+**Body:**
+```json
+{
+  "lead_id": "uuid",
   "status": "talking_human"
 }
 ```
@@ -77,35 +211,25 @@ Body: {
 {
   "ok": true,
   "message": "Lead status updated successfully",
-  "lead_id": "uuid-do-lead",
+  "lead_id": "uuid",
   "old_status": "new_interest",
   "new_status": "talking_human"
 }
 ```
 
-**Status Disponíveis:**
-- `new_interest` - Novo Interesse
-- `talking_ai` - Falando com IA
-- `talking_human` - Falando com Humano
-- `proposal_sent` - Proposta Enviada
-- `won` - Ganho
-- `lost` - Perdido
-
 ---
 
-### 3. Adicionar Nota ao Lead
+### 7. Adicionar Nota ao Lead
 
 **Endpoint:** `agent_add_lead_note`  
 **Método:** `POST`  
 **Scope:** `leads:write`
 
-**Request:**
-```bash
-POST /agent_add_lead_note
-Headers: { "x-agent-token": "...", "Content-Type": "application/json" }
-Body: {
-  "lead_id": "uuid-do-lead",
-  "message": "Cliente demonstrou interesse no produto"
+**Body:**
+```json
+{
+  "lead_id": "uuid",
+  "message": "Nota sobre o cliente"
 }
 ```
 
@@ -114,199 +238,28 @@ Body: {
 {
   "ok": true,
   "message": "Lead note added successfully",
-  "lead_id": "uuid-do-lead",
+  "lead_id": "uuid",
   "note": {
-    "id": "uuid-da-nota",
-    "message": "Cliente demonstrou interesse no produto",
-    "created_at": "2024-01-01T12:00:00.000Z"
-  }
-}
-```
-
----
-
-## 📦 Consulta de Produtos
-
-### 4. Buscar Produtos
-
-**Endpoint:** `agent_products_search`  
-**Método:** `GET`  
-**Scope:** `products:read`
-
-**Request:**
-```bash
-GET /agent_products_search?q=solar&category=modulos&limit=10
-Headers: { "x-agent-token": "..." }
-```
-
-**Query Params (opcional):**
-- `q`: Termo de busca (busca em nome e descrição)
-- `category`: Slug da categoria
-- `limit`: Quantidade de resultados (padrão: 10, máximo: 50)
-
-**Response:**
-```json
-{
-  "ok": true,
-  "products": [
-    {
-      "id": "uuid",
-      "name": "Módulo Solar 400W",
-      "short_description": "Painel solar de alta eficiência...",
-      "category_slug": "modulos-solares",
-      "category_name": "Módulos Solares",
-      "image": "https://url-da-imagem.jpg",
-      "public_url": "https://site.com/product/uuid"
-    }
-  ],
-  "count": 1
-}
-```
-
----
-
-### 5. Produto por ID
-
-**Endpoint:** `agent_product_by_id`  
-**Método:** `GET`  
-**Scope:** `products:read` (+ `products:read_private` para dados sensíveis)
-
-**Request:**
-```bash
-GET /agent_product_by_id?id=uuid-do-produto
-Headers: { "x-agent-token": "..." }
-```
-
-**Response:**
-```json
-{
-  "ok": true,
-  "product": {
     "id": "uuid",
-    "name": "Módulo Solar 400W",
-    "description": "Descrição completa...",
-    "images": ["url1.jpg", "url2.jpg"],
-    "categories": [
-      {
-        "id": "uuid",
-        "name": "Módulos Solares",
-        "slug": "modulos-solares"
-      }
-    ],
-    "public_url": "https://site.com/product/uuid",
-    "private": {
-      "internal_code": "MOD-400W-01",
-      "price": 1500.00,
-      "currency": "BRL",
-      "payment_terms": "À vista ou parcelado",
-      "stock_status": "sob_consulta"
-    }
+    "message": "...",
+    "created_at": "..."
   }
 }
 ```
 
-**Nota:** Campo `private` só é preenchido se o token tiver scope `products:read_private`.
-
 ---
 
-## 🚚 Rastreio de Pedidos
+## Montadores
 
-### 6. Buscar Pedidos por Telefone
-
-**Endpoint:** `agent_find_recent_orders_by_phone`  
-**Método:** `GET`  
-**Scope:** `orders:read`
-
-**Request:**
-```bash
-GET /agent_find_recent_orders_by_phone?phone=5511999999999
-Headers: { "x-agent-token": "..." }
-```
-
-**Query Params:**
-- `phone` (obrigatório): Telefone em qualquer formato
-
-**Regras:**
-- Apenas pedidos dos últimos 90 dias
-- Ordenado do mais recente para o mais antigo
-- Limite de 50 resultados
-- Telefone normalizado automaticamente para E.164
-
-**Response:**
-```json
-{
-  "ok": true,
-  "orders": [
-    {
-      "order_id": "uuid",
-      "product_name": "Em Montagem",
-      "created_at": "2024-01-15T10:30:00.000Z",
-      "order_stage": "assembly",
-      "updated_at": "2024-01-16T14:20:00.000Z"
-    }
-  ],
-  "count": 1
-}
-```
-
----
-
-### 7. Status do Pedido
-
-**Endpoint:** `agent_get_order_status`  
-**Método:** `GET`  
-**Scope:** `orders:read`
-
-**Request:**
-```bash
-GET /agent_get_order_status?order_id=uuid-do-pedido
-Headers: { "x-agent-token": "..." }
-```
-
-**Response:**
-```json
-{
-  "ok": true,
-  "order": {
-    "order_id": "uuid",
-    "status": "assembly",
-    "label": "Em Montagem",
-    "updated_at": "2024-01-16T14:20:00.000Z",
-    "product_name": "PED-2024-001"
-  }
-}
-```
-
-**Status Disponíveis:**
-| Status Técnico | Label Amigável |
-|----------------|----------------|
-| `order_created` | Pedido Criado |
-| `preparing_order` | Preparando Pedido |
-| `assembly` | Em Montagem |
-| `ready_to_ship` | Pronto para Envio |
-| `delivery_route` | Em Rota de Entrega |
-| `delivered` | Entregue |
-| `canceled` | Cancelado |
-
----
-
-## 👷 Consultas Diversas
-
-### 8. Buscar Montadores
+### 8. Lista de Montadores
 
 **Endpoint:** `agent_get_assemblers`  
 **Método:** `GET`  
 **Scope:** `leads:read` ou `products:read`
 
-**Request:**
-```bash
-GET /agent_get_assemblers?city=São+Paulo&limit=10
-Headers: { "x-agent-token": "..." }
-```
-
-**Query Params (opcional):**
-- `city`: Filtrar por cidade (busca parcial)
-- `limit`: Quantidade de resultados (padrão: 20, máximo: 50)
+**Query Params:**
+- `city` (opcional): Filtrar por cidade
+- `limit` (opcional, padrão: 20, máx: 50): Quantidade
 
 **Response:**
 ```json
@@ -318,8 +271,8 @@ Headers: { "x-agent-token": "..." }
       "name": "Carlos Oliveira",
       "phone": "11988887777",
       "city": "São Paulo",
-      "bio": "Especialista em montagem de painéis solares",
-      "photo_url": "https://url-da-foto.jpg"
+      "bio": "...",
+      "photo_url": "url"
     }
   ],
   "count": 1
@@ -328,22 +281,22 @@ Headers: { "x-agent-token": "..." }
 
 ---
 
-## 🔐 Scopes
+## Scopes
 
 | Scope | Descrição | Endpoints |
 |-------|-----------|-----------|
-| `leads:read` | Ler leads e oportunidades | Buscar montadores |
-| `leads:write` | Criar e modificar leads | Criar lead, Adicionar nota |
-| `leads:update` | Atualizar status de leads | Atualizar status |
-| `products:read` | Ler produtos públicos | Buscar produtos, Produto por ID, Buscar montadores |
-| `products:read_private` | Ler dados privados de produtos | Produto por ID (opcional) |
-| `orders:read` | Ler pedidos | Buscar pedidos por telefone, Status do pedido |
+| `leads:read` | Ler leads e oportunidades | agent_get_assemblers |
+| `leads:write` | Criar/modificar leads | agent_create_lead, agent_add_lead_note |
+| `leads:update` | Atualizar status | agent_update_lead_status |
+| `products:read` | Ler produtos | agent_products_search, agent_product_by_id, agent_get_assemblers |
+| `products:read_private` | Ler preços/estoque | agent_product_by_id (opcional) |
+| `orders:read` | Ler pedidos | agent_find_recent_orders_by_phone, agent_get_order_status |
 
 ---
 
-## ❌ Erros Comuns
+## Erros Comuns
 
-### Todos os endpoints retornam HTTP 200 mesmo em erro.
+Todos retornam HTTP 200, verifique campo `ok`.
 
 ### Sem Token
 ```json
@@ -373,7 +326,7 @@ Headers: { "x-agent-token": "..." }
 ```json
 {
   "ok": false,
-  "error": "Missing required field: X"
+  "error": "Missing required parameter: {param}"
 }
 ```
 
@@ -381,61 +334,28 @@ Headers: { "x-agent-token": "..." }
 ```json
 {
   "ok": false,
-  "error": "Lead not found"
+  "error": "{Resource} not found"
 }
 ```
 
 ---
 
-## 📊 Resumo dos Endpoints
+## Resumo
 
-| # | Endpoint | Método | Scope | Categoria |
-|---|----------|--------|-------|-----------|
-| 1 | `agent_create_lead` | POST | `leads:write` | Leads |
-| 2 | `agent_update_lead_status` | POST | `leads:update` | Leads |
-| 3 | `agent_add_lead_note` | POST | `leads:write` | Leads |
-| 4 | `agent_products_search` | GET | `products:read` | Produtos |
-| 5 | `agent_product_by_id` | GET | `products:read` | Produtos |
-| 6 | `agent_find_recent_orders_by_phone` | GET | `orders:read` | Rastreio |
-| 7 | `agent_get_order_status` | GET | `orders:read` | Rastreio |
-| 8 | `agent_get_assemblers` | GET | `leads:read` / `products:read` | Diversos |
+| # | Endpoint | Método | Scope |
+|---|----------|--------|-------|
+| 1 | `agent_products_search` | GET | `products:read` |
+| 2 | `agent_product_by_id` | GET | `products:read` |
+| 3 | `agent_find_recent_orders_by_phone` | GET | `orders:read` |
+| 4 | `agent_get_order_status` | GET | `orders:read` |
+| 5 | `agent_create_lead` | POST | `leads:write` |
+| 6 | `agent_update_lead_status` | POST | `leads:update` |
+| 7 | `agent_add_lead_note` | POST | `leads:write` |
+| 8 | `agent_get_assemblers` | GET | `leads:read` / `products:read` |
 
 **Total:** 8 endpoints
 
 ---
 
-## 🎯 Uso Rápido
-
-### Criar token no banco:
-```sql
-INSERT INTO agent_tokens (name, token_hash, scopes, active)
-VALUES (
-  'Token IA Completo',
-  'seu_token_hash_aqui',
-  ARRAY['leads:read', 'leads:write', 'leads:update', 'products:read', 'orders:read'],
-  true
-);
-```
-
-### Testar endpoint:
-```bash
-curl -X GET "https://kbpkdnptzvsvoujirfwe.supabase.co/functions/v1/agent_products_search?limit=1" \
-  -H "x-agent-token: seu_token_hash_aqui"
-```
-
----
-
-## 📚 Documentação Completa
-
-- [Validação Completa - Leads/Produtos](./validacao-endpoints-ia.md)
-- [Validação - Rastreio de Pedidos](./validacao-rastreio-pedidos.md)
-- [Checklist n8n - Leads/Produtos](./checklist-validacao-n8n.md)
-- [Guia n8n - Leads/Produtos](./guia-n8n-node-config.md)
-- [Guia n8n - Rastreio](./guia-n8n-rastreio-pedidos.md)
-- [Payloads - Leads/Produtos](./payloads-exemplo.json)
-- [Payloads - Rastreio](./payloads-rastreio-pedidos.json)
-
----
-
-**Última atualização:** 2024  
-**Versão:** 1.0
+**Última atualização:** 2024-03-28  
+**Versão:** 2.0

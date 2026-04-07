@@ -25,6 +25,7 @@ import About from "./pages/About";
 import SiteContent from "./pages/app/SiteContent";
 import Montadores from "./pages/public/Montadores";
 import TestWebhookAmbiente from "./pages/test-webhook-ambiente";
+import TestAgentCreateLeadInterest from "./pages/test-agent-create-lead-interest";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,9 @@ const App = () => (
             
             {/* Temporário: Teste isolado de webhook de ambiente */}
             <Route path="/test-webhook-ambiente" element={<TestWebhookAmbiente />} />
+            
+            {/* Temporário: Teste isolado de agent_create_lead_interest */}
+            <Route path="/test-agent-create-lead-interest" element={<TestAgentCreateLeadInterest />} />
             
             {/* Login Route Alias */}
             <Route path="/login" element={<Login />} />

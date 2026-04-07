@@ -15,7 +15,7 @@ POST https://kbpkdnptzvsvoujirfwe.supabase.co/functions/v1/agent_create_lead_int
 ## Headers
 ```
 Content-Type: application/json
-x-agent-token: 9f8d7e6a5b4c3d2e1f0a9b8c7d6e5f4
+x-agent-token: 312166dda8c49a5ea856092f016b8333b1086fdb9a42abc98b1037f7ba0856f0
 ```
 
 ## Request Body
@@ -41,19 +41,9 @@ x-agent-token: 9f8d7e6a5b4c3d2e1f0a9b8c7d6e5f4
 curl -X POST \
   https://kbpkdnptzvsvoujirfwe.supabase.co/functions/v1/agent_create_lead_interest \
   -H 'Content-Type: application/json' \
-  -H 'x-agent-token: 9f8d7e6a5b4c3d2e1f0a9b8c7d6e5f4' \
+  -H 'x-agent-token: 312166dda8c49a5ea856092f016b8333b1086fdb9a42abc98b1037f7ba0856f0' \
   -d '{
-    "customer_name": "João Silva",
-    "customer_phone": "11987654321",
-    "message": "Gostaria de saber mais sobre o sofá de três lugares",
-    "source": "n8n",
-    "context": {
-      "product_id": "123e4567-e89b-12d3-a456-426614174000",
-      "product_name": "Sofá de Três Lugares",
-      "category_slug": "sala",
-      "intent": "catalog_interest"
-    }
-  }'
+
 ```
 
 ## Response

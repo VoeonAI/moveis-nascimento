@@ -28,7 +28,7 @@ const TestAgentCreateLeadInterest = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-agent-token': '9f8d7e6a5b4c3d2e1f0a9b8c7d6e5f4', // Token do n8n AI Agent
+          'x-agent-token': '312166dda8c49a5ea856092f016b8333b1086fdb9a42abc98b1037f7ba0856f0', // Token correto do n8n AI Agent
         },
         body: JSON.stringify({
           customer_name: customerName || undefined,

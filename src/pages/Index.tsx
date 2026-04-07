@@ -64,34 +64,59 @@ const Index = () => {
   }, []);
 
   // Helper para obter todos os IDs de uma categoria pai e TODAS as suas descendentes (recursivo)
-  const getDescendantCategoryIds = (parentId: string): string[] => {
+  // Protegido contra loops/ciclos e com garantia de IDs únicos
+  const getDescendantCategoryIds = (parentId: string, visited = new Set<string>()): string[] => {
+    // Guard: evitar ciclos infinitos
+    if (visited.has(parentId)) {
+      return [];
+    }
+    visited.add(parentId);
+
     const children = allCategories.filter((cat: any) => cat.parent_id === parentId);
     const ids = children.map((cat: any) => cat.id);
     
-    // Recursivamente obter descendentes de cada filho
+    // Recursivamente obter descendentes de cada filho (com proteção contra ciclos)
     children.forEach((child: any) => {
-      ids.push(...getDescendantCategoryIds(child.id));
+      ids.push(...getDescendantCategoryIds(child.id, visited));
     });
     
-    return ids;
+    // Garantir IDs únicos (proteção contra duplicidade)
+    return Array.from(new Set(ids));
   };
 
   // Helper para obter slugs de uma categoria pai e TODAS as suas subcategorias (recursivo)
+  // Protegido com fallback seguro e garantia de slugs únicos
   const getCategorySlugs = (parentSlug: string): string[] => {
-    if (!allCategories || allCategories.length === 0) return [parentSlug];
+    // Guard: evitar processamento desnecessário
+    if (!allCategories || allCategories.length === 0) {
+      return [parentSlug];
+    }
     
+    // Guard: fallback seguro quando slug não existe
     const parentCategory = allCategories.find((cat: any) => cat.slug === parentSlug);
-    if (!parentCategory) return [parentSlug];
+    if (!parentCategory) {
+      return [parentSlug];
+    }
     
-    // Obter todos os IDs das categorias descendentes (recursivo)
+    // Obter todos os IDs das categorias descendentes (recursivo, com proteção)
     const descendantIds = getDescendantCategoryIds(parentCategory.id);
     
-    // Filtrar categorias cujo ID seja o pai ou esteja nos descendentes
+    // Filtrar categorias ativas cujo ID seja o pai ou esteja nos descendentes
     const slugs = allCategories
-      .filter((cat: any) => cat.id === parentCategory.id || descendantIds.includes(cat.id))
+      .filter((cat: any) => 
+        // Garantir que a categoria tem slug
+        cat.slug && 
+        // Filtrar apenas categorias ativas (como o catálogo público usa listActiveCategories)
+        // e que sejam o pai ou descendentes
+        (cat.id === parentCategory.id || descendantIds.includes(cat.id))
+      )
       .map((cat: any) => cat.slug);
     
-    return slugs;
+    // Garantir slugs únicos
+    const uniqueSlugs = Array.from(new Set(slugs));
+    
+    // Fallback: se nenhum slug foi encontrado, retornar o original
+    return uniqueSlugs.length > 0 ? uniqueSlugs : [parentSlug];
   };
 
   const handleWhatsAppClick = () => {
@@ -140,9 +165,21 @@ const Index = () => {
     // Category filter - filtrar por categoria pai incluindo TODAS as subcategorias (recursivo)
     if (selectedCategory !== 'all') {
       const categorySlugs = getCategorySlugs(selectedCategory);
-      filtered = filtered.filter(p => 
-        p.categories?.some(cat => categorySlugs.includes(cat.slug))
-      );
+      
+      // Guard: processar apenas se categorySlugs for válido
+      if (categorySlugs && categorySlugs.length > 0) {
+        filtered = filtered.filter(p => {
+          // Guard: produtos sem categories são ignorados (não aparecem no filtro)
+          if (!p.categories || p.categories.length === 0) {
+            return false;
+          }
+          
+          // Guard: filtrar apenas produtos que têm categories com slug válido
+          return p.categories.some(cat => 
+            cat.slug && categorySlugs.includes(cat.slug)
+          );
+        });
+      }
     }
 
     // Search filter
@@ -151,7 +188,8 @@ const Index = () => {
       filtered = filtered.filter(p => 
         p.name.toLowerCase().includes(query) || 
         (p.description && p.description.toLowerCase().includes(query)) ||
-        (p.categories && p.categories.some(cat => cat.name.toLowerCase().includes(query)))
+        // Guard: categorias podem ser undefined, adicionar verificação segura
+        (p.categories && p.categories.some(cat => cat.name && cat.name.toLowerCase().includes(query)))
       );
     }
 

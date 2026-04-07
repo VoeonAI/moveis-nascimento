@@ -1,9 +1,8 @@
 import { useSearchParams } from 'react-router-dom';
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { productsService } from '@/services/productsService';
+import { productsService, Product } from '@/services/productsService';
 import { categoriesService } from '@/services/categoriesService';
-import { Product } from '@/types';
 import { useAuth } from '@/core/auth/AuthProvider';
 import { Role } from '@/constants/domain';
 import { Package, Search, MessageCircle } from 'lucide-react';
@@ -57,29 +56,40 @@ const Index = () => {
   }, []);
 
   // Check if user can see internal price
-  const canSeeInternalPrice = [Role.MASTER, Role.GESTOR, Role.ESTOQUE].includes(profile?.role ?? "");
+  const canSeeInternalPrice = profile?.role && [Role.MASTER, Role.GESTOR, Role.ESTOQUE].includes(profile.role);
 
   // Load initial data
   useEffect(() => {
     loadData();
   }, []);
 
-  // Helper para obter slugs de uma categoria pai e suas subcategorias
+  // Helper para obter todos os IDs de uma categoria pai e TODAS as suas descendentes (recursivo)
+  const getDescendantCategoryIds = (parentId: string): string[] => {
+    const children = allCategories.filter((cat: any) => cat.parent_id === parentId);
+    const ids = children.map((cat: any) => cat.id);
+    
+    // Recursivamente obter descendentes de cada filho
+    children.forEach((child: any) => {
+      ids.push(...getDescendantCategoryIds(child.id));
+    });
+    
+    return ids;
+  };
+
+  // Helper para obter slugs de uma categoria pai e TODAS as suas subcategorias (recursivo)
   const getCategorySlugs = (parentSlug: string): string[] => {
     if (!allCategories || allCategories.length === 0) return [parentSlug];
     
     const parentCategory = allCategories.find((cat: any) => cat.slug === parentSlug);
     if (!parentCategory) return [parentSlug];
     
-    // Incluir o próprio pai
-    const slugs = [parentSlug];
+    // Obter todos os IDs das categorias descendentes (recursivo)
+    const descendantIds = getDescendantCategoryIds(parentCategory.id);
     
-    // Incluir todas as subcategorias (parent_id aponta para o pai)
-    allCategories.forEach((cat: any) => {
-      if (cat.parent_id === parentCategory.id) {
-        slugs.push(cat.slug);
-      }
-    });
+    // Filtrar categorias cujo ID seja o pai ou esteja nos descendentes
+    const slugs = allCategories
+      .filter((cat: any) => cat.id === parentCategory.id || descendantIds.includes(cat.id))
+      .map((cat: any) => cat.slug);
     
     return slugs;
   };
@@ -127,7 +137,7 @@ const Index = () => {
   useEffect(() => {
     let filtered = [...allProducts];
 
-    // Category filter - filtrar por categoria pai incluindo subcategorias
+    // Category filter - filtrar por categoria pai incluindo TODAS as subcategorias (recursivo)
     if (selectedCategory !== 'all') {
       const categorySlugs = getCategorySlugs(selectedCategory);
       filtered = filtered.filter(p => 

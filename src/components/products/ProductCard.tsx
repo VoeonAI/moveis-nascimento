@@ -1,16 +1,14 @@
-import React, { MouseEvent } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { Star, Tag, Heart, ArrowRight } from 'lucide-react';
 import { Product } from '@/services/productsService';
 import { productImagesService } from '@/services/productImagesService';
 import { Button } from '@/components/ui/button';
-import { trackProductClick } from '@/services/productClicksService';
-import type { ClickSource } from '@/services/productClicksService';
 
 interface ProductCardProps {
   product: Product;
   showBadge?: 'featured' | 'promotion' | 'none';
-  clickSource?: ClickSource;
+  clickSource?: 'catalog' | 'home' | 'search';
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ 
@@ -22,13 +20,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const coverUrl = coverPath ? productImagesService.getPublicUrl(coverPath) : '';
   const category = product.categories?.[0]?.name || 'Preço sob consulta';
 
-  const handleCardClick = (e: MouseEvent) => {
-    // Registra clique de forma não-bloqueante
-    trackProductClick(product.id, clickSource);
-  };
-
   return (
-    <Link to={`/product/${product.id}`} className="group block" onClick={handleCardClick}>
+    <Link to={`/product/${product.id}`} className="group block">
       <div className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden">
         {/* Imagem com Badge */}
         <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">

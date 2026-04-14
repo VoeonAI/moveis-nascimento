@@ -15,6 +15,7 @@ import { Loader2, Copy, MessageCircle, AlertCircle, Star, Tag, ArrowRight, X, Zo
 import { productImagesService } from '@/services/productImagesService';
 import ProductCard from '@/components/products/ProductCard';
 import Footer from '@/components/layout/Footer';
+import { trackProductInterest } from '@/services/productClicksService';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -128,6 +129,14 @@ const ProductDetail = () => {
   }, [modalOpen]);
 
   const handleInterestClick = () => {
+    console.log('[ProductDetail] Interest clicked for product:', product?.id);
+    
+    // Registra interesse de forma não-bloqueante
+    if (product?.id) {
+      trackProductInterest(product.id);
+    }
+    
+    // Abre o modal imediatamente (não espera tracking)
     setModalOpen(true);
   };
 
@@ -443,7 +452,17 @@ const ProductDetail = () => {
               </Button>
               
               <Button
-                onClick={() => setModalOpen(true)}
+                onClick={() => {
+                  console.log('[ProductDetail] "Quais as condições?" clicked for product:', product?.id);
+                  
+                  // Registra interesse de forma não-bloqueante
+                  if (product?.id) {
+                    trackProductInterest(product.id);
+                  }
+                  
+                  // Abre o modal imediatamente (não espera tracking)
+                  setModalOpen(true);
+                }}
                 variant="outline"
                 size="lg"
                 className="w-full py-6 text-lg font-semibold rounded-xl border-2 border-gray-300 hover:border-green-600 hover:text-green-600 transition-all"
@@ -539,7 +558,17 @@ const ProductDetail = () => {
                   Fale com o Nas no WhatsApp e tire todas as suas dúvidas agora mesmo.
                 </p>
                 <Button
-                  onClick={handleInterestClick}
+                  onClick={() => {
+                    console.log('[ProductDetail] Mascote "Falar com o Nas" clicked for product:', product?.id);
+                    
+                    // Registra interesse de forma não-bloqueante
+                    if (product?.id) {
+                      trackProductInterest(product.id);
+                    }
+                    
+                    // Abre o modal imediatamente (não espera tracking)
+                    setModalOpen(true);
+                  }}
                   size="lg"
                   className="bg-green-600 hover:bg-green-700 text-white"
                 >
@@ -570,7 +599,6 @@ const ProductDetail = () => {
                   key={relatedProduct.id}
                   product={relatedProduct}
                   showBadge={relatedProduct.featured ? 'featured' : relatedProduct.on_promotion ? 'promotion' : 'none'}
-                  clickSource="catalog"
                 />
               ))}
             </div>

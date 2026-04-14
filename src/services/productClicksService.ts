@@ -1,13 +1,25 @@
 import { supabase } from '@/core/supabaseClient';
 
 export type ClickSource = 'catalog' | 'home' | 'search';
+export type EventType = 'click' | 'interest_open';
 
 /**
  * Registra um clique em um produto de forma não-bloqueante
- * Não afeta o fluxo de navegação do usuário
+ * NOTA: Descontinuado em favor de trackProductInterest para medir interesse real
  */
 export async function trackProductClick(productId: string, source: ClickSource = 'catalog'): Promise<void> {
+  // Tracking de clique simples descontinuado - não faz nada
+  console.warn('[ProductClicks] trackProductClick is deprecated. Use trackProductInterest instead.');
+}
+
+/**
+ * Registra um interesse real em um produto (abertura do modal)
+ * Não afeta o fluxo de navegação do usuário
+ */
+export async function trackProductInterest(productId: string): Promise<void> {
   try {
+    console.log('[ProductClicks] Tracking interest for product:', productId);
+    
     // Gera um session_id simples se não existir (armazenado em sessionStorage)
     let sessionId = sessionStorage.getItem('click_tracking_session');
     if (!sessionId) {
@@ -20,17 +32,19 @@ export async function trackProductClick(productId: string, source: ClickSource =
       .from('product_clicks')
       .insert({
         product_id: productId,
-        source: source,
+        source: 'product_modal',
         session_id: sessionId,
       })
       .then(({ error }) => {
         if (error) {
-          console.warn('[ProductClicks] Failed to track click:', error.message);
+          console.warn('[ProductClicks] Failed to track interest:', error.message);
+        } else {
+          console.log('[ProductClicks] Interest tracked successfully for product:', productId);
         }
       });
   } catch (error) {
     // Silencioso - não deve afetar UX do usuário
-    console.warn('[ProductClicks] Error tracking click:', error);
+    console.warn('[ProductClicks] Error tracking interest:', error);
   }
 }
 

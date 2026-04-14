@@ -9,27 +9,46 @@ import { supabase } from '@/core/supabaseClient';
  */
 
 /**
- * Registra um evento do funil de forma não-bloqueante
+ * Registra um evento do funil com logs detalhados para debug
  * @param eventType Tipo do evento a ser registrado
  */
 export async function trackEvent(eventType: 'interest_click' | 'message_sent'): Promise<void> {
   try {
-    console.log('[FunnelTracking] Tracking event:', eventType);
-
-    // Inserção não-bloqueante (não aguarda resultado)
-    supabase
+    console.log('═══════════════════════════════════════════════════');
+    console.log('[FunnelTracking] trackEvent called');
+    console.log('[FunnelTracking] Event type:', eventType);
+    console.log('[FunnelTracking] Payload:', { event_type: eventType });
+    
+    // Aguarda a resposta para debugar
+    const { data, error } = await supabase
       .from('funnel_events')
       .insert({ event_type: eventType })
-      .then(({ error }) => {
-        if (error) {
-          console.error('[FunnelTracking] Error tracking event:', error);
-        } else {
-          console.log('[FunnelTracking] Event tracked successfully:', eventType);
-        }
+      .select();
+    
+    console.log('[FunnelTracking] Supabase response:');
+    console.log('[FunnelTracking] - data:', data);
+    console.log('[FunnelTracking] - error:', error);
+    
+    if (error) {
+      console.error('[FunnelTracking] ❌ ERROR tracking event:');
+      console.error('[FunnelTracking] Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
       });
+    } else {
+      console.log('[FunnelTracking] ✅ Event tracked successfully:', eventType);
+      console.log('[FunnelTracking] Inserted data:', data);
+    }
+    console.log('═══════════════════════════════════════════════════');
   } catch (error) {
-    // Try/catch silencioso - não afeta UX
-    console.error('[FunnelTracking] Unexpected error:', error);
+    console.error('═══════════════════════════════════════════════════');
+    console.error('[FunnelTracking] ❌ UNEXPECTED ERROR in trackEvent:');
+    console.error('[FunnelTracking] Error:', error);
+    console.error('[FunnelTracking] Error type:', typeof error);
+    console.error('[FunnelTracking] Error keys:', Object.keys(error));
+    console.error('═══════════════════════════════════════════════════');
   }
 }
 

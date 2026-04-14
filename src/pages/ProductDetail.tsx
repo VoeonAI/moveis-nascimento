@@ -130,18 +130,35 @@ const ProductDetail = () => {
   }, [modalOpen]);
 
   const handleInterestClick = () => {
-    console.log('[ProductDetail] Interest clicked for product:', product?.id);
+    console.log('═══════════════════════════════════════════════════');
+    console.log('[ProductDetail] handleInterestClick called');
+    console.log('[ProductDetail] Product ID:', product?.id);
     
-    // Registra interesse de forma não-bloqueante
-    if (product?.id) {
-      trackProductInterest(product.id);
+    try {
+      // Registra interesse de forma não-bloqueante
+      if (product?.id) {
+        console.log('[ProductDetail] Calling trackProductInterest...');
+        trackProductInterest(product.id);
+        console.log('[ProductDetail] trackProductInterest called');
+      }
+      
+      // Registra evento do funil global (simplificado)
+      console.log('[ProductDetail] Calling trackEvent...');
+      trackEvent('interest_click');
+      console.log('[ProductDetail] trackEvent called');
+      
+      // Abre o modal imediatamente (não espera tracking)
+      console.log('[ProductDetail] Opening modal...');
+      setModalOpen(true);
+      console.log('[ProductDetail] Modal open state set');
+      console.log('═══════════════════════════════════════════════════');
+    } catch (error) {
+      console.error('═══════════════════════════════════════════════════');
+      console.error('[ProductDetail] ERROR in handleInterestClick:', error);
+      console.error('═══════════════════════════════════════════════════');
+      // Abre o modal mesmo se houver erro no tracking
+      setModalOpen(true);
     }
-    
-    // Registra evento do funil global (simplificado)
-    trackEvent('interest_click');
-    
-    // Abre o modal imediatamente (não espera tracking)
-    setModalOpen(true);
   };
 
   const handleModalClose = () => {

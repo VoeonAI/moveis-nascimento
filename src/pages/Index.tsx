@@ -1,20 +1,22 @@
-import { useSearchParams } from 'react-router-dom';
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { productsService, Product } from '@/services/productsService';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { productsService } from '@/services/productsService';
 import { categoriesService } from '@/services/categoriesService';
-import { useAuth } from '@/core/auth/AuthProvider';
-import { Role } from '@/constants/domain';
-import { Package, Search, MessageCircle } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Product } from '@/services/productsService';
+import ProductCard from '@/components/products/ProductCard';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import ProductCard from '@/components/products/ProductCard';
-import HomeHeader from '@/components/home/HomeHeader';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Search, Loader2, X, MessageCircle, Package } from 'lucide-react';
 import Footer from '@/components/layout/Footer';
 import { supabase } from '@/core/supabaseClient';
+import { useAuth } from '@/core/auth/AuthProvider';
+import { Role } from '@/constants/domain';
+import TestTracking from '@/components/debug/TestTracking';
+import HomeHeader from '@/components/home/HomeHeader';
 
 const Index = () => {
+  const { profile } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -24,8 +26,7 @@ const Index = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('newest');
   const [whatsappNumber, setWhatsappNumber] = useState('');
-  const { profile } = useAuth();
-  const [searchParams] = useSearchParams();
+  const [searchParams] = useState(new URLSearchParams());
   const searchFromUrl = searchParams.get('search') || '';
   const categoryFromUrl = searchParams.get('category') || '';
   
@@ -254,6 +255,9 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Componente de teste para debug - remover em produção */}
+      <TestTracking />
+      
       {/* Header with Logo and Menu */}
       <HomeHeader />
 

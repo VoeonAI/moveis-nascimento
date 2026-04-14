@@ -1,4 +1,6 @@
 import { supabase } from '@/core/supabaseClient';
+import { productClicksService } from './productClicksService';
+import { Product } from '@/services/productsService';
 
 export type PeriodType = 'today' | 'last_7_days' | 'last_30_days' | 'current_month' | 'last_month' | 'last_6_months';
 
@@ -38,6 +40,17 @@ export interface EvolutionData {
   month: string;
   leads: number;
   ordersDelivered: number;
+}
+
+export interface ProductClicksMetrics {
+  totalClicks: number;
+  clicksBySource: Record<string, number>;
+  clicksByProduct: Array<{ product_id: string; click_count: number; product_name?: string }>;
+  clicksLast30Days: number;
+}
+
+export interface ProductWithClicks extends Product {
+  click_count?: number;
 }
 
 // Helper to get date range based on period
@@ -392,6 +405,55 @@ export const dashboardService = {
     } catch (error) {
       console.error('[dashboardService.getEvolutionByPeriod]', error);
       return [];
+    }
+  },
+
+  /**
+   * Obtém métricas de cliques de produtos para análise de funil
+   */
+  async getProductClicksMetrics(): Promise<ProductClicksMetrics> {
+    try {
+      const [totalClicks, clicksBySource, clicksByProduct, clicksLast30Days] = await Promise.all([
+        productClicksService.getAllProductsClicksCount(),
+        productClicksService.getClicksBySource(),
+        productClicksService.getProductsClicksByProduct(),
+        productClicksService.getClicksLastDays(30),
+      ]);
+
+      // Obter nomes dos produtos para os mais clicados (top 10)
+      const topProducts = clicksByProduct.slice(0, 10);
+      const productIds = topProducts.map(p => p.product_id);
+      
+      let productsWithNames: Array<{ product_id: string; click_count: number; product_name?: string }> = topProducts;
+      
+      if (productIds.length > 0) {
+        const { data: products } = await supabase
+          .from('products')
+          .select('id, name')
+          .in('id', productIds);
+        
+        const productMap = new Map((products || []).map(p => [p.id, p.name]));
+        
+        productsWithNames = topProducts.map(item => ({
+          ...item,
+          product_name: productMap.get(item.product_id),
+        }));
+      }
+
+      return {
+        totalClicks,
+        clicksBySource,
+        clicksByProduct: productsWithNames,
+        clicksLast30Days,
+      };
+    } catch (error) {
+      console.error('[dashboardService.getProductClicksMetrics]', error);
+      return {
+        totalClicks: 0,
+        clicksBySource: { catalog: 0, home: 0, search: 0 },
+        clicksByProduct: [],
+        clicksLast30Days: 0,
+      };
     }
   },
 };

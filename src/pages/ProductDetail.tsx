@@ -570,6 +570,7 @@ const ProductDetail = () => {
                   key={relatedProduct.id}
                   product={relatedProduct}
                   showBadge={relatedProduct.featured ? 'featured' : relatedProduct.on_promotion ? 'promotion' : 'none'}
+                  clickSource="catalog"
                 />
               ))}
             </div>

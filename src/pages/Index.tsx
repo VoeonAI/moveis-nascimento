@@ -58,6 +58,12 @@ const Index = () => {
   // Check if user can see internal price
   const canSeeInternalPrice = profile?.role && [Role.MASTER, Role.GESTOR, Role.ESTOQUE].includes(profile.role);
 
+  // Helper para determinar a fonte do clique baseada no contexto
+  const getClickSource = () => {
+    if (searchQuery.trim()) return 'search';
+    return 'catalog';
+  };
+
   // Load initial data
   useEffect(() => {
     loadData();
@@ -383,7 +389,7 @@ const Index = () => {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={product.id} product={product} clickSource={getClickSource()} />
             ))}
           </div>
         )}

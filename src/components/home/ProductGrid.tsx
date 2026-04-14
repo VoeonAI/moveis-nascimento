@@ -88,7 +88,8 @@ const ProductGrid = () => {
               <ProductCard 
                 key={product.id} 
                 product={product} 
-                showBadge={getBadgeType(product)} 
+                showBadge={getBadgeType(product)}
+                clickSource="home"
               />
             ))}
           </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { productsService } from '@/services/productsService';
 import { supabase } from '@/core/supabaseClient';
 import { Product } from '@/types';

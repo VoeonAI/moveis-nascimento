@@ -66,6 +66,27 @@ const getLeadStatusLabel = (status: string): string => {
   return labels[status] || status.replace(/_/g, ' ');
 };
 
+// Helper: Derive status from opportunities (PATCH CRM STATUS)
+const getContactDerivedStatus = (lead: Lead & { last_opportunity?: Opportunity }): string => {
+  // Se há opportunity vinculada, usa o stage dela
+  if (lead.last_opportunity && lead.last_opportunity.stage) {
+    return lead.last_opportunity.stage;
+  }
+  // Fallback: usa o status do lead
+  return lead.status || 'new_interest';
+};
+
+// Helper: Check if contact matches status filter (PATCH CRM STATUS)
+const contactMatchesStatusFilter = (
+  lead: Lead & { last_opportunity?: Opportunity }, 
+  selectedStatus: string
+): boolean => {
+  if (selectedStatus === 'all') return true;
+  
+  const derivedStatus = getContactDerivedStatus(lead);
+  return derivedStatus === selectedStatus;
+};
+
 // Componente para exibir contexto do topo do detalhe
 const LeadContextCard = ({ lead, lastOpportunity, lastMessage, storeWhatsApp }: {
   lead: Lead;
@@ -236,12 +257,15 @@ const CRM = () => {
   };
 
   // Helper: Check if lead is considered "New" based on business rule
-  const isNewLead = (lead: Lead) => {
+  const isNewLead = (lead: Lead & { last_opportunity?: Opportunity }) => {
     const threeDaysAgo = new Date();
     threeDaysAgo.setDate(threeDaysAgo.getDate() -3);
     
+    // PATCH CRM STATUS: Usar derived status da oportunidade
+    const derivedStatus = getContactDerivedStatus(lead);
+    
     return (
-      lead.status === 'new_interest' &&
+      derivedStatus === 'new_interest' &&
       new Date(lead.created_at) >= threeDaysAgo &&
       !lead.follow_up_needed
     );
@@ -303,8 +327,9 @@ const CRM = () => {
       filtered = filtered.filter(l => isNewLead(l) || hasNewInterest(l));
     } else if (filter === 'followup') {
       filtered = filtered.filter(l => l.follow_up_needed);
-    } else if (filter === 'status' && statusFilter !== 'all') {
-      filtered = filtered.filter(l => l.status === statusFilter);
+    } else if (filter === 'status') {
+      // PATCH CRM STATUS: Usar derived status das oportunidades
+      filtered = filtered.filter(l => contactMatchesStatusFilter(l, statusFilter));
     }
 
     // Sort: 1) overdue follow-ups first, 2) today follow-ups, 3) new leads, 4) new interest, 5) created_at desc
@@ -1034,7 +1059,7 @@ const CRM = () => {
                       {/* Status e Data */}
                       <div className="flex items-center justify-between">
                         <Badge variant="outline" className="capitalize">
-                          {getLeadStatusLabel(lead.status)}
+                          {getLeadStatusLabel(getContactDerivedStatus(lead))}
                         </Badge>
                         <span className="text-xs text-gray-500">
                           {format(new Date(lead.created_at), 'dd/MM')}

@@ -16,6 +16,7 @@ import { productImagesService } from '@/services/productImagesService';
 import ProductCard from '@/components/products/ProductCard';
 import Footer from '@/components/layout/Footer';
 import { trackProductInterest } from '@/services/productClicksService';
+import { trackEvent } from '@/services/funnelTrackingService';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -135,6 +136,9 @@ const ProductDetail = () => {
     if (product?.id) {
       trackProductInterest(product.id);
     }
+    
+    // Registra evento do funil global (simplificado)
+    trackEvent('interest_click');
     
     // Abre o modal imediatamente (não espera tracking)
     setModalOpen(true);
@@ -460,6 +464,9 @@ const ProductDetail = () => {
                     trackProductInterest(product.id);
                   }
                   
+                  // Registra evento do funil global (simplificado)
+                  trackEvent('interest_click');
+                  
                   // Abre o modal imediatamente (não espera tracking)
                   setModalOpen(true);
                 }}
@@ -565,6 +572,9 @@ const ProductDetail = () => {
                     if (product?.id) {
                       trackProductInterest(product.id);
                     }
+                    
+                    // Registra evento do funil global (simplificado)
+                    trackEvent('interest_click');
                     
                     // Abre o modal imediatamente (não espera tracking)
                     setModalOpen(true);

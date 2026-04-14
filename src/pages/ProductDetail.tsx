@@ -514,7 +514,7 @@ const ProductDetail = () => {
         <div className="mb-16">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Descrição do produto</h2>
           <div className="bg-white rounded-2xl shadow-sm p-8">
-            <p className="text-gray-700 leading-relaxed text-lg max-w-4xl">
+            <p className="text-gray-700 leading-relaxed text-lg max-w-4xl whitespace-pre-line">
               {product.description}
             </p>
           </div>

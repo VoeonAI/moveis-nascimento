@@ -2,9 +2,41 @@ import { supabase } from '@/core/supabaseClient';
 
 const BUCKET = 'product-images';
 
+// Lista de buckets possíveis para imagens de produtos
+// Em ordem de prioridade: bucket principal → buckets legados
+const POSSIBLE_BUCKETS = [
+  'product-images',      // Bucket principal atual
+  'products',             // Possível bucket legado
+  'images',               // Possível bucket legado
+  'produtos',             // Possível bucket legado (PT-BR)
+];
+
 /**
- * Helper único para normalizar URLs de imagens do produto.
+ * Tenta gerar URL pública para um path em um bucket específico.
+ * Retorna a URL se sucesso, null se falhar.
+ */
+function tryGetPublicUrl(bucket: string, path: string): string | null {
+  try {
+    const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+    if (data?.publicUrl) {
+      console.log(`[resolveProductImageUrl] ✅ Success with bucket="${bucket}" path="${path}"`);
+      console.log(`[resolveProductImageUrl] URL: ${data.publicUrl}`);
+      return data.publicUrl;
+    }
+  } catch (error) {
+    console.warn(`[resolveProductImageUrl] ❌ Failed with bucket="${bucket}" path="${path}":`, error);
+  }
+  return null;
+}
+
+/**
+ * Helper robusto para normalizar URLs de imagens do produto.
  * Lida com imagens antigas (legadas) e novas das variações.
+ * 
+ * Diagnóstico detalhado:
+ * - Logs todos os paths detectados
+ * - Tenta múltiplos buckets
+ * - Testa diferentes variações de path
  */
 export function resolveProductImageUrl(image: string | null | undefined): string {
   // 1. Se valor vazio ou null/undefined -> retornar vazio
@@ -22,34 +54,75 @@ export function resolveProductImageUrl(image: string | null | undefined): string
     return trimmed;
   }
   
-  // 5. Log temporário para identificar formatos antigos no banco
-  console.log('[resolveProductImageUrl] Legacy path detected:', {
-    original: trimmed,
-    hasBucketPrefix: trimmed.includes(BUCKET),
-    length: trimmed.length
-  });
+  // 5. Log detalhado do path original
+  console.log('═══════════════════════════════════════════════════');
+  console.log('[resolveProductImageUrl] 🔍 DIAGNÓSTICO INICIADO');
+  console.log('[resolveProductImageUrl] Original path:', trimmed);
+  console.log('[resolveProductImageUrl] Path length:', trimmed.length);
+  console.log('[resolveProductImageUrl] Starts with "/" ?', trimmed.startsWith('/'));
+  console.log('[resolveProductImageUrl] Contains "product-images"?', trimmed.includes('product-images'));
+  console.log('═══════════════════════════════════════════════════');
   
-  // 6. Normalizar path: remover prefixo do bucket se presente
-  // Paths antigos podem vir como "product-images/arquivo.webp" ou apenas "arquivo.webp"
+  // 6. Normalizar path: remover "/" inicial e prefixos de bucket
   let normalizedPath = trimmed;
+  
+  // Remover "/" inicial se existir
+  if (normalizedPath.startsWith('/')) {
+    console.log('[resolveProductImageUrl] ⚠️ Path começa com "/" - REMOVENDO');
+    normalizedPath = normalizedPath.substring(1);
+    console.log('[resolveProductImageUrl] Path após remover "/":', normalizedPath);
+  }
+  
+  // Remover prefixo do bucket se presente
   if (normalizedPath.startsWith(`${BUCKET}/`)) {
+    console.log('[resolveProductImageUrl] ⚠️ Path contém prefixo do bucket - REMOVENDO');
     normalizedPath = normalizedPath.replace(`${BUCKET}/`, '');
-    console.log('[resolveProductImageUrl] Removed bucket prefix:', {
-      original: trimmed,
-      normalized: normalizedPath
-    });
+    console.log('[resolveProductImageUrl] Path após remover bucket:', normalizedPath);
   }
   
-  // 7. Chamar Supabase com o path normalizado
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(normalizedPath);
+  console.log('═══════════════════════════════════════════════════');
+  console.log('[resolveProductImageUrl] 🎯 Tentando resolução com path normalizado:', normalizedPath);
+  console.log('═══════════════════════════════════════════════════');
   
-  if (data?.publicUrl) {
-    console.log('[resolveProductImageUrl] Generated public URL:', data.publicUrl);
-    return data.publicUrl;
+  // 7. Tentar cada bucket possível
+  for (const bucket of POSSIBLE_BUCKETS) {
+    console.log(`[resolveProductImageUrl] 📦 Tentando bucket: "${bucket}"`);
+    
+    // Tentar com path normalizado
+    const url1 = tryGetPublicUrl(bucket, normalizedPath);
+    if (url1) return url1;
+    
+    // Se o path original começava com "/", tentar COM "/" também
+    if (trimmed.startsWith('/')) {
+      const url2 = tryGetPublicUrl(bucket, trimmed);
+      if (url2) return url2;
+    }
+    
+    // Se o path original tinha prefixo de bucket, tentar o path original também
+    if (trimmed.includes(BUCKET)) {
+      const url3 = tryGetPublicUrl(bucket, trimmed);
+      if (url3) return url3;
+    }
   }
   
-  // 8. Fallback seguro
-  console.warn('[resolveProductImageUrl] Failed to generate public URL for:', normalizedPath);
+  // 8. Se tudo falhar, tentar usar o path exatamente como veio do banco
+  console.log('[resolveProductImageUrl] ⚠️ Tentando usar path exato do banco (sem normalização):', trimmed);
+  for (const bucket of POSSIBLE_BUCKETS) {
+    const url = tryGetPublicUrl(bucket, trimmed);
+    if (url) return url;
+  }
+  
+  // 9. Fallback seguro
+  console.error('═══════════════════════════════════════════════════');
+  console.error('[resolveProductImageUrl] ❌ FALHA TOTAL - Nenhum bucket funcionou');
+  console.error('[resolveProductImageUrl] Original path:', trimmed);
+  console.error('[resolveProductImageUrl] Normalized path:', normalizedPath);
+  console.error('[resolveProductImageUrl] Verifique se:');
+  console.error('[resolveProductImageUrl]   1. O arquivo existe no Supabase Storage');
+  console.error('[resolveProductImageUrl]   2. O bucket está correto');
+  console.error('[resolveProductImageUrl]   3. O nome do arquivo está correto');
+  console.error('═══════════════════════════════════════════════════');
+  
   return '';
 }
 

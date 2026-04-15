@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { productsService, ProductVariant } from '@/services/productsService';
 import { supabase } from '@/core/supabaseClient';
@@ -61,7 +61,7 @@ const ProductDetail = () => {
   const hasVariants = product?.variants && product.variants.length > 0;
 
   // Get current images based on variant selection
-  const currentImages = React.useMemo(() => {
+  const currentImages = useMemo(() => {
     if (!product) return [];
 
     // Se não tem variantes ou não tem seleção, usa todas as imagens do produto
@@ -84,7 +84,7 @@ const ProductDetail = () => {
   }, [hasVariants, selectedVariant, product]);
 
   // Get main image URL
-  const mainImageUrl = React.useMemo(() => {
+  const mainImageUrl = useMemo(() => {
     // Se usuário clicou em uma thumbnail específica, usa essa
     if (mainImageOverride) {
       return productImagesService.getPublicUrl(mainImageOverride);
@@ -341,30 +341,38 @@ const ProductDetail = () => {
     setZoomModalOpen(true);
   };
 
-  if (loading) return <div className="p-8 text-center">Carregando...</div>;
-  if (!product) return <div className="p-8 text-center">Produto não encontrado.</div>;
-
-  // Get gallery images (including all images)
-  const galleryImages = React.useMemo(() => {
+  // Get gallery images (including all images) - MOVED BEFORE CONDITIONAL RETURNS
+  const galleryImages = useMemo(() => {
+    if (!product || currentImages.length === 0) return [];
     return currentImages.map((img) => ({
       path: img,
       url: productImagesService.getPublicUrl(img),
     }));
-  }, [currentImages]);
+  }, [product, currentImages]);
 
-  // Get badge type
+  // Get badge type - MOVED BEFORE CONDITIONAL RETURNS
   const getBadgeType = (): 'featured' | 'promotion' | 'none' => {
+    if (!product) return 'none';
     if (product.featured) return 'featured';
     if (product.on_promotion) return 'promotion';
     return 'none';
   };
 
-  // Get attributes from metadata
-  const attributes = product.metadata?.attrs || {};
+  // Get attributes from metadata - MOVED BEFORE CONDITIONAL RETURNS
+  const attributes = useMemo(() => {
+    return product?.metadata?.attrs || {};
+  }, [product?.metadata?.attrs]);
+
   const hasAttributes = Object.keys(attributes).length > 0;
 
-  // Get category name for breadcrumb
-  const categoryName = product.categories?.[0]?.name || 'Catálogo';
+  // Get category name for breadcrumb - MOVED BEFORE CONDITIONAL RETURNS
+  const categoryName = useMemo(() => {
+    return product?.categories?.[0]?.name || 'Catálogo';
+  }, [product?.categories]);
+
+  // Early returns AFTER all hooks
+  if (loading) return <div className="p-8 text-center">Carregando...</div>;
+  if (!product) return <div className="p-8 text-center">Produto não encontrado.</div>;
 
   return (
     <div className="min-h-screen bg-gray-50">

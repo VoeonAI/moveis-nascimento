@@ -64,44 +64,93 @@ const ProductDetail = () => {
   const currentImages = useMemo(() => {
     if (!product) return [];
 
+    console.log('[ProductDetail] 🔍 currentImages calculation:');
+    console.log('[ProductDetail]   Product:', product.name);
+    console.log('[ProductDetail]   Has variants:', hasVariants);
+    console.log('[ProductDetail]   Selected variant:', selectedVariant?.id);
+
     // Se não tem variantes ou não tem seleção, usa todas as imagens do produto
     if (!hasVariants || !selectedVariant) {
+      console.log('[ProductDetail]   → Using product.images[]', product.images);
       return Array.isArray(product.images) ? product.images : [];
     }
 
     // Filtrar imagens vinculadas à variante selecionada
+    // ProductImageVariant tem: product_id, variant_id, image_url, is_primary
     const variantImages = product.image_variants
-      ?.filter(iv => iv.variant_id === selectedVariant.id)
+      ?.filter(iv => 
+        iv.product_id === product.id &&  // Garante que é do produto atual
+        iv.variant_id === selectedVariant.id  // Filtra pela variante selecionada
+      )
       .map(iv => iv.image_url) || [];
+
+    console.log('[ProductDetail]   → Found', variantImages.length, 'images for variant from product.image_variants');
 
     // Se tiver imagens vinculadas, usa essas
     if (variantImages.length > 0) {
+      console.log('[ProductDetail]   ✓ Using variant images:', variantImages);
       return variantImages;
     }
 
-    // Fallback: usa todas as imagens do produto
+    // Fallback 1: usa primary_image da variante se existir
+    if (selectedVariant.primary_image) {
+      console.log('[ProductDetail]   → Fallback to selectedVariant.primary_image:', selectedVariant.primary_image);
+      return [selectedVariant.primary_image];
+    }
+
+    // Fallback 2: usa todas as imagens do produto
+    console.log('[ProductDetail]   → Fallback to product.images[]', product.images);
     return Array.isArray(product.images) ? product.images : [];
   }, [hasVariants, selectedVariant, product]);
 
   // Get main image URL
   const mainImageUrl = useMemo(() => {
-    // Se usuário clicou em uma thumbnail específica, usa essa
+    console.log('[ProductDetail] 🔍 mainImageUrl calculation:');
+    
+    // 1. Se usuário clicou em uma thumbnail específica, usa essa
     if (mainImageOverride) {
-      return productImagesService.resolveProductImageUrl(mainImageOverride);
+      const url = productImagesService.resolveProductImageUrl(mainImageOverride);
+      console.log('[ProductDetail]   → Using override:', mainImageOverride);
+      console.log('[ProductDetail]   → URL:', url);
+      return url;
     }
     
-    // Se tem imagem principal da variante, usa essa
+    // 2. Se tem variantes selecionadas, prioriza imagem marcada como is_primary em product.image_variants
+    if (hasVariants && selectedVariant) {
+      const primaryImage = product.image_variants
+        ?.find(iv => 
+          iv.product_id === product.id &&
+          iv.variant_id === selectedVariant.id &&
+          iv.is_primary
+        );
+
+      if (primaryImage?.image_url) {
+        const url = productImagesService.resolveProductImageUrl(primaryImage.image_url);
+        console.log('[ProductDetail]   → Using is_primary image:', primaryImage.image_url);
+        console.log('[ProductDetail]   → URL:', url);
+        return url;
+      }
+    }
+    
+    // 3. Se tem primary_image na variante (campo legado), usa essa
     if (selectedVariant?.primary_image) {
-      return productImagesService.resolveProductImageUrl(selectedVariant.primary_image);
+      const url = productImagesService.resolveProductImageUrl(selectedVariant.primary_image);
+      console.log('[ProductDetail]   → Using selectedVariant.primary_image:', selectedVariant.primary_image);
+      console.log('[ProductDetail]   → URL:', url);
+      return url;
     }
     
-    // Se não tem imagem principal da variante, usa a primeira da lista filtrada
+    // 4. Se não tem imagem principal, usa a primeira da lista filtrada
     if (currentImages.length > 0) {
-      return productImagesService.resolveProductImageUrl(currentImages[0]);
+      const url = productImagesService.resolveProductImageUrl(currentImages[0]);
+      console.log('[ProductDetail]   → Using first from currentImages:', currentImages[0]);
+      console.log('[ProductDetail]   → URL:', url);
+      return url;
     }
     
+    console.log('[ProductDetail]   ⚠️ No image found, returning empty string');
     return '';
-  }, [selectedVariant, currentImages, mainImageOverride]);
+  }, [hasVariants, selectedVariant, currentImages, mainImageOverride, product]);
 
   // Load store WhatsApp
   const loadStoreWhatsApp = async () => {
@@ -172,8 +221,36 @@ const ProductDetail = () => {
       .finally(() => setLoading(false));
   }, [id, navigate]);
 
+  // Handle image click for zoom (only for main image)
+  const handleImageClick = (imagePath: string) => {
+    console.log('[ProductDetail] 🔍 handleImageClick called:', imagePath);
+    setZoomImage(imagePath);
+    setZoomModalOpen(true);
+  };
+
+  // Handle thumbnail click to override main image
+  const handleThumbnailClick = (imagePath: string) => {
+    console.log('[ProductDetail] 🔍 handleThumbnailClick called:', imagePath);
+    console.log('[ProductDetail]   → Setting mainImageOverride to:', imagePath);
+    setMainImageOverride(imagePath);
+  };
+
+  // Handle variant selection
+  const handleVariantSelect = (variant: ProductVariant) => {
+    console.log('[ProductDetail] 🔍 handleVariantSelect called:');
+    console.log('[ProductDetail]   → Variant ID:', variant.id);
+    console.log('[ProductDetail]   → Variant name:', variant.name);
+    console.log('[ProductDetail]   → Has primary_image:', !!variant.primary_image);
+    if (variant.primary_image) {
+      console.log('[ProductDetail]   → Primary image:', variant.primary_image);
+    }
+    setSelectedVariant(variant);
+  };
+
   // Reset main image override when variant changes
   useEffect(() => {
+    console.log('[ProductDetail] 🔍 Variant changed, resetting mainImageOverride');
+    console.log('[ProductDetail]   → New variant:', selectedVariant?.id);
     setMainImageOverride(null);
   }, [selectedVariant]);
 
@@ -335,12 +412,6 @@ const ProductDetail = () => {
     return isNaN(numPrice) ? 'Preço sob consulta' : `R$ ${numPrice.toFixed(2)}`;
   };
 
-  // Handle image click for zoom (only for main image)
-  const handleImageClick = (imagePath: string) => {
-    setZoomImage(imagePath);
-    setZoomModalOpen(true);
-  };
-
   // Get gallery images (including all images) - MOVED BEFORE CONDITIONAL RETURNS
   const galleryImages = useMemo(() => {
     if (!product || currentImages.length === 0) return [];
@@ -412,6 +483,15 @@ const ProductDetail = () => {
                   src={mainImageUrl}
                   alt={product.name}
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  onError={(e) => {
+                    console.error('[ProductDetail] ❌ Main image failed to load:', mainImageUrl);
+                    console.error('[ProductDetail]   Override:', mainImageOverride);
+                    console.error('[ProductDetail]   Selected variant:', selectedVariant?.id);
+                    console.error('[ProductDetail]   Current images:', currentImages);
+                  }}
+                  onLoad={() => {
+                    console.log('[ProductDetail] ✅ Main image loaded successfully:', mainImageUrl);
+                  }}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100">
@@ -449,7 +529,7 @@ const ProductDetail = () => {
                 {galleryImages.map(({ path, url }, idx) => (
                   <button
                     key={idx}
-                    onClick={() => setMainImageOverride(path)}
+                    onClick={() => handleThumbnailClick(path)}
                     className={`relative rounded-xl overflow-hidden border-2 transition-all hover:shadow-md ${
                       mainImageOverride === path ? 'border-green-500 ring-2 ring-green-200' : 'border-gray-200 hover:border-gray-300'
                     }`}
@@ -458,6 +538,13 @@ const ProductDetail = () => {
                       src={url}
                       alt={`${product?.name} ${idx + 1}`}
                       className="w-full aspect-square object-cover"
+                      onError={(e) => {
+                        console.error('[ProductDetail] ❌ Thumbnail failed to load:', url);
+                        console.error('[ProductDetail]   Path:', path);
+                      }}
+                      onLoad={() => {
+                        console.log('[ProductDetail] ✅ Thumbnail loaded:', url);
+                      }}
                     />
                   </button>
                 ))}
@@ -515,7 +602,7 @@ const ProductDetail = () => {
                   {product.variants.map((variant) => (
                     <button
                       key={variant.id}
-                      onClick={() => setSelectedVariant(variant)}
+                      onClick={() => handleVariantSelect(variant)}
                       className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                         selectedVariant?.id === variant.id
                           ? 'bg-green-600 text-white ring-2 ring-green-200 ring-offset-2'

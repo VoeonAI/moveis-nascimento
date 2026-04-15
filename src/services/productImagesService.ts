@@ -11,6 +11,71 @@ const POSSIBLE_BUCKETS = [
   'produtos',             // Possível bucket legado (PT-BR)
 ];
 
+// Extensões de imagem permitidas
+const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'];
+const MAX_FILENAME_LENGTH = 500;
+const MIN_FILENAME_LENGTH = 5;
+
+/**
+ * Valida se um path de imagem é válido.
+ * Retorna true se válido, false se inválido.
+ */
+function isValidImagePath(path: string): boolean {
+  // 1. Validar tamanho
+  if (path.length < MIN_FILENAME_LENGTH) {
+    console.warn('[resolveProductImageUrl] ❌ Invalid image path: too short', { path, length: path.length });
+    return false;
+  }
+
+  if (path.length > MAX_FILENAME_LENGTH) {
+    console.warn('[resolveProductImageUrl] ❌ Invalid image path: too long', { path, length: path.length });
+    return false;
+  }
+
+  // 2. Verificar se tem extensão válida
+  const lowerPath = path.toLowerCase();
+  const hasValidExtension = ALLOWED_EXTENSIONS.some(ext => lowerPath.endsWith(ext));
+
+  if (!hasValidExtension) {
+    console.warn('[resolveProductImageUrl] ❌ Invalid image path: no valid extension', {
+      path,
+      allowedExtensions: ALLOWED_EXTENSIONS
+    });
+    return false;
+  }
+
+  // 3. Detectar padrões suspeitos (strings concatenadas, caracteres especiais excessivos)
+  // Exemplo: "file1.jpgfile2.png" ou "produto   .jpg"
+  const consecutiveSpaces = /\s{4,}/.test(path);
+  const concatenatedExtensions = /\.(jpg|jpeg|png|webp|gif|svg)/gi.test(path.replace(/.*\.(jpg|jpeg|png|webp|gif|svg)/i, ''));
+
+  if (consecutiveSpaces) {
+    console.warn('[resolveProductImageUrl] ❌ Invalid image path: suspicious consecutive spaces', { path });
+    return false;
+  }
+
+  if (concatenatedExtensions) {
+    console.warn('[resolveProductImageUrl] ❌ Invalid image path: suspicious concatenated extensions', { path });
+    return false;
+  }
+
+  // 4. Validar caracteres inválidos (não usar /, \, :, *, ?, ", <, >, |)
+  // Exceto "/" que pode indicar subpastas válidas
+  const invalidChars = /[\\:*?"<>|]/;
+  if (invalidChars.test(path)) {
+    console.warn('[resolveProductImageUrl] ❌ Invalid image path: invalid characters', { path });
+    return false;
+  }
+
+  // 5. Validar que não é apenas whitespace
+  if (!path.trim()) {
+    console.warn('[resolveProductImageUrl] ❌ Invalid image path: whitespace only');
+    return false;
+  }
+
+  return true;
+}
+
 /**
  * Tenta gerar URL pública para um path em um bucket específico.
  * Retorna a URL se sucesso, null se falhar.
@@ -33,6 +98,12 @@ function tryGetPublicUrl(bucket: string, path: string): string | null {
  * Helper robusto para normalizar URLs de imagens do produto.
  * Lida com imagens antigas (legadas) e novas das variações.
  * 
+ * Validações de segurança:
+ * - Extensões permitidas: .jpg, .jpeg, .png, .webp, .gif, .svg
+ * - Tamanho mínimo: 5 caracteres
+ * - Tamanho máximo: 500 caracteres
+ * - Padrões suspeitos detectados automaticamente
+ * 
  * Diagnóstico detalhado:
  * - Logs todos os paths detectados
  * - Tenta múltiplos buckets
@@ -46,7 +117,10 @@ export function resolveProductImageUrl(image: string | null | undefined): string
   const trimmed = image.trim();
   
   // 3. Validar vazio após trim
-  if (!trimmed) return '';
+  if (!trimmed) {
+    console.warn('[resolveProductImageUrl] ❌ Invalid image path: empty string');
+    return '';
+  }
   
   // 4. Se for URL completa (http/https) -> retornar como está
   if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
@@ -54,7 +128,17 @@ export function resolveProductImageUrl(image: string | null | undefined): string
     return trimmed;
   }
   
-  // 5. Log detalhado do path original
+  // 5. VALIDAÇÃO DE SEGURANÇA - Validar path antes de tentar resolver
+  if (!isValidImagePath(trimmed)) {
+    console.error('═══════════════════════════════════════════════════');
+    console.error('[resolveProductImageUrl] ❌ INVALID IMAGE PATH DETECTED');
+    console.error('[resolveProductImageUrl] Path:', trimmed);
+    console.error('[resolveProductImageUrl] Image will NOT be rendered - using placeholder');
+    console.error('═══════════════════════════════════════════════════');
+    return ''; // Retorna vazio para usar placeholder
+  }
+  
+  // 6. Log detalhado do path original
   console.log('═══════════════════════════════════════════════════');
   console.log('[resolveProductImageUrl] 🔍 DIAGNÓSTICO INICIADO');
   console.log('[resolveProductImageUrl] Original path:', trimmed);
@@ -63,7 +147,7 @@ export function resolveProductImageUrl(image: string | null | undefined): string
   console.log('[resolveProductImageUrl] Contains "product-images"?', trimmed.includes('product-images'));
   console.log('═══════════════════════════════════════════════════');
   
-  // 6. Normalizar path: remover "/" inicial e prefixos de bucket
+  // 7. Normalizar path: remover "/" inicial e prefixos de bucket
   let normalizedPath = trimmed;
   
   // Remover "/" inicial se existir
@@ -84,7 +168,7 @@ export function resolveProductImageUrl(image: string | null | undefined): string
   console.log('[resolveProductImageUrl] 🎯 Tentando resolução com path normalizado:', normalizedPath);
   console.log('═══════════════════════════════════════════════════');
   
-  // 7. Tentar cada bucket possível
+  // 8. Tentar cada bucket possível
   for (const bucket of POSSIBLE_BUCKETS) {
     console.log(`[resolveProductImageUrl] 📦 Tentando bucket: "${bucket}"`);
     
@@ -105,18 +189,19 @@ export function resolveProductImageUrl(image: string | null | undefined): string
     }
   }
   
-  // 8. Se tudo falhar, tentar usar o path exatamente como veio do banco
+  // 9. Se tudo falhar, tentar usar o path exatamente como veio do banco
   console.log('[resolveProductImageUrl] ⚠️ Tentando usar path exato do banco (sem normalização):', trimmed);
   for (const bucket of POSSIBLE_BUCKETS) {
     const url = tryGetPublicUrl(bucket, trimmed);
     if (url) return url;
   }
   
-  // 9. Fallback seguro
+  // 10. Fallback seguro
   console.error('═══════════════════════════════════════════════════');
   console.error('[resolveProductImageUrl] ❌ FALHA TOTAL - Nenhum bucket funcionou');
   console.error('[resolveProductImageUrl] Original path:', trimmed);
   console.error('[resolveProductImageUrl] Normalized path:', normalizedPath);
+  console.error('[resolveProductImageUrl] Image will NOT be rendered - using placeholder');
   console.error('[resolveProductImageUrl] Verifique se:');
   console.error('[resolveProductImageUrl]   1. O arquivo existe no Supabase Storage');
   console.error('[resolveProductImageUrl]   2. O bucket está correto');

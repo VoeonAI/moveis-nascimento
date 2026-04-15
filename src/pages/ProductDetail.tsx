@@ -103,16 +103,40 @@ const ProductDetail = () => {
     return Array.isArray(product.images) ? product.images : [];
   }, [hasVariants, selectedVariant, product]);
 
+  // PATCH CIRÚRGICO: Lista de imagens com URLs resolvidas
+  const resolvedCurrentImages = useMemo(() => {
+    console.log('[ProductDetail] 🔍 resolvedCurrentImages calculation:');
+    const resolved = currentImages
+      .map(img => {
+        const rawPath = typeof img === 'string' ? img : (img.image_url || img.url || String(img));
+        const resolvedUrl = productImagesService.resolveProductImageUrl(rawPath);
+        return {
+          rawPath,
+          resolvedUrl,
+          hasValidUrl: !!resolvedUrl && resolvedUrl !== rawPath
+        };
+      })
+      .filter(img => img.hasValidUrl);
+    
+    console.log('[ProductDetail]   → Total raw paths:', currentImages.length);
+    console.log('[ProductDetail]   → Valid resolved URLs:', resolved.length);
+    resolved.forEach((img, idx) => {
+      console.log(`[ProductDetail]   [${idx}] Raw: ${img.rawPath}`);
+      console.log(`[ProductDetail]   [${idx}] Resolved: ${img.resolvedUrl}`);
+    });
+    
+    return resolved;
+  }, [currentImages]);
+
   // Get main image URL
   const mainImageUrl = useMemo(() => {
     console.log('[ProductDetail] 🔍 mainImageUrl calculation:');
     
-    // 1. Se usuário clicou em uma thumbnail específica, usa essa
+    // 1. Se usuário clicou em uma thumbnail específica, usa essa (JÁ RESOLVIDA)
     if (mainImageOverride) {
-      const url = productImagesService.resolveProductImageUrl(mainImageOverride);
       console.log('[ProductDetail]   → Using override:', mainImageOverride);
-      console.log('[ProductDetail]   → URL:', url);
-      return url;
+      console.log('[ProductDetail]   → URL:', mainImageOverride);
+      return mainImageOverride;
     }
     
     // 2. Se tem variantes selecionadas, prioriza imagem marcada como is_primary em product.image_variants
@@ -140,17 +164,17 @@ const ProductDetail = () => {
       return url;
     }
     
-    // 4. Se não tem imagem principal, usa a primeira da lista filtrada
-    if (currentImages.length > 0) {
-      const url = productImagesService.resolveProductImageUrl(currentImages[0]);
-      console.log('[ProductDetail]   → Using first from currentImages:', currentImages[0]);
-      console.log('[ProductDetail]   → URL:', url);
+    // 4. PATCH CIRÚRGICO: Se não tem imagem principal, usa a PRIMEIRA URL RESOLVIDA
+    if (resolvedCurrentImages.length > 0) {
+      const url = resolvedCurrentImages[0].resolvedUrl;
+      console.log('[ProductDetail]   → Using first from resolvedCurrentImages:', url);
+      console.log('[ProductDetail]   → Raw:', resolvedCurrentImages[0].rawPath);
       return url;
     }
     
     console.log('[ProductDetail]   ⚠️ No image found, returning empty string');
     return '';
-  }, [hasVariants, selectedVariant, currentImages, mainImageOverride, product]);
+  }, [hasVariants, selectedVariant, resolvedCurrentImages, mainImageOverride, product]);
 
   // Load store WhatsApp
   const loadStoreWhatsApp = async () => {
@@ -221,18 +245,18 @@ const ProductDetail = () => {
       .finally(() => setLoading(false));
   }, [id, navigate]);
 
-  // Handle image click for zoom (only for main image)
-  const handleImageClick = (imagePath: string) => {
-    console.log('[ProductDetail] 🔍 handleImageClick called:', imagePath);
-    setZoomImage(imagePath);
+  // Handle image click for zoom (only for main image) - PATCH: recebe URL resolvida
+  const handleImageClick = (resolvedUrl: string) => {
+    console.log('[ProductDetail] 🔍 handleImageClick called:', resolvedUrl);
+    setZoomImage(resolvedUrl);
     setZoomModalOpen(true);
   };
 
-  // Handle thumbnail click to override main image
-  const handleThumbnailClick = (imagePath: string) => {
-    console.log('[ProductDetail] 🔍 handleThumbnailClick called:', imagePath);
-    console.log('[ProductDetail]   → Setting mainImageOverride to:', imagePath);
-    setMainImageOverride(imagePath);
+  // Handle thumbnail click to override main image - PATCH: recebe URL resolvida
+  const handleThumbnailClick = (resolvedUrl: string) => {
+    console.log('[ProductDetail] 🔍 handleThumbnailClick called:', resolvedUrl);
+    console.log('[ProductDetail]   → Setting mainImageOverride to:', resolvedUrl);
+    setMainImageOverride(resolvedUrl);
   };
 
   // Handle variant selection
@@ -412,14 +436,18 @@ const ProductDetail = () => {
     return isNaN(numPrice) ? 'Preço sob consulta' : `R$ ${numPrice.toFixed(2)}`;
   };
 
-  // Get gallery images (including all images) - MOVED BEFORE CONDITIONAL RETURNS
+  // Get gallery images (including all images) - PATCH: usa resolvedCurrentImages como fonte única
   const galleryImages = useMemo(() => {
-    if (!product || currentImages.length === 0) return [];
-    return currentImages.map((img) => ({
-      path: img,
-      url: productImagesService.resolveProductImageUrl(img),
-    }));
-  }, [product, currentImages]);
+    console.log('[ProductDetail] 🔍 galleryImages calculation from resolvedCurrentImages:');
+    console.log('[ProductDetail]   → Total resolved images:', resolvedCurrentImages.length);
+    return resolvedCurrentImages.map((img, idx) => {
+      console.log(`[ProductDetail]   Gallery [${idx}]:`, img.resolvedUrl);
+      return {
+        rawPath: img.rawPath,
+        resolvedUrl: img.resolvedUrl,
+      };
+    });
+  }, [resolvedCurrentImages]);
 
   // Get badge type - MOVED BEFORE CONDITIONAL RETURNS
   const getBadgeType = (): 'featured' | 'promotion' | 'none' => {
@@ -444,6 +472,18 @@ const ProductDetail = () => {
   // Early returns AFTER all hooks
   if (loading) return <div className="p-8 text-center">Carregando...</div>;
   if (!product) return <div className="p-8 text-center">Produto não encontrado.</div>;
+
+  // PATCH: Logs temporários no render para debugar URLs resolvidas
+  console.log('═══════════════════════════════════════════════════');
+  console.log('[ProductDetail] 🖼️ RENDER STATE:');
+  console.log('[ProductDetail]   Product:', product.name);
+  console.log('[ProductDetail]   currentImages (raw):', currentImages);
+  console.log('[ProductDetail]   resolvedCurrentImages:', resolvedCurrentImages.map(i => i.resolvedUrl));
+  console.log('[ProductDetail]   mainImageUrl:', mainImageUrl);
+  console.log('[ProductDetail]   mainImageOverride:', mainImageOverride);
+  console.log('[ProductDetail]   zoomImage:', zoomImage);
+  console.log('[ProductDetail]   galleryImages:', galleryImages.map(g => g.resolvedUrl));
+  console.log('═══════════════════════════════════════════════════');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -473,10 +513,10 @@ const ProductDetail = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mb-16">
           {/* Left Column - Images */}
           <div className="space-y-4">
-            {/* Main Image with Zoom */}
+            {/* Main Image with Zoom - PATCH: usa mainImageUrl já resolvido direto */}
             <div 
               className="relative aspect-square bg-white rounded-2xl shadow-lg overflow-hidden cursor-zoom-in group"
-              onClick={() => currentImages[0] && handleImageClick(currentImages[0])}
+              onClick={() => mainImageUrl && handleImageClick(mainImageUrl)}
             >
               {mainImageUrl ? (
                 <img
@@ -487,7 +527,7 @@ const ProductDetail = () => {
                     console.error('[ProductDetail] ❌ Main image failed to load:', mainImageUrl);
                     console.error('[ProductDetail]   Override:', mainImageOverride);
                     console.error('[ProductDetail]   Selected variant:', selectedVariant?.id);
-                    console.error('[ProductDetail]   Current images:', currentImages);
+                    console.error('[ProductDetail]   Resolved current images:', resolvedCurrentImages.map(i => i.resolvedUrl));
                   }}
                   onLoad={() => {
                     console.log('[ProductDetail] ✅ Main image loaded successfully:', mainImageUrl);
@@ -523,27 +563,27 @@ const ProductDetail = () => {
               </div>
             </div>
 
-            {/* Gallery Thumbnails */}
+            {/* Gallery Thumbnails - PATCH: passa URLs resolvidas para handlers */}
             {galleryImages.length > 0 && (
               <div className="grid grid-cols-4 gap-3">
-                {galleryImages.map(({ path, url }, idx) => (
+                {galleryImages.map(({ rawPath, resolvedUrl }, idx) => (
                   <button
                     key={idx}
-                    onClick={() => handleThumbnailClick(path)}
+                    onClick={() => handleThumbnailClick(resolvedUrl)}
                     className={`relative rounded-xl overflow-hidden border-2 transition-all hover:shadow-md ${
-                      mainImageOverride === path ? 'border-green-500 ring-2 ring-green-200' : 'border-gray-200 hover:border-gray-300'
+                      mainImageOverride === resolvedUrl ? 'border-green-500 ring-2 ring-green-200' : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
                     <img
-                      src={url}
+                      src={resolvedUrl}
                       alt={`${product?.name} ${idx + 1}`}
                       className="w-full aspect-square object-cover"
                       onError={(e) => {
-                        console.error('[ProductDetail] ❌ Thumbnail failed to load:', url);
-                        console.error('[ProductDetail]   Path:', path);
+                        console.error('[ProductDetail] ❌ Thumbnail failed to load:', resolvedUrl);
+                        console.error('[ProductDetail]   Raw path:', rawPath);
                       }}
                       onLoad={() => {
-                        console.log('[ProductDetail] ✅ Thumbnail loaded:', url);
+                        console.log('[ProductDetail] ✅ Thumbnail loaded:', resolvedUrl);
                       }}
                     />
                   </button>
@@ -928,7 +968,7 @@ const ProductDetail = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Image Zoom Modal */}
+      {/* Image Zoom Modal - PATCH: usa URL resolvida direta sem re-resolver */}
       <Dialog open={zoomModalOpen} onOpenChange={setZoomModalOpen}>
         <DialogContent className="sm:max-w-4xl max-h-[90vh] p-0">
           <button
@@ -939,9 +979,15 @@ const ProductDetail = () => {
           </button>
           {zoomImage && (
             <img
-              src={productImagesService.resolveProductImageUrl(zoomImage)}
+              src={zoomImage}
               alt={product.name}
               className="w-full h-full object-contain"
+              onLoad={() => {
+                console.log('[ProductDetail] ✅ Zoom modal image loaded:', zoomImage);
+              }}
+              onError={(e) => {
+                console.error('[ProductDetail] ❌ Zoom modal image failed to load:', zoomImage);
+              }}
             />
           )}
         </DialogContent>

@@ -32,13 +32,6 @@ const ProductDetail = () => {
   // Main image state for gallery (when user clicks on thumbnail)
   const [mainImageOverride, setMainImageOverride] = useState<string | null>(null);
   
-  // PATCH CIRÚRGICO: Estado para imagens validadas (apenas imagens que realmente carregam)
-  const [validatedImages, setValidatedImages] = useState<Array<{
-    rawPath: string;
-    resolvedUrl: string;
-  }>>([]);
-  const [validatingImages, setValidatingImages] = useState(false);
-  
   // Image zoom modal state
   const [zoomModalOpen, setZoomModalOpen] = useState(false);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
@@ -67,22 +60,21 @@ const ProductDetail = () => {
   // Check if product has variants
   const hasVariants = product?.variants && product.variants.length > 0;
 
-  // PATCH CIRÚRGICO: Função para verificar se imagem realmente carrega
-  const checkImageExists = async (url: string): Promise<{ url: string; exists: boolean; httpStatus?: number }> => {
+  // PATCH CIRÚRGICO: Função utilitária simples para verificar se imagem carrega
+  const checkImage = async (url: string): Promise<boolean> => {
     try {
-      const response = await fetch(url, { method: 'HEAD' });
-      return {
-        url,
-        exists: response.ok === true,
-        httpStatus: response.status
-      };
-    } catch (error) {
-      return {
-        url,
-        exists: false
-      };
+      const res = await fetch(url, { method: 'HEAD' });
+      return res.ok;
+    } catch {
+      return false;
     }
   };
+
+  // PATCH CIRÚRGICO: Estado para imagens válidas da galeria
+  const [galleryValidImages, setGalleryValidImages] = useState<Array<{
+    rawPath: string;
+    resolvedUrl: string;
+  }>>([]);
 
   // Get current images based on variant selection
   const currentImages = useMemo(() => {
@@ -144,80 +136,68 @@ const ProductDetail = () => {
     
     console.log('[ProductDetail]   → Total raw paths:', currentImages.length);
     console.log('[ProductDetail]   → Valid resolved URLs:', resolved.length);
-    resolved.forEach((img, idx) => {
-      console.log(`[ProductDetail]   [${idx}] Raw: ${img.rawPath}`);
-      console.log(`[ProductDetail]   [${idx}] Resolved: ${img.resolvedUrl}`);
-    });
     
     return resolved;
   }, [currentImages]);
 
-  // PATCH CIRÚRGICO: Validar imagens assim que resolvedCurrentImages mudar
+  // PATCH CIRÚRGICO: Validar imagens e manter apenas válidas na galeria
   useEffect(() => {
-    const validateImages = async () => {
+    const validateGalleryImages = async () => {
       if (resolvedCurrentImages.length === 0) {
-        setValidatedImages([]);
-        setValidatingImages(false);
+        setGalleryValidImages([]);
         return;
       }
 
-      setValidatingImages(true);
-      console.log('[ProductDetail] 🔍 Validating images...');
+      console.log('[ProductDetail] 🔍 Validating gallery images...');
       console.log('[ProductDetail]   → Total to validate:', resolvedCurrentImages.length);
 
-      const validations = resolvedCurrentImages.map(img => 
-        checkImageExists(img.resolvedUrl)
+      // Validar cada URL com checkImage
+      const validations = await Promise.all(
+        resolvedCurrentImages.map(async (img) => {
+          const isValid = await checkImage(img.resolvedUrl);
+          return { ...img, isValid };
+        })
       );
 
-      const results = await Promise.all(validations);
+      // Manter apenas imagens válidas
+      const validImages = validations.filter(v => v.isValid);
+      const brokenImages = validations.filter(v => !v.isValid);
 
-      const validImages = results
-        .filter(r => r.exists)
-        .map(r => {
-          const original = resolvedCurrentImages.find(img => img.resolvedUrl === r.url);
-          return original || { rawPath: '', resolvedUrl: r.url };
-        });
-
-      const removedImages = results.filter(r => !r.exists);
-      
       console.log('[ProductDetail]   → Valid images:', validImages.length);
-      console.log('[ProductDetail]   → Removed broken images:', removedImages.length);
-      
-      removedImages.forEach(img => {
-        console.log(`[ProductDetail]   ❌ Removed broken image: ${img.url}`);
-        console.log(`[ProductDetail]      HTTP Status: ${img.httpStatus || 'NETWORK_ERROR'}`);
+      console.log('[ProductDetail]   → Broken images removed:', brokenImages.length);
+
+      brokenImages.forEach(img => {
+        console.log(`[ProductDetail]   ❌ Removed: ${img.resolvedUrl}`);
       });
 
-      setValidatedImages(validImages);
-      setValidatingImages(false);
+      setGalleryValidImages(validImages);
 
-      // Reset main image override if it's a broken image
+      // Reset mainImageOverride se imagem atual quebrou
       if (mainImageOverride) {
         const stillValid = validImages.some(img => img.resolvedUrl === mainImageOverride);
         if (!stillValid) {
-          console.log('[ProductDetail]   🔄 Resetting mainImageOverride (current image is broken)');
+          console.log('[ProductDetail]   🔄 Resetting mainImageOverride (broken image)');
           setMainImageOverride(null);
         }
       }
     };
 
-    validateImages();
+    validateGalleryImages();
   }, [resolvedCurrentImages]);
 
   // Get main image URL
   const mainImageUrl = useMemo(() => {
     console.log('[ProductDetail] 🔍 mainImageUrl calculation:');
     
-    // 1. Se usuário clicou em uma thumbnail específica, usa essa (JÁ RESOLVIDA E VALIDADA)
+    // 1. Se usuário clicou em uma thumbnail específica, usa essa (JÁ VALIDADA)
     if (mainImageOverride) {
       // Verifica se ainda é válida
-      const stillValid = validatedImages.some(img => img.resolvedUrl === mainImageOverride);
+      const stillValid = galleryValidImages.some(img => img.resolvedUrl === mainImageOverride);
       if (stillValid) {
         console.log('[ProductDetail]   → Using override:', mainImageOverride);
-        console.log('[ProductDetail]   → URL:', mainImageOverride);
         return mainImageOverride;
       } else {
-        console.log('[ProductDetail]   ⚠️ Override is no longer valid, falling back');
+        console.log('[ProductDetail]   ⚠️ Override is broken, falling back');
         setMainImageOverride(null);
       }
     }
@@ -234,10 +214,9 @@ const ProductDetail = () => {
       if (primaryImage?.image_url) {
         const url = productImagesService.resolveProductImageUrl(primaryImage.image_url);
         // Verifica se está na lista de validadas
-        const isValid = validatedImages.some(img => img.resolvedUrl === url);
+        const isValid = galleryValidImages.some(img => img.resolvedUrl === url);
         if (isValid) {
-          console.log('[ProductDetail]   → Using is_primary image:', primaryImage.image_url);
-          console.log('[ProductDetail]   → URL:', url);
+          console.log('[ProductDetail]   → Using is_primary image:', url);
           return url;
         } else {
           console.log('[ProductDetail]   ⚠️ is_primary image is broken, skipping');
@@ -249,27 +228,33 @@ const ProductDetail = () => {
     if (selectedVariant?.primary_image) {
       const url = productImagesService.resolveProductImageUrl(selectedVariant.primary_image);
       // Verifica se está na lista de validadas
-      const isValid = validatedImages.some(img => img.resolvedUrl === url);
+      const isValid = galleryValidImages.some(img => img.resolvedUrl === url);
       if (isValid) {
-        console.log('[ProductDetail]   → Using selectedVariant.primary_image:', selectedVariant.primary_image);
-        console.log('[ProductDetail]   → URL:', url);
+        console.log('[ProductDetail]   → Using selectedVariant.primary_image:', url);
         return url;
       } else {
         console.log('[ProductDetail]   ⚠️ primary_image is broken, skipping');
       }
     }
     
-    // 4. PATCH CIRÚRGICO: Se não tem imagem principal, usa a PRIMEIRA URL VALIDADA
-    if (validatedImages.length > 0) {
-      const url = validatedImages[0].resolvedUrl;
-      console.log('[ProductDetail]   → Using first from validatedImages:', url);
-      console.log('[ProductDetail]   → Raw:', validatedImages[0].rawPath);
+    // 4. PATCH CIRÚRGICO: Se não tem imagem principal, usa a PRIMEIRA IMAGEM VÁLIDA
+    if (galleryValidImages.length > 0) {
+      const url = galleryValidImages[0].resolvedUrl;
+      console.log('[ProductDetail]   → Using first from galleryValidImages:', url);
       return url;
     }
     
-    console.log('[ProductDetail]   ⚠️ No valid image found, returning empty string');
+    // 5. Fallback final: se nenhuma imagem válida, tenta products.images
+    if (product?.images && Array.isArray(product.images) && product.images.length > 0) {
+      const firstImage = product.images[0];
+      const url = productImagesService.resolveProductImageUrl(typeof firstImage === 'string' ? firstImage : String(firstImage));
+      console.log('[ProductDetail]   → Fallback to products.images[0]:', url);
+      return url;
+    }
+    
+    console.log('[ProductDetail]   ⚠️ No image found, using placeholder');
     return '';
-  }, [hasVariants, selectedVariant, validatedImages, mainImageOverride, product]);
+  }, [hasVariants, selectedVariant, galleryValidImages, mainImageOverride, product]);
 
   // Load store WhatsApp
   const loadStoreWhatsApp = async () => {
@@ -531,18 +516,15 @@ const ProductDetail = () => {
     return isNaN(numPrice) ? 'Preço sob consulta' : `R$ ${numPrice.toFixed(2)}`;
   };
 
-  // Get gallery images (including all images) - PATCH: usa validatedImages como fonte única
+  // Get gallery images (including all images) - PATCH: usa galleryValidImages como fonte única
   const galleryImages = useMemo(() => {
-    console.log('[ProductDetail] 🔍 galleryImages calculation from validatedImages:');
-    console.log('[ProductDetail]   → Total validated images:', validatedImages.length);
-    return validatedImages.map((img, idx) => {
-      console.log(`[ProductDetail]   Gallery [${idx}]:`, img.resolvedUrl);
-      return {
-        rawPath: img.rawPath,
-        resolvedUrl: img.resolvedUrl,
-      };
-    });
-  }, [validatedImages]);
+    console.log('[ProductDetail] 🔍 galleryImages calculation from galleryValidImages:');
+    console.log('[ProductDetail]   → Total valid images:', galleryValidImages.length);
+    return galleryValidImages.map((img, idx) => ({
+      rawPath: img.rawPath,
+      resolvedUrl: img.resolvedUrl,
+    }));
+  }, [galleryValidImages]);
 
   // Get badge type - MOVED BEFORE CONDITIONAL RETURNS
   const getBadgeType = (): 'featured' | 'promotion' | 'none' => {
@@ -568,14 +550,13 @@ const ProductDetail = () => {
   if (loading) return <div className="p-8 text-center">Carregando...</div>;
   if (!product) return <div className="p-8 text-center">Produto não encontrado.</div>;
 
-  // PATCH: Logs temporários no render para debugar URLs resolvidas
+  // PATCH: Logs temporários no render para debugar URLs válidas
   console.log('═══════════════════════════════════════════════════');
   console.log('[ProductDetail] 🖼️ RENDER STATE:');
   console.log('[ProductDetail]   Product:', product.name);
   console.log('[ProductDetail]   currentImages (raw):', currentImages);
   console.log('[ProductDetail]   resolvedCurrentImages:', resolvedCurrentImages.map(i => i.resolvedUrl));
-  console.log('[ProductDetail]   validatedImages (final):', validatedImages.map(i => i.resolvedUrl));
-  console.log('[ProductDetail]   validatingImages:', validatingImages);
+  console.log('[ProductDetail]   galleryValidImages (final):', galleryValidImages.map(i => i.resolvedUrl));
   console.log('[ProductDetail]   mainImageUrl:', mainImageUrl);
   console.log('[ProductDetail]   mainImageOverride:', mainImageOverride);
   console.log('[ProductDetail]   zoomImage:', zoomImage);
@@ -610,7 +591,7 @@ const ProductDetail = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mb-16">
           {/* Left Column - Images */}
           <div className="space-y-4">
-            {/* Main Image with Zoom - PATCH: usa mainImageUrl já resolvido direto */}
+            {/* Main Image with Zoom - PATCH: usa mainImageUrl já validado */}
             <div 
               className="relative aspect-square bg-white rounded-2xl shadow-lg overflow-hidden cursor-zoom-in group"
               onClick={() => mainImageUrl && handleImageClick(mainImageUrl)}
@@ -624,17 +605,12 @@ const ProductDetail = () => {
                     console.error('[ProductDetail] ❌ Main image failed to load:', mainImageUrl);
                     console.error('[ProductDetail]   Override:', mainImageOverride);
                     console.error('[ProductDetail]   Selected variant:', selectedVariant?.id);
-                    console.error('[ProductDetail]   Validated images:', validatedImages.map(i => i.resolvedUrl));
+                    console.error('[ProductDetail]   Gallery valid images:', galleryValidImages.map(i => i.resolvedUrl));
                   }}
                   onLoad={() => {
                     console.log('[ProductDetail] ✅ Main image loaded successfully:', mainImageUrl);
                   }}
                 />
-              ) : validatingImages ? (
-                <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-100">
-                  <Loader2 size={32} className="animate-spin mb-3" />
-                  <span>Validando imagens...</span>
-                </div>
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100">
                   Sem imagem disponível

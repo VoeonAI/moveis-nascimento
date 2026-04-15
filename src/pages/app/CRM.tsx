@@ -41,6 +41,7 @@ import { HardDeleteConfirmDialog } from '@/components/HardDeleteConfirmDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import ProductSelector from '@/components/crm/ProductSelector';
 import { 
   ArrowLeft, CheckCircle, Clock, User, Phone, MessageSquare, Package, 
   Calendar as CalendarIcon, RefreshCw, Plus, Bell, AlertCircle,
@@ -859,25 +860,13 @@ const CRM = () => {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="lead_product">Produto de Interesse (opcional)</Label>
-              <Select
-                value={newLeadData.product_id}
-                onValueChange={(value) => setNewLeadData({ ...newLeadData, product_id: value })}
-                disabled={creatingLead}
-              >
-                <SelectTrigger id="lead_product">
-                  <SelectValue placeholder="Selecione um produto" />
-                </SelectTrigger>
-                <SelectContent>
-                  {products.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Produto de Interesse - Novo Seletor */}
+            <ProductSelector
+              products={products}
+              selectedProductId={newLeadData.product_id}
+              onProductSelect={(productId) => setNewLeadData({ ...newLeadData, product_id: productId })}
+              disabled={creatingLead}
+            />
 
             <div className="flex items-center space-x-2">
               <Switch

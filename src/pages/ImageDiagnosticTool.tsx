@@ -171,16 +171,28 @@ const ImageDiagnosticTool = () => {
         variantName,
         isValid: false,
         status: 'error',
+        httpCode: undefined,
       };
     }
 
-    // Testar a URL com fetch
+    // PATCH: Testar a URL com fetch SEM no-cors para poder ler o status HTTP
     try {
-      const response = await fetch(resolvedUrl, { method: 'HEAD', mode: 'no-cors' });
+      console.log(`[ImageDiagnosticTool] 📡 Fetching: ${resolvedUrl}`);
+      const response = await fetch(resolvedUrl, { method: 'HEAD' });
+      
+      console.log(`[ImageDiagnosticTool] 📊 HTTP Status: ${response.status} ${response.statusText}`);
+      console.log(`[ImageDiagnosticTool] 📊 response.ok: ${response.ok}`);
 
-      // Como usamos no-cors, não conseguimos ler o status
-      // Mas sabemos que não houve erro de rede
-      console.log(`[ImageDiagnosticTool] ✅ Network request succeeded for: ${resolvedUrl}`);
+      // PATCH: Considerar sucesso APENAS quando response.ok === true
+      // response.ok é true para status 200-299
+      const isValid = response.ok === true;
+
+      if (!isValid) {
+        console.error(`[ImageDiagnosticTool] ❌ Invalid HTTP status: ${response.status}`);
+        console.error(`[ImageDiagnosticTool]    Image considered BROKEN`);
+      } else {
+        console.log(`[ImageDiagnosticTool] ✅ Image is VALID`);
+      }
 
       return {
         productId,
@@ -189,8 +201,9 @@ const ImageDiagnosticTool = () => {
         resolvedUrl,
         source,
         variantName,
-        isValid: true,
-        status: 'success',
+        isValid,
+        status: isValid ? 'success' : 'error',
+        httpCode: response.status,
       };
     } catch (error) {
       console.error(`[ImageDiagnosticTool] ❌ Network request failed for: ${resolvedUrl}`);
@@ -205,6 +218,7 @@ const ImageDiagnosticTool = () => {
         variantName,
         isValid: false,
         status: 'error',
+        httpCode: undefined,
       };
     }
   };
@@ -325,6 +339,12 @@ const ImageDiagnosticTool = () => {
                           {diag.status === 'success' ? '✅ OK' : '❌ ERRO'}
                         </span>
 
+                        {diag.httpCode && (
+                          <span className="px-2 py-1 rounded text-sm font-medium bg-gray-100 text-gray-700">
+                            HTTP {diag.httpCode}
+                          </span>
+                        )}
+
                         {diag.resolvedUrl && diag.resolvedUrl !== 'NOT RESOLVED' && (
                           <button
                             onClick={() => window.open(diag.resolvedUrl, '_blank')}
@@ -349,6 +369,8 @@ const ImageDiagnosticTool = () => {
                           <p><strong>Problema detectado:</strong></p>
                           {diag.resolvedUrl === 'NOT RESOLVED' ? (
                             <p>O helper não conseguiu gerar uma URL pública para este path.</p>
+                          ) : diag.httpCode ? (
+                            <p>A URL retornou erro HTTP {diag.httpCode}. A imagem está quebrada ou inacessível.</p>
                           ) : (
                             <p>Ocorreu um erro ao tentar carregar a imagem via rede.</p>
                           )}
@@ -361,7 +383,7 @@ const ImageDiagnosticTool = () => {
                       {diag.status === 'success' && (
                         <div className="bg-green-50 border border-green-200 rounded p-3 text-sm text-green-800">
                           <p><strong>Sucesso!</strong></p>
-                          <p>URL gerada e rede respondeu sem erros.</p>
+                          <p>URL gerada e servidor respondeu com HTTP {diag.httpCode || '200'}.</p>
                           <p className="mt-2">
                             <strong>Próximo passo:</strong> Se a imagem ainda não aparece no ProductDetail, o problema pode ser no componente React.
                           </p>

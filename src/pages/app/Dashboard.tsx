@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { dashboardService, DashboardMetrics, SystemOverview, OpportunityFunnel, OrdersPipeline, EvolutionData, PeriodType } from '@/services/dashboardService';
+import { dashboardService, DashboardMetrics, SystemOverview, OpportunityFunnel, OrdersPipeline, EvolutionData, PeriodType, BehavioralFunnel as BehavioralFunnelType } from '@/services/dashboardService';
 import { productsIntelligenceService, MostWorkedProduct, ProductWithoutActivity, CategoryDistribution, ProductsOverview, BestSellingProduct, ProductConversion, SalesOverview, ProductRadar } from '@/services/productsIntelligenceService';
 import { leadsIntelligenceService, LeadsRadar } from '@/services/leadsIntelligenceService';
 import { pipelineIntelligenceService, PipelineRadar } from '@/services/pipelineIntelligenceService';
@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ProductsRadar } from '@/components/ProductsRadar';
 import { LeadsRadar as LeadsRadarComponent } from '@/components/LeadsRadar';
 import { PipelineRadar as PipelineRadarComponent } from '@/components/PipelineRadar';
+import BehavioralFunnel from '@/components/analytics/BehavioralFunnel';
 
 const COLORS = {
   primary: '#3b82f6',
@@ -44,6 +45,7 @@ const Dashboard = () => {
   });
   
   const [opportunityFunnel, setOpportunityFunnel] = useState<OpportunityFunnel[]>([]);
+  const [behavioralFunnel, setBehavioralFunnel] = useState<BehavioralFunnelType[]>([]);
   const [ordersPipeline, setOrdersPipeline] = useState<OrdersPipeline[]>([]);
   const [evolution, setEvolution] = useState<EvolutionData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,18 +103,19 @@ const Dashboard = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [overviewData, metricsData, funnelData, pipelineData, evolutionData] = await Promise.all([
+      const [overviewData, metricsData, funnelData, behavioralData, pipelineData, evolutionData] = await Promise.all([
         dashboardService.getSystemOverview(),
         dashboardService.getMetrics(period),
         dashboardService.getOpportunityFunnel(period),
+        dashboardService.getBehavioralFunnel(period),
         dashboardService.getOrdersPipeline(period),
         dashboardService.getEvolutionByPeriod(period),
       ]);
       setOverview(overviewData);
       setMetrics(metricsData);
       setOpportunityFunnel(funnelData);
+      setBehavioralFunnel(behavioralData);
       setOrdersPipeline(pipelineData);
-      setEvolution(evolutionData);
       
       // Load products intelligence data
       await loadProductsData();
@@ -370,6 +373,11 @@ const Dashboard = () => {
             <p className="text-xs text-muted-foreground mt-1">{periodLabels[period]}</p>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Funil Comportamental - Novo */}
+      <div className="mb-6">
+        <BehavioralFunnel funnelData={behavioralFunnel} loading={loading} />
       </div>
 
       {/* Charts */}

@@ -36,6 +36,13 @@ export interface OrdersPipeline {
   label: string;
 }
 
+export interface BehavioralFunnel {
+  stage: string;
+  count: number;
+  label: string;
+  color: string;
+}
+
 export interface EvolutionData {
   month: string;
   leads: number;
@@ -404,6 +411,86 @@ export const dashboardService = {
       }));
     } catch (error) {
       console.error('[dashboardService.getEvolutionByPeriod]', error);
+      return [];
+    }
+  },
+
+  async getBehavioralFunnel(period: PeriodType = 'last_30_days'): Promise<BehavioralFunnel[]> {
+    try {
+      const { start, end } = getDateRange(period);
+
+      // 1. Cliques de interesse (funnel_events)
+      const { data: clicksData, error: clicksError } = await supabase
+        .from('funnel_events')
+        .select('event_type')
+        .eq('event_type', 'interest_click')
+        .gte('created_at', start.toISOString())
+        .lte('created_at', end.toISOString());
+
+      if (clicksError) {
+        console.error('[dashboardService.getBehavioralFunnel] clicks:', clicksError.message);
+      }
+
+      const interestClicks = clicksData?.length || 0;
+
+      // 2. Interestes (todas as opportunities no período)
+      const { data: oppsData, error: oppsError } = await supabase
+        .from('opportunities')
+        .select('stage')
+        .eq('archived', false)
+        .gte('created_at', start.toISOString())
+        .lte('created_at', end.toISOString());
+
+      if (oppsError) {
+        console.error('[dashboardService.getBehavioralFunnel] opportunities:', oppsError.message);
+      }
+
+      // Contar por estágio
+      const funnel = (oppsData || []).reduce((acc, opp) => {
+        acc[opp.stage] = (acc[opp.stage] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const totalInterests = oppsData?.length || 0;
+      const talkingAi = funnel['talking_ai'] || 0;
+      const talkingHuman = funnel['talking_human'] || 0;
+      const won = funnel['won'] || 0;
+
+      // Retornar dados do funil comportamental
+      return [
+        {
+          stage: 'interest_click',
+          count: interestClicks,
+          label: 'Cliques',
+          color: '#3b82f6', // blue-500
+        },
+        {
+          stage: 'interest',
+          count: totalInterests,
+          label: 'Interesse',
+          color: '#22c55e', // green-500
+        },
+        {
+          stage: 'talking_ai',
+          count: talkingAi,
+          label: 'Conversando com IA',
+          color: '#a855f7', // purple-500
+        },
+        {
+          stage: 'talking_human',
+          count: talkingHuman,
+          label: 'Conversando com Humano',
+          color: '#f97316', // orange-500
+        },
+        {
+          stage: 'won',
+          count: won,
+          label: 'Ganho',
+          color: '#eab308', // yellow-500
+        },
+      ];
+    } catch (error) {
+      console.error('[dashboardService.getBehavioralFunnel]', error);
       return [];
     }
   },

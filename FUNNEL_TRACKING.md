@@ -4,6 +4,45 @@
 
 Sistema de tracking do funil de conversão usando `funnel_events` para cliques de interesse e `opportunities` para o restante do pipeline.
 
+## Duas Visualizações Disponíveis
+
+### 1. Funil de Conversão (FunilTrackingService)
+Visualização completa do pipeline com métricas detalhadas por estágio.
+
+**Componente:** `src/components/analytics/FunnelMetrics.tsx`
+
+**Uso:**
+```typescript
+import FunnelMetrics from '@/components/analytics/FunnelMetrics';
+
+<FunnelMetrics />
+```
+
+**Características:**
+- Cards de métricas (6 estágios)
+- Taxas de conversão detalhadas
+- Resumo do pipeline
+- Win Rate e IA Engagement
+
+---
+
+### 2. Funil Comportamental (Dashboard)
+Visualização integrada ao dashboard mostrando o comportamento do usuário e conversão.
+
+**Componente:** `src/components/analytics/BehavioralFunnel.tsx`
+
+**Integração:** Dashboard principal (`/app/dashboard`)
+
+**Características:**
+- Barras horizontais coloridas
+- Seta e % de conversão entre etapas
+- Conversão global (cliques → vendas)
+- Resumo numérico
+
+**Documentação completa:** Veja `BEHAVIORAL_FUNNEL.md`
+
+---
+
 ## Arquitetura
 
 ### Fontes de Dados
@@ -128,18 +167,13 @@ const rates = await getConversionRates();
 // }
 ```
 
-## Componente de Dashboard
+## Componentes de Dashboard
 
-Componente `FunnelMetrics` disponível em `src/components/analytics/FunnelMetrics.tsx`:
+### Componente 1: FunnelMetrics
 
-```typescript
-import FunnelMetrics from '@/components/analytics/FunnelMetrics';
+Arquivo: `src/components/analytics/FunnelMetrics.tsx`
 
-<FunnelMetrics />
-```
-
-### Métricas Exibidas
-
+**Visualização:**
 ```
 ┌──────────┬──────────┬───────────┬───────────────┬─────────┬──────────┐
 │  Cliques │ Mensagens│  Con. IA  │ Con. Humano  │  Ganho  │ Perdido  │
@@ -159,6 +193,43 @@ import FunnelMetrics from '@/components/analytics/FunnelMetrics';
 │ Humano → Vendas         350.00%                              │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+**Uso:**
+```typescript
+import FunnelMetrics from '@/components/analytics/FunnelMetrics';
+
+<FunnelMetrics />
+```
+
+### Componente 2: BehavioralFunnel (Dashboard Integrado)
+
+Arquivo: `src/components/analytics/BehavioralFunnel.tsx`
+
+**Visualização:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Funil Comportamental (Conversão Global: 28.6%)               │
+│                                                               │
+│ Cliques ████████████ 3                                       │
+│ └─> 32.7% de conversão (3 → 49)                             │
+│                                                               │
+│ Interesse ████████████████████████████████ 49                │
+│ └─> 61.2% de conversão (49 → 30)                           │
+│                                                               │
+│ Conversando com IA ████████████████████████ 30              │
+│ └─> 13.3% de conversão (30 → 4)                            │
+│                                                               │
+│ Conversando com Humano ████ 4                                │
+│ └─> 350% de conversão (4 → 14)                             │
+│                                                               │
+│ Ganho ████████████████ 14                                    │
+│                                                               │
+├─────────────────────────────────────────────────────────────┤
+│ Total: 3 | Conversões: 14 | Taxa Global: 28.6%             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Integração:** Aparece automaticamente no Dashboard (`/app/dashboard`)
 
 ## Implementação nos Componentes
 
@@ -285,6 +356,10 @@ Fonte: `funnel_events` para cliques + `opportunities` para o restante
 3. **Dashboard completo** → Gráficos de tendência
 4. **Análise de tempo** → Tempo médio por estágio
 5. **Filtros avançados** → Por categoria, usuário, etc.
+
+## Documentação Relacionada
+
+- **Funil Comportamental no Dashboard:** Veja `BEHAVIORAL_FUNNEL.md` para documentação completa da visualização integrada ao dashboard.
 
 ## Remover Logs Temporários
 

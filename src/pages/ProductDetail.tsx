@@ -87,17 +87,17 @@ const ProductDetail = () => {
   const mainImageUrl = useMemo(() => {
     // Se usuário clicou em uma thumbnail específica, usa essa
     if (mainImageOverride) {
-      return productImagesService.getPublicUrl(mainImageOverride);
+      return productImagesService.resolveProductImageUrl(mainImageOverride);
     }
     
     // Se tem imagem principal da variante, usa essa
     if (selectedVariant?.primary_image) {
-      return productImagesService.getPublicUrl(selectedVariant.primary_image);
+      return productImagesService.resolveProductImageUrl(selectedVariant.primary_image);
     }
     
     // Se não tem imagem principal da variante, usa a primeira da lista filtrada
     if (currentImages.length > 0) {
-      return productImagesService.getPublicUrl(currentImages[0]);
+      return productImagesService.resolveProductImageUrl(currentImages[0]);
     }
     
     return '';
@@ -346,7 +346,7 @@ const ProductDetail = () => {
     if (!product || currentImages.length === 0) return [];
     return currentImages.map((img) => ({
       path: img,
-      url: productImagesService.getPublicUrl(img),
+      url: productImagesService.resolveProductImageUrl(img),
     }));
   }, [product, currentImages]);
 
@@ -852,7 +852,7 @@ const ProductDetail = () => {
           </button>
           {zoomImage && (
             <img
-              src={productImagesService.getPublicUrl(zoomImage)}
+              src={productImagesService.resolveProductImageUrl(zoomImage)}
               alt={product.name}
               className="w-full h-full object-contain"
             />

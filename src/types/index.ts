@@ -1,5 +1,5 @@
 import { OpportunityStage, OrderStage, Role } from '@/constants/domain';
-import { ProductVariant } from '@/services/productsService';
+import { ProductVariant, ProductImageVariant } from '@/services/productsService';
 import { Category } from '@/services/categoriesService';
 
 export interface Profile {
@@ -27,6 +27,7 @@ export interface Product {
   created_at: string;
   categories?: Category[];
   variants?: ProductVariant[];
+  image_variants?: ProductImageVariant[];
 }
 
 export interface Lead {

@@ -26,15 +26,15 @@ const ProductDetail = () => {
   const navigate = useNavigate();
   const { profile } = useAuth();
 
-  // Main image state for gallery
-  const [mainImage, setMainImage] = useState<string | null>(null);
+  // Variant selection state
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
+  
+  // Main image state for gallery (when user clicks on thumbnail)
+  const [mainImageOverride, setMainImageOverride] = useState<string | null>(null);
   
   // Image zoom modal state
   const [zoomModalOpen, setZoomModalOpen] = useState(false);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
-
-  // Variant selection state
-  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
 
   // WhatsApp configuration
   const [storeWhatsApp, setStoreWhatsApp] = useState<string | null>(null);
@@ -60,14 +60,48 @@ const ProductDetail = () => {
   // Check if product has variants
   const hasVariants = product?.variants && product.variants.length > 0;
 
-  // Get current images based on variant selection or fallback to product images
+  // Get current images based on variant selection
   const currentImages = React.useMemo(() => {
-    if (hasVariants && selectedVariant && selectedVariant.images && selectedVariant.images.length > 0) {
-      return selectedVariant.images.map(img => img.image_url);
+    if (!product) return [];
+
+    // Se não tem variantes ou não tem seleção, usa todas as imagens do produto
+    if (!hasVariants || !selectedVariant) {
+      return Array.isArray(product.images) ? product.images : [];
     }
-    // Fallback to product images
-    return Array.isArray(product?.images) ? product.images : [];
+
+    // Filtrar imagens vinculadas à variante selecionada
+    const variantImages = product.image_variants
+      ?.filter(iv => iv.variant_id === selectedVariant.id)
+      .map(iv => iv.image_url) || [];
+
+    // Se tiver imagens vinculadas, usa essas
+    if (variantImages.length > 0) {
+      return variantImages;
+    }
+
+    // Fallback: usa todas as imagens do produto
+    return Array.isArray(product.images) ? product.images : [];
   }, [hasVariants, selectedVariant, product]);
+
+  // Get main image URL
+  const mainImageUrl = React.useMemo(() => {
+    // Se usuário clicou em uma thumbnail específica, usa essa
+    if (mainImageOverride) {
+      return productImagesService.getPublicUrl(mainImageOverride);
+    }
+    
+    // Se tem imagem principal da variante, usa essa
+    if (selectedVariant?.primary_image) {
+      return productImagesService.getPublicUrl(selectedVariant.primary_image);
+    }
+    
+    // Se não tem imagem principal da variante, usa a primeira da lista filtrada
+    if (currentImages.length > 0) {
+      return productImagesService.getPublicUrl(currentImages[0]);
+    }
+    
+    return '';
+  }, [selectedVariant, currentImages, mainImageOverride]);
 
   // Load store WhatsApp
   const loadStoreWhatsApp = async () => {
@@ -124,9 +158,6 @@ const ProductDetail = () => {
     ])
       .then(([productData]) => {
         setProduct(productData);
-        // Set main image to first image
-        const images = Array.isArray(productData.images) && productData.images.length > 0 ? productData.images : [];
-        setMainImage(images.length > 0 ? images[0] : null);
         
         // Select default variant if exists
         if (productData.variants && productData.variants.length > 0) {
@@ -141,14 +172,10 @@ const ProductDetail = () => {
       .finally(() => setLoading(false));
   }, [id, navigate]);
 
-  // Update main image when selected variant changes
+  // Reset main image override when variant changes
   useEffect(() => {
-    if (hasVariants && selectedVariant && selectedVariant.images && selectedVariant.images.length > 0) {
-      setMainImage(selectedVariant.images[0].image_url);
-    } else if (!hasVariants && Array.isArray(product?.images) && product.images.length > 0) {
-      setMainImage(product.images[0]);
-    }
-  }, [hasVariants, selectedVariant, product]);
+    setMainImageOverride(null);
+  }, [selectedVariant]);
 
   // Reset form data when modal opens (prevent stale state)
   useEffect(() => {
@@ -317,18 +344,13 @@ const ProductDetail = () => {
   if (loading) return <div className="p-8 text-center">Carregando...</div>;
   if (!product) return <div className="p-8 text-center">Produto não encontrado.</div>;
 
-  // Get main image URL
-  const mainImageUrl = mainImage ? productImagesService.getPublicUrl(mainImage) : '';
-
-  // Get gallery images (excluding main)
-  const galleryImages = currentImages.length > 1
-    ? currentImages
-        .filter((img) => img !== mainImage)
-        .map((img) => ({
-          path: img,
-          url: productImagesService.getPublicUrl(img),
-        }))
-    : [];
+  // Get gallery images (including all images)
+  const galleryImages = React.useMemo(() => {
+    return currentImages.map((img) => ({
+      path: img,
+      url: productImagesService.getPublicUrl(img),
+    }));
+  }, [currentImages]);
 
   // Get badge type
   const getBadgeType = (): 'featured' | 'promotion' | 'none' => {
@@ -375,7 +397,7 @@ const ProductDetail = () => {
             {/* Main Image with Zoom */}
             <div 
               className="relative aspect-square bg-white rounded-2xl shadow-lg overflow-hidden cursor-zoom-in group"
-              onClick={() => mainImage && handleImageClick(mainImage)}
+              onClick={() => currentImages[0] && handleImageClick(currentImages[0])}
             >
               {mainImageUrl ? (
                 <img
@@ -419,14 +441,14 @@ const ProductDetail = () => {
                 {galleryImages.map(({ path, url }, idx) => (
                   <button
                     key={idx}
-                    onClick={() => setMainImage(path)}
+                    onClick={() => setMainImageOverride(path)}
                     className={`relative rounded-xl overflow-hidden border-2 transition-all hover:shadow-md ${
-                      mainImage === path ? 'border-green-500 ring-2 ring-green-200' : 'border-gray-200 hover:border-gray-300'
+                      mainImageOverride === path ? 'border-green-500 ring-2 ring-green-200' : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
                     <img
                       src={url}
-                      alt={`${product.name} ${idx + 1}`}
+                      alt={`${product?.name} ${idx + 1}`}
                       className="w-full aspect-square object-cover"
                     />
                   </button>

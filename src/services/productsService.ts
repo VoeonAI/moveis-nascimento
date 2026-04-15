@@ -15,9 +15,18 @@ export interface ProductVariant {
   name: string;
   slug: string;
   is_default: boolean;
+  primary_image?: string; // URL da imagem principal da variação
   created_at: string;
   updated_at: string;
-  images?: ProductVariantImage[];
+}
+
+export interface ProductImageVariant {
+  id: string;
+  product_id: string;
+  image_url: string;
+  variant_id: string;
+  is_primary: boolean;
+  created_at: string;
 }
 
 export interface Product {
@@ -36,6 +45,7 @@ export interface Product {
   created_at: string;
   categories?: Category[];
   variants?: ProductVariant[];
+  image_variants?: ProductImageVariant[]; // Vínculos imagem-variação
 }
 
 export interface ProductsFilter {
@@ -87,25 +97,24 @@ export const productsService = {
 
       // Transform data to include categories array and variants
       return (data || []).map((product: any) => {
-        // Transform variants
-        const variants = (product.product_variants || []).map((v: any) => ({
-          ...v,
-          images: v.product_variant_images || [],
-          product_variant_images: undefined,
-        }));
+        // Processar variantes e definir imagens principais
+        const variants = (product.product_variants || []).map((v: any) => {
+          // Encontrar imagem primária desta variação
+          const primaryVariantImage = (product.product_image_variants || []).find(
+            (iv: any) => iv.variant_id === v.id && iv.is_primary
+          );
+          
+          return {
+            ...v,
+            primary_image: primaryVariantImage?.image_url || undefined,
+          };
+        });
 
         // Sort variants: default first, then by name
         variants.sort((a: ProductVariant, b: ProductVariant) => {
           if (a.is_default) return -1;
           if (b.is_default) return 1;
           return a.name.localeCompare(b.name);
-        });
-
-        // Sort images within each variant
-        variants.forEach((v: ProductVariant) => {
-          if (v.images) {
-            v.images.sort((a, b) => a.sort_order - b.sort_order);
-          }
         });
 
         return {
@@ -120,6 +129,7 @@ export const productsService = {
           created_at: product.created_at,
           categories: product.product_categories?.map((pc: any) => pc.categories) || [],
           variants,
+          image_variants: product.product_image_variants || [],
         };
       });
     } catch (error: any) {
@@ -138,14 +148,14 @@ export const productsService = {
             categories (*)
           ),
           product_variants (
-            id, product_id, name, slug, is_default, created_at, updated_at,
-            product_variant_images (
-              id, variant_id, image_url, sort_order, created_at
-            )
+            id, product_id, name, slug, is_default, created_at, updated_at
+          ),
+          product_image_variants (
+            id, product_id, image_url, variant_id, is_primary, created_at
           )
         `)
-        .eq('id', id)
         .eq('active', true)
+        .eq('id', id)
         .single();
 
       if (error) {
@@ -159,25 +169,24 @@ export const productsService = {
       }
       if (!data) return null;
 
-      // Transform variants to include images array
-      const variants = (data.product_variants || []).map((v: any) => ({
-        ...v,
-        images: v.product_variant_images || [],
-        product_variant_images: undefined, // Remove nested property
-      }));
+      // Processar variantes e definir imagens principais
+      const variants = (data.product_variants || []).map((v: any) => {
+        // Encontrar imagem primária desta variação
+        const primaryVariantImage = (data.product_image_variants || []).find(
+          (iv: any) => iv.variant_id === v.id && iv.is_primary
+        );
+        
+        return {
+          ...v,
+          primary_image: primaryVariantImage?.image_url || undefined,
+        };
+      });
 
       // Sort variants: default first, then by name
       variants.sort((a: ProductVariant, b: ProductVariant) => {
         if (a.is_default) return -1;
         if (b.is_default) return 1;
         return a.name.localeCompare(b.name);
-      });
-
-      // Sort images within each variant by sort_order
-      variants.forEach((v: ProductVariant) => {
-        if (v.images) {
-          v.images.sort((a, b) => a.sort_order - b.sort_order);
-        }
       });
 
       return {
@@ -192,6 +201,7 @@ export const productsService = {
         created_at: data.created_at,
         categories: data.product_categories?.map((pc: any) => pc.categories) || [],
         variants,
+        image_variants: data.product_image_variants || [],
       };
     } catch (error: any) {
       console.error('[productsService.getProductById] Unexpected error:', error);
@@ -242,25 +252,24 @@ export const productsService = {
 
       // Transform data to include categories array and variants
       return (data || []).map((product: any) => {
-        // Transform variants
-        const variants = (product.product_variants || []).map((v: any) => ({
-          ...v,
-          images: v.product_variant_images || [],
-          product_variant_images: undefined,
-        }));
+        // Processar variantes e definir imagens principais
+        const variants = (product.product_variants || []).map((v: any) => {
+          // Encontrar imagem primária desta variação
+          const primaryVariantImage = (product.product_image_variants || []).find(
+            (iv: any) => iv.variant_id === v.id && iv.is_primary
+          );
+          
+          return {
+            ...v,
+            primary_image: primaryVariantImage?.image_url || undefined,
+          };
+        });
 
         // Sort variants: default first, then by name
         variants.sort((a: ProductVariant, b: ProductVariant) => {
           if (a.is_default) return -1;
           if (b.is_default) return 1;
           return a.name.localeCompare(b.name);
-        });
-
-        // Sort images within each variant
-        variants.forEach((v: ProductVariant) => {
-          if (v.images) {
-            v.images.sort((a, b) => a.sort_order - b.sort_order);
-          }
         });
 
         return {
@@ -275,6 +284,7 @@ export const productsService = {
           created_at: product.created_at,
           categories: product.product_categories?.map((pc: any) => pc.categories) || [],
           variants,
+          image_variants: product.product_image_variants || [],
         };
       });
     } catch (error: any) {

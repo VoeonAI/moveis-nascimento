@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { productsService, Product, ProductVariant } from '@/services/productsService';
+import { productsService, Product, ProductVariant, ProductImageVariant } from '@/services/productsService';
 import { categoriesService, Category } from '@/services/categoriesService';
 import { productImagesService } from '@/services/productImagesService';
 import { supabase } from '@/core/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Save, X, Star, ChevronLeft, ChevronRight, Palette } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Star, ChevronLeft, ChevronRight, Palette, Image, Check } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -61,9 +61,12 @@ const Catalog = () => {
 
   // Variants management state
   const [productVariants, setProductVariants] = useState<ProductVariant[]>([]);
+  const [productImageVariants, setProductImageVariants] = useState<ProductImageVariant[]>([]);
   const [newVariantName, setNewVariantName] = useState('');
-  const [newVariantImages, setNewVariantImages] = useState<File[]>([]);
-  const [editingVariantIndex, setEditingVariantIndex] = useState<number | null>(null);
+
+  // Image-variant association state
+  const [selectedImageForVariants, setSelectedImageForVariants] = useState<string | null>(null);
+  const [imageVariantsDialog, setImageVariantsDialog] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -132,8 +135,6 @@ const Catalog = () => {
     setNewAttrKey('');
     setNewAttrValue('');
     setNewVariantName('');
-    setNewVariantImages([]);
-    setEditingVariantIndex(null);
     setModalOpen(true);
   };
 
@@ -142,6 +143,7 @@ const Catalog = () => {
     setImageFiles([]);
     setCurrentImages(Array.isArray(product.images) ? [...product.images] : []);
     setProductVariants(product.variants || []);
+    setProductImageVariants(product.image_variants || []);
     setFormData({
       name: product.name,
       description: product.description || '',
@@ -157,8 +159,6 @@ const Catalog = () => {
     setNewAttrKey('');
     setNewAttrValue('');
     setNewVariantName('');
-    setNewVariantImages([]);
-    setEditingVariantIndex(null);
     setModalOpen(true);
   };
 
@@ -231,12 +231,10 @@ const Catalog = () => {
       is_default: productVariants.length === 0, // First variant is default
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      images: [],
     };
 
     setProductVariants([...productVariants, newVariant]);
     setNewVariantName('');
-    setNewVariantImages([]);
   };
 
   const handleSetDefaultVariant = (index: number) => {
@@ -247,101 +245,119 @@ const Catalog = () => {
     setProductVariants(updatedVariants);
   };
 
-  const handleRemoveVariant = (index: number) => {
+  const handleRemoveVariant = async (index: number) => {
+    const variant = productVariants[index];
+    
+    // Se a variante já tem ID, remover do banco
+    if (variant.id) {
+      try {
+        // Remove variant from database
+        await supabase
+          .from('product_variants')
+          .delete()
+          .eq('id', variant.id);
+
+        // Remove all image-variant associations for this variant
+        await supabase
+          .from('product_image_variants')
+          .delete()
+          .eq('variant_id', variant.id);
+      } catch (error: any) {
+        console.error('[Catalog] Error removing variant:', error);
+        showError('Erro ao remover variação');
+        return;
+      }
+    }
+
     const updatedVariants = productVariants.filter((_, i) => i !== index);
     // If removing default, make first variant default
-    if (updatedVariants.length > 0 && productVariants[index].is_default) {
+    if (updatedVariants.length > 0 && variant.is_default) {
       updatedVariants[0].is_default = true;
     }
+    
+    // Remove image-variant associations from state
+    const updatedImageVariants = productImageVariants.filter(iv => iv.variant_id !== variant.id);
+    setProductImageVariants(updatedImageVariants);
+    
     setProductVariants(updatedVariants);
   };
 
-  const handleAddVariantImages = async (variantIndex: number) => {
-    if (!editingProduct) return;
+  // Image-variant association functions
+  const handleOpenImageVariantsDialog = (imageUrl: string) => {
+    setSelectedImageForVariants(imageUrl);
+    setImageVariantsDialog(true);
+  };
 
-    if (newVariantImages.length === 0) {
-      showError('Selecione pelo menos uma imagem');
-      return;
-    }
+  const handleToggleImageVariant = (variantId: string, setAsPrimary: boolean = false) => {
+    if (!selectedImageForVariants) return;
 
-    try {
-      // Create variant if it doesn't have an ID yet
-      const variant = productVariants[variantIndex];
-      let variantId = variant.id;
+    const existingAssociation = productImageVariants.find(
+      iv => iv.image_url === selectedImageForVariants && iv.variant_id === variantId
+    );
 
-      if (!variantId) {
-        // Insert new variant
-        const { data: newVariant, error: insertError } = await supabase
-          .from('product_variants')
-          .insert({
-            product_id: editingProduct.id,
-            name: variant.name,
-            slug: variant.slug,
-            is_default: variant.is_default,
-          })
-          .select()
-          .single();
+    if (existingAssociation) {
+      if (setAsPrimary) {
+        // Set as primary: first, remove primary from all other variants for this image
+        const updated = productImageVariants.map(iv => {
+          if (iv.image_url === selectedImageForVariants) {
+            return { ...iv, is_primary: false };
+          }
+          if (iv.variant_id === variantId) {
+            return { ...iv, is_primary: false };
+          }
+          return iv;
+        });
 
-        if (insertError) throw insertError;
-        variantId = newVariant.id;
+        // Then set this association as primary
+        const final = updated.map(iv => {
+          if (iv.image_url === selectedImageForVariants && iv.variant_id === variantId) {
+            return { ...iv, is_primary: true };
+          }
+          return iv;
+        });
 
-        // Update variant ID in state
-        const updatedVariants = [...productVariants];
-        updatedVariants[variantIndex] = { ...variant, id: variantId };
-        setProductVariants(updatedVariants);
+        setProductImageVariants(final);
+      } else {
+        // Remove association
+        setProductImageVariants(productImageVariants.filter(iv => 
+          !(iv.image_url === selectedImageForVariants && iv.variant_id === variantId)
+        ));
       }
-
-      // Upload images
-      const uploadedPaths = await productImagesService.uploadProductImages(
-        `${editingProduct.id}/variants/${variantId}`,
-        newVariantImages
-      );
-
-      // Insert image records
-      const imageRecords = uploadedPaths.map((path, index) => ({
+    } else if (setAsPrimary || !setAsPrimary) {
+      // Create new association
+      const newAssociation: ProductImageVariant = {
+        id: '',
+        product_id: editingProduct?.id || '',
+        image_url: selectedImageForVariants,
         variant_id: variantId,
-        image_url: path,
-        sort_order: (variant.images?.length || 0) + index,
-      }));
-
-      const { error: imagesError } = await supabase
-        .from('product_variant_images')
-        .insert(imageRecords);
-
-      if (imagesError) throw imagesError;
-
-      // Update variant in state with new images
-      const updatedVariants = [...productVariants];
-      updatedVariants[variantIndex] = {
-        ...updatedVariants[variantIndex],
-        images: [
-          ...(variant.images || []),
-          ...imageRecords.map((rec, idx) => ({
-            id: '',
-            variant_id: variantId,
-            image_url: uploadedPaths[idx],
-            sort_order: rec.sort_order,
-            created_at: new Date().toISOString(),
-          })),
-        ],
+        is_primary: setAsPrimary,
+        created_at: new Date().toISOString(),
       };
-      setProductVariants(updatedVariants);
-      setNewVariantImages([]);
 
-      showSuccess('Imagens adicionadas com sucesso');
-    } catch (error: any) {
-      console.error('[Catalog] Error adding variant images:', error);
-      showError(error.message || 'Erro ao adicionar imagens');
+      // If setting as primary, remove primary from all other associations for this variant
+      const updated = setAsPrimary
+        ? productImageVariants.map(iv => {
+            if (iv.variant_id === variantId) {
+              return { ...iv, is_primary: false };
+            }
+            return iv;
+          })
+        : productImageVariants;
+
+      setProductImageVariants([...updated, newAssociation]);
     }
   };
 
-  const handleRemoveVariantImage = (variantIndex: number, imageIndex: number) => {
-    const updatedVariants = [...productVariants];
-    updatedVariants[variantIndex] = {
-      ...updatedVariants[variantIndex],
-      images: updatedVariants[variantIndex].images?.filter((_, i) => i !== imageIndex) || [],
-    };
-    setProductVariants(updatedVariants);
+  const isImageLinkedToVariant = (imageUrl: string, variantId: string): boolean => {
+    return productImageVariants.some(iv => iv.image_url === imageUrl && iv.variant_id === variantId);
+  };
+
+  const isImagePrimaryForVariant = (imageUrl: string, variantId: string): boolean => {
+    return productImageVariants.some(iv => 
+      iv.image_url === imageUrl && 
+      iv.variant_id === variantId && 
+      iv.is_primary
+    );
   };
 
   const handleSave = async () => {
@@ -435,32 +451,35 @@ const Catalog = () => {
             })
             .eq('id', variantId);
         }
+      }
 
-        // Handle variant images
-        // First, delete all existing images for this variant (simpler approach)
+      // Handle image-variant associations
+      // First, delete all existing image-variant associations for this product
+      await supabase
+        .from('product_image_variants')
+        .delete()
+        .eq('product_id', productId);
+
+      // Then insert all associations from state
+      if (productImageVariants.length > 0) {
+        // Create associations
+        const associations = productImageVariants.map(iv => ({
+          product_id: productId,
+          image_url: iv.image_url,
+          variant_id: iv.variant_id,
+          is_primary: iv.is_primary,
+        }));
+
         await supabase
-          .from('product_variant_images')
-          .delete()
-          .eq('variant_id', variantId);
-
-        // Then insert all images
-        if (variant.images && variant.images.length > 0) {
-          const imageRecords = variant.images.map((img, index) => ({
-            variant_id: variantId,
-            image_url: img.image_url,
-            sort_order: index,
-          }));
-
-          await supabase
-            .from('product_variant_images')
-            .insert(imageRecords);
-        }
+          .from('product_image_variants')
+          .insert(associations);
       }
 
       showSuccess(editingProduct ? 'Produto atualizado com sucesso' : 'Produto criado com sucesso');
       setImageFiles([]);
       setCurrentImages([]);
       setProductVariants([]);
+      setProductImageVariants([]);
       setModalOpen(false);
       await loadData();
     } catch (error: any) {
@@ -833,13 +852,13 @@ const Catalog = () => {
                   <Label>Variações (Cores)</Label>
                 </div>
                 <p className="text-xs text-gray-500">
-                  Adicione variações do produto com suas próprias imagens (ex: Branco, Madeira).
+                  Adicione variações do produto e vincule imagens do produto a cada variação.
                 </p>
 
                 {/* Add new variant */}
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Nome da variação (ex: Branco)"
+                    placeholder="Nome da variação (ex: Branco, Madeira)"
                     value={newVariantName}
                     onChange={(e) => setNewVariantName(e.target.value)}
                     disabled={saving}
@@ -866,6 +885,9 @@ const Catalog = () => {
                               <Badge variant="default" className="text-xs">Padrão</Badge>
                             )}
                             <span className="font-medium">{variant.name}</span>
+                            {variant.primary_image && (
+                              <Badge variant="secondary" className="text-xs">Imagem Principal</Badge>
+                            )}
                           </div>
                           <div className="flex gap-1">
                             {!variant.is_default && (
@@ -890,76 +912,139 @@ const Catalog = () => {
                           </div>
                         </div>
 
-                        {/* Variant images */}
-                        {variant.images && variant.images.length > 0 && (
-                          <div className="grid grid-cols-4 gap-2">
-                            {variant.images.map((img, imgIndex) => {
-                              const url = productImagesService.getPublicUrl(img.image_url);
-                              return (
-                                <div key={imgIndex} className="relative group rounded overflow-hidden border">
-                                  <img
-                                    src={url}
-                                    alt={`${variant.name} ${imgIndex + 1}`}
-                                    className="w-full h-16 object-cover"
-                                  />
-                                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                    <Button
-                                      size="sm"
-                                      variant="destructive"
-                                      className="w-full h-full"
-                                      onClick={() => handleRemoveVariantImage(variantIndex, imgIndex)}
-                                      disabled={saving}
-                                    >
-                                      <Trash2 size={12} />
-                                    </Button>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        {/* Add images to variant */}
-                        <div className="flex gap-2">
-                          <Input
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            disabled={saving}
-                            onChange={(e) => {
-                              const files = Array.from(e.target.files || []);
-                              setNewVariantImages(files);
-                            }}
-                          />
-                          <Button
-                            size="sm"
-                            onClick={() => handleAddVariantImages(variantIndex)}
-                            disabled={saving || newVariantImages.length === 0}
-                          >
-                            <Plus size={14} />
-                            Fotos
-                          </Button>
-                        </div>
-
-                        {/* Preview new images */}
-                        {newVariantImages.length > 0 && editingVariantIndex === variantIndex && (
-                          <div className="flex gap-2 flex-wrap">
-                            {newVariantImages.map((file, idx) => (
-                              <img
-                                key={idx}
-                                src={URL.createObjectURL(file)}
-                                alt="preview"
-                                className="w-16 h-16 object-cover rounded"
-                              />
-                            ))}
-                          </div>
-                        )}
+                        {/* Count of linked images */}
+                        <p className="text-xs text-gray-500">
+                          {productImageVariants.filter(iv => iv.variant_id === variant.id).length} imagem(ns) vinculada(s)
+                        </p>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
             )}
+
+            {/* Image Management with Variant Links */}
+            {editingProduct && currentImages.length > 0 && (
+              <div className="space-y-3 pt-4 border-t">
+                <div className="flex items-center gap-2">
+                  <Image size={16} className="text-gray-600" />
+                  <Label>Galeria do Produto</Label>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Clique em uma imagem para vincular a variações.
+                </p>
+
+                <div className="grid grid-cols-4 gap-2">
+                  {currentImages.map((path, index) => {
+                    const url = productImagesService.getPublicUrl(path);
+                    const linkedVariants = productImageVariants.filter(iv => iv.image_url === path);
+                    
+                    return (
+                      <div 
+                        key={index} 
+                        className="relative group rounded overflow-hidden border-2 border-gray-200 hover:border-gray-300 cursor-pointer"
+                        onClick={() => handleOpenImageVariantsDialog(path)}
+                      >
+                        <img
+                          src={url}
+                          alt={`Foto ${index + 1}`}
+                          className="w-full h-20 object-cover"
+                        />
+                        
+                        {/* Overlay with linked variants count */}
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-1">
+                          <span className="text-white text-xs font-medium">
+                            {linkedVariants.length} variação(ões)
+                          </span>
+                          <span className="text-white text-xs">
+                            Clique para editar
+                          </span>
+                        </div>
+
+                        {/* Primary badge for any variant */}
+                        {linkedVariants.some(iv => iv.is_primary) && (
+                          <div className="absolute top-1 left-1 bg-blue-500 text-white p-1 rounded-full">
+                            <Star size={10} fill="white" />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Image-Variant Association Dialog */}
+            <Dialog open={imageVariantsDialog} onOpenChange={setImageVariantsDialog}>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle>Vincular Imagem a Variações</DialogTitle>
+                  <DialogDescription>
+                    Selecione quais variações esta imagem deve pertencer.
+                  </DialogDescription>
+                </DialogHeader>
+
+                {selectedImageForVariants && (
+                  <div className="space-y-4">
+                    <div className="flex justify-center">
+                      <img
+                        src={productImagesService.getPublicUrl(selectedImageForVariants)}
+                        alt="Preview"
+                        className="max-w-full max-h-48 object-contain rounded"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      {productVariants.map((variant) => {
+                        const isLinked = isImageLinkedToVariant(selectedImageForVariants, variant.id);
+                        const isPrimary = isImagePrimaryForVariant(selectedImageForVariants, variant.id);
+                        
+                        return (
+                          <div 
+                            key={variant.id} 
+                            className={`flex items-center justify-between p-3 rounded border ${
+                              isLinked ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              {isLinked && (
+                                <Check size={16} className="text-green-600" />
+                              )}
+                              <span className="font-medium">{variant.name}</span>
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                              {isLinked && (
+                                <Button
+                                  size="sm"
+                                  variant={isPrimary ? "default" : "outline"}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleImageVariant(variant.id, true);
+                                  }}
+                                  disabled={!isLinked}
+                                >
+                                  <Star size={12} className={isPrimary ? "mr-1" : ""} />
+                                  {isPrimary ? 'Principal' : 'Definir Principal'}
+                                </Button>
+                              )}
+                              
+                              <Button
+                                size="sm"
+                                variant={isLinked ? "destructive" : "default"}
+                                onClick={() => handleToggleImageVariant(variant.id)}
+                              >
+                                {isLinked ? 'Remover' : 'Adicionar'}
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
 
             {/* Image Upload Section */}
             <div className="space-y-2 pt-4 border-t">

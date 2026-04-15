@@ -19,41 +19,22 @@ const TestTracking: React.FC = () => {
     }
   };
 
-  const handleTestMessage = async () => {
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('[TestTracking] Testing message_sent event');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    
-    try {
-      await trackEvent('message_sent');
-      console.log('[TestTracking] ✅ trackEvent completed');
-    } catch (error) {
-      console.error('[TestTracking] ❌ Error:', error);
-    }
-  };
-
   return (
     <div className="fixed bottom-4 right-4 z-50 p-4 bg-yellow-100 border-2 border-yellow-500 rounded-lg shadow-xl">
       <h3 className="font-bold text-yellow-900 mb-2">🧪 Debug Tracking</h3>
-      <div className="space-x-2">
-        <Button 
-          onClick={handleTestInterest}
-          size="sm"
-          variant="default"
-          className="bg-blue-600 hover:bg-blue-700"
-        >
-          Test Interest
-        </Button>
-        <Button 
-          onClick={handleTestMessage}
-          size="sm"
-          variant="outline"
-        >
-          Test Message
-        </Button>
-      </div>
+      <Button 
+        onClick={handleTestInterest}
+        size="sm"
+        variant="default"
+        className="bg-blue-600 hover:bg-blue-700 w-full"
+      >
+        Test Interest Click
+      </Button>
       <p className="text-xs text-yellow-800 mt-2">
         Check console for logs
+      </p>
+      <p className="text-[10px] text-yellow-700 mt-1">
+        message_sent is tracked via opportunities table
       </p>
     </div>
   );

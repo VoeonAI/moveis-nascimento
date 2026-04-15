@@ -1,13 +1,33 @@
 import { supabase } from '@/core/supabaseClient';
 import { Category } from './categoriesService';
 
+export interface ProductVariantImage {
+  id: string;
+  variant_id: string;
+  image_url: string;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface ProductVariant {
+  id: string;
+  product_id: string;
+  name: string;
+  slug: string;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+  images?: ProductVariantImage[];
+}
+
 export interface Product {
   id: string;
   name: string;
   description: string;
-  price: number;
+  price?: number;
   image_url?: string;
-  is_public: boolean;
+  is_public?: boolean;
+  is_active?: boolean;
   active: boolean;
   images: any[];
   metadata: any;
@@ -15,6 +35,7 @@ export interface Product {
   on_promotion: boolean;
   created_at: string;
   categories?: Category[];
+  variants?: ProductVariant[];
 }
 
 export interface ProductsFilter {
@@ -31,6 +52,12 @@ export const productsService = {
           id, name, description, images, metadata, active, featured, on_promotion,
           product_categories (
             categories (*)
+          ),
+          product_variants (
+            id, product_id, name, slug, is_default, created_at, updated_at,
+            product_variant_images (
+              id, variant_id, image_url, sort_order, created_at
+            )
           )
         `)
         .eq('active', true)
@@ -58,11 +85,43 @@ export const productsService = {
         return [];
       }
 
-      // Transform data to include categories array
-      return (data || []).map(product => ({
-        ...product,
-        categories: product.product_categories?.map((pc: any) => pc.categories) || [],
-      }));
+      // Transform data to include categories array and variants
+      return (data || []).map((product: any) => {
+        // Transform variants
+        const variants = (product.product_variants || []).map((v: any) => ({
+          ...v,
+          images: v.product_variant_images || [],
+          product_variant_images: undefined,
+        }));
+
+        // Sort variants: default first, then by name
+        variants.sort((a: ProductVariant, b: ProductVariant) => {
+          if (a.is_default) return -1;
+          if (b.is_default) return 1;
+          return a.name.localeCompare(b.name);
+        });
+
+        // Sort images within each variant
+        variants.forEach((v: ProductVariant) => {
+          if (v.images) {
+            v.images.sort((a, b) => a.sort_order - b.sort_order);
+          }
+        });
+
+        return {
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          images: product.images,
+          metadata: product.metadata,
+          active: product.active,
+          featured: product.featured,
+          on_promotion: product.on_promotion,
+          created_at: product.created_at,
+          categories: product.product_categories?.map((pc: any) => pc.categories) || [],
+          variants,
+        };
+      });
     } catch (error: any) {
       console.error('[productsService.listPublicProducts] Unexpected error:', error);
       return [];
@@ -74,9 +133,15 @@ export const productsService = {
       const { data, error } = await supabase
         .from('products')
         .select(`
-          id, name, description, images, metadata, active, featured, on_promotion,
+          id, name, description, images, metadata, active, featured, on_promotion, created_at,
           product_categories (
             categories (*)
+          ),
+          product_variants (
+            id, product_id, name, slug, is_default, created_at, updated_at,
+            product_variant_images (
+              id, variant_id, image_url, sort_order, created_at
+            )
           )
         `)
         .eq('id', id)
@@ -94,9 +159,39 @@ export const productsService = {
       }
       if (!data) return null;
 
+      // Transform variants to include images array
+      const variants = (data.product_variants || []).map((v: any) => ({
+        ...v,
+        images: v.product_variant_images || [],
+        product_variant_images: undefined, // Remove nested property
+      }));
+
+      // Sort variants: default first, then by name
+      variants.sort((a: ProductVariant, b: ProductVariant) => {
+        if (a.is_default) return -1;
+        if (b.is_default) return 1;
+        return a.name.localeCompare(b.name);
+      });
+
+      // Sort images within each variant by sort_order
+      variants.forEach((v: ProductVariant) => {
+        if (v.images) {
+          v.images.sort((a, b) => a.sort_order - b.sort_order);
+        }
+      });
+
       return {
-        ...data,
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        images: data.images,
+        metadata: data.metadata,
+        active: data.active,
+        featured: data.featured,
+        on_promotion: data.on_promotion,
+        created_at: data.created_at,
         categories: data.product_categories?.map((pc: any) => pc.categories) || [],
+        variants,
       };
     } catch (error: any) {
       console.error('[productsService.getProductById] Unexpected error:', error);
@@ -112,6 +207,12 @@ export const productsService = {
           id, name, description, images, metadata, active, featured, on_promotion,
           product_categories (
             categories (*)
+          ),
+          product_variants (
+            id, product_id, name, slug, is_default, created_at, updated_at,
+            product_variant_images (
+              id, variant_id, image_url, sort_order, created_at
+            )
           )
         `)
         .eq('active', true)
@@ -139,11 +240,43 @@ export const productsService = {
         return [];
       }
 
-      // Transform data to include categories array
-      return (data || []).map(product => ({
-        ...product,
-        categories: product.product_categories?.map((pc: any) => pc.categories) || [],
-      }));
+      // Transform data to include categories array and variants
+      return (data || []).map((product: any) => {
+        // Transform variants
+        const variants = (product.product_variants || []).map((v: any) => ({
+          ...v,
+          images: v.product_variant_images || [],
+          product_variant_images: undefined,
+        }));
+
+        // Sort variants: default first, then by name
+        variants.sort((a: ProductVariant, b: ProductVariant) => {
+          if (a.is_default) return -1;
+          if (b.is_default) return 1;
+          return a.name.localeCompare(b.name);
+        });
+
+        // Sort images within each variant
+        variants.forEach((v: ProductVariant) => {
+          if (v.images) {
+            v.images.sort((a, b) => a.sort_order - b.sort_order);
+          }
+        });
+
+        return {
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          images: product.images,
+          metadata: product.metadata,
+          active: product.active,
+          featured: product.featured,
+          on_promotion: product.on_promotion,
+          created_at: product.created_at,
+          categories: product.product_categories?.map((pc: any) => pc.categories) || [],
+          variants,
+        };
+      });
     } catch (error: any) {
       console.error('[productsService.listAllProducts] Unexpected error:', error);
       return [];

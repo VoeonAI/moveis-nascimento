@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { productsService } from '@/services/productsService';
+import { productsService, ProductVariant } from '@/services/productsService';
 import { supabase } from '@/core/supabaseClient';
 import { Product } from '@/types';
 import { useAuth } from '@/core/auth/AuthProvider';
@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Loader2, Copy, MessageCircle, AlertCircle, Star, Tag, ArrowRight, X, ZoomIn, Check, Shield, Truck, Wrench, ChevronRight, Heart, Phone, Clock, Award, Sparkles } from 'lucide-react';
+import { Loader2, Copy, MessageCircle, AlertCircle, Star, Tag, ArrowRight, X, ZoomIn, Check, Shield, Truck, Wrench, ChevronRight, Heart, Phone, Clock, Award, Sparkles, Palette } from 'lucide-react';
 import { productImagesService } from '@/services/productImagesService';
 import ProductCard from '@/components/products/ProductCard';
 import Footer from '@/components/layout/Footer';
@@ -33,6 +33,9 @@ const ProductDetail = () => {
   const [zoomModalOpen, setZoomModalOpen] = useState(false);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
 
+  // Variant selection state
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
+
   // WhatsApp configuration
   const [storeWhatsApp, setStoreWhatsApp] = useState<string | null>(null);
 
@@ -53,6 +56,18 @@ const ProductDetail = () => {
 
   // Check if user can see price
   const canSeePrice = profile?.role && [Role.MASTER, Role.GESTOR, Role.ESTOQUE].includes(profile.role);
+
+  // Check if product has variants
+  const hasVariants = product?.variants && product.variants.length > 0;
+
+  // Get current images based on variant selection or fallback to product images
+  const currentImages = React.useMemo(() => {
+    if (hasVariants && selectedVariant && selectedVariant.images && selectedVariant.images.length > 0) {
+      return selectedVariant.images.map(img => img.image_url);
+    }
+    // Fallback to product images
+    return Array.isArray(product?.images) ? product.images : [];
+  }, [hasVariants, selectedVariant, product]);
 
   // Load store WhatsApp
   const loadStoreWhatsApp = async () => {
@@ -110,13 +125,30 @@ const ProductDetail = () => {
       .then(([productData]) => {
         setProduct(productData);
         // Set main image to first image
-        setMainImage(Array.isArray(productData.images) && productData.images.length > 0 ? productData.images[0] : null);
+        const images = Array.isArray(productData.images) && productData.images.length > 0 ? productData.images : [];
+        setMainImage(images.length > 0 ? images[0] : null);
+        
+        // Select default variant if exists
+        if (productData.variants && productData.variants.length > 0) {
+          const defaultVariant = productData.variants.find((v: ProductVariant) => v.is_default) || productData.variants[0];
+          setSelectedVariant(defaultVariant);
+        }
+        
         // Load related products
         loadRelatedProducts(productData);
       })
       .catch(() => navigate('/'))
       .finally(() => setLoading(false));
   }, [id, navigate]);
+
+  // Update main image when selected variant changes
+  useEffect(() => {
+    if (hasVariants && selectedVariant && selectedVariant.images && selectedVariant.images.length > 0) {
+      setMainImage(selectedVariant.images[0].image_url);
+    } else if (!hasVariants && Array.isArray(product?.images) && product.images.length > 0) {
+      setMainImage(product.images[0]);
+    }
+  }, [hasVariants, selectedVariant, product]);
 
   // Reset form data when modal opens (prevent stale state)
   useEffect(() => {
@@ -289,11 +321,13 @@ const ProductDetail = () => {
   const mainImageUrl = mainImage ? productImagesService.getPublicUrl(mainImage) : '';
 
   // Get gallery images (excluding main)
-  const galleryImages = Array.isArray(product.images) && product.images.length > 1
-    ? product.images.filter((img) => img !== mainImage).map((img) => ({
-        path: img,
-        url: productImagesService.getPublicUrl(img),
-      }))
+  const galleryImages = currentImages.length > 1
+    ? currentImages
+        .filter((img) => img !== mainImage)
+        .map((img) => ({
+          path: img,
+          url: productImagesService.getPublicUrl(img),
+        }))
     : [];
 
   // Get badge type
@@ -439,6 +473,36 @@ const ProductDetail = () => {
                 <ArrowRight size={20} />
               </Button>
             </div>
+
+            {/* Variant Selector */}
+            {hasVariants && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Palette size={18} className="text-gray-600" />
+                  <Label className="text-sm font-medium">Cor:</Label>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {product.variants.map((variant) => (
+                    <button
+                      key={variant.id}
+                      onClick={() => setSelectedVariant(variant)}
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                        selectedVariant?.id === variant.id
+                          ? 'bg-green-600 text-white ring-2 ring-green-200 ring-offset-2'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {variant.name}
+                    </button>
+                  ))}
+                </div>
+                {selectedVariant && (
+                  <p className="text-sm text-gray-500">
+                    Selecionado: <span className="font-medium text-gray-700">{selectedVariant.name}</span>
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Trust Badges */}
             <div className="space-y-2">

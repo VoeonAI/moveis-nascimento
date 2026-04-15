@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { productsService, Product } from '@/services/productsService';
+import { productsService, Product, ProductVariant } from '@/services/productsService';
 import { categoriesService, Category } from '@/services/categoriesService';
 import { productImagesService } from '@/services/productImagesService';
 import { supabase } from '@/core/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Save, X, Star, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Star, ChevronLeft, ChevronRight, Palette } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -58,6 +58,12 @@ const Catalog = () => {
 
   // Image management state
   const [currentImages, setCurrentImages] = useState<string[]>([]);
+
+  // Variants management state
+  const [productVariants, setProductVariants] = useState<ProductVariant[]>([]);
+  const [newVariantName, setNewVariantName] = useState('');
+  const [newVariantImages, setNewVariantImages] = useState<File[]>([]);
+  const [editingVariantIndex, setEditingVariantIndex] = useState<number | null>(null);
 
   useEffect(() => {
     loadData();
@@ -125,6 +131,9 @@ const Catalog = () => {
     });
     setNewAttrKey('');
     setNewAttrValue('');
+    setNewVariantName('');
+    setNewVariantImages([]);
+    setEditingVariantIndex(null);
     setModalOpen(true);
   };
 
@@ -132,6 +141,7 @@ const Catalog = () => {
     setEditingProduct(product);
     setImageFiles([]);
     setCurrentImages(Array.isArray(product.images) ? [...product.images] : []);
+    setProductVariants(product.variants || []);
     setFormData({
       name: product.name,
       description: product.description || '',
@@ -146,6 +156,9 @@ const Catalog = () => {
     });
     setNewAttrKey('');
     setNewAttrValue('');
+    setNewVariantName('');
+    setNewVariantImages([]);
+    setEditingVariantIndex(null);
     setModalOpen(true);
   };
 
@@ -201,6 +214,134 @@ const Catalog = () => {
         },
       };
     });
+  };
+
+  // Variant management functions
+  const handleAddVariant = () => {
+    if (!newVariantName.trim()) {
+      showError('Nome da variação é obrigatório');
+      return;
+    }
+
+    const newVariant: ProductVariant = {
+      id: '',
+      product_id: editingProduct?.id || '',
+      name: newVariantName,
+      slug: newVariantName.toLowerCase().replace(/\s+/g, '-'),
+      is_default: productVariants.length === 0, // First variant is default
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      images: [],
+    };
+
+    setProductVariants([...productVariants, newVariant]);
+    setNewVariantName('');
+    setNewVariantImages([]);
+  };
+
+  const handleSetDefaultVariant = (index: number) => {
+    const updatedVariants = productVariants.map((v, i) => ({
+      ...v,
+      is_default: i === index,
+    }));
+    setProductVariants(updatedVariants);
+  };
+
+  const handleRemoveVariant = (index: number) => {
+    const updatedVariants = productVariants.filter((_, i) => i !== index);
+    // If removing default, make first variant default
+    if (updatedVariants.length > 0 && productVariants[index].is_default) {
+      updatedVariants[0].is_default = true;
+    }
+    setProductVariants(updatedVariants);
+  };
+
+  const handleAddVariantImages = async (variantIndex: number) => {
+    if (!editingProduct) return;
+
+    if (newVariantImages.length === 0) {
+      showError('Selecione pelo menos uma imagem');
+      return;
+    }
+
+    try {
+      // Create variant if it doesn't have an ID yet
+      const variant = productVariants[variantIndex];
+      let variantId = variant.id;
+
+      if (!variantId) {
+        // Insert new variant
+        const { data: newVariant, error: insertError } = await supabase
+          .from('product_variants')
+          .insert({
+            product_id: editingProduct.id,
+            name: variant.name,
+            slug: variant.slug,
+            is_default: variant.is_default,
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        variantId = newVariant.id;
+
+        // Update variant ID in state
+        const updatedVariants = [...productVariants];
+        updatedVariants[variantIndex] = { ...variant, id: variantId };
+        setProductVariants(updatedVariants);
+      }
+
+      // Upload images
+      const uploadedPaths = await productImagesService.uploadProductImages(
+        `${editingProduct.id}/variants/${variantId}`,
+        newVariantImages
+      );
+
+      // Insert image records
+      const imageRecords = uploadedPaths.map((path, index) => ({
+        variant_id: variantId,
+        image_url: path,
+        sort_order: (variant.images?.length || 0) + index,
+      }));
+
+      const { error: imagesError } = await supabase
+        .from('product_variant_images')
+        .insert(imageRecords);
+
+      if (imagesError) throw imagesError;
+
+      // Update variant in state with new images
+      const updatedVariants = [...productVariants];
+      updatedVariants[variantIndex] = {
+        ...updatedVariants[variantIndex],
+        images: [
+          ...(variant.images || []),
+          ...imageRecords.map((rec, idx) => ({
+            id: '',
+            variant_id: variantId,
+            image_url: uploadedPaths[idx],
+            sort_order: rec.sort_order,
+            created_at: new Date().toISOString(),
+          })),
+        ],
+      };
+      setProductVariants(updatedVariants);
+      setNewVariantImages([]);
+
+      showSuccess('Imagens adicionadas com sucesso');
+    } catch (error: any) {
+      console.error('[Catalog] Error adding variant images:', error);
+      showError(error.message || 'Erro ao adicionar imagens');
+    }
+  };
+
+  const handleRemoveVariantImage = (variantIndex: number, imageIndex: number) => {
+    const updatedVariants = [...productVariants];
+    updatedVariants[variantIndex] = {
+      ...updatedVariants[variantIndex],
+      images: updatedVariants[variantIndex].images?.filter((_, i) => i !== imageIndex) || [],
+    };
+    setProductVariants(updatedVariants);
   };
 
   const handleSave = async () => {
@@ -262,9 +403,64 @@ const Catalog = () => {
         await categoriesService.setProductCategories(productId, [formData.category_id]);
       }
 
+      // Handle variants
+      for (const variant of productVariants) {
+        // Create or update variant
+        let variantId = variant.id;
+
+        if (!variantId) {
+          // Insert new variant
+          const { data: newVariant, error: insertError } = await supabase
+            .from('product_variants')
+            .insert({
+              product_id: productId,
+              name: variant.name,
+              slug: variant.slug,
+              is_default: variant.is_default,
+            })
+            .select()
+            .single();
+
+          if (insertError) throw insertError;
+          variantId = newVariant.id;
+        } else {
+          // Update existing variant
+          await supabase
+            .from('product_variants')
+            .update({
+              name: variant.name,
+              slug: variant.slug,
+              is_default: variant.is_default,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', variantId);
+        }
+
+        // Handle variant images
+        // First, delete all existing images for this variant (simpler approach)
+        await supabase
+          .from('product_variant_images')
+          .delete()
+          .eq('variant_id', variantId);
+
+        // Then insert all images
+        if (variant.images && variant.images.length > 0) {
+          const imageRecords = variant.images.map((img, index) => ({
+            variant_id: variantId,
+            image_url: img.image_url,
+            sort_order: index,
+          }));
+
+          await supabase
+            .from('product_variant_images')
+            .insert(imageRecords);
+        }
+      }
+
       showSuccess(editingProduct ? 'Produto atualizado com sucesso' : 'Produto criado com sucesso');
       setImageFiles([]);
       setCurrentImages([]);
+      setProductVariants([]);
       setModalOpen(false);
       await loadData();
     } catch (error: any) {
@@ -628,6 +824,142 @@ const Catalog = () => {
                 </Button>
               </div>
             </div>
+
+            {/* Variants Section */}
+            {editingProduct && (
+              <div className="space-y-3 pt-4 border-t">
+                <div className="flex items-center gap-2">
+                  <Palette size={16} className="text-gray-600" />
+                  <Label>Variações (Cores)</Label>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Adicione variações do produto com suas próprias imagens (ex: Branco, Madeira).
+                </p>
+
+                {/* Add new variant */}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Nome da variação (ex: Branco)"
+                    value={newVariantName}
+                    onChange={(e) => setNewVariantName(e.target.value)}
+                    disabled={saving}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleAddVariant}
+                    disabled={saving || !newVariantName.trim()}
+                  >
+                    <Plus size={14} />
+                    Adicionar
+                  </Button>
+                </div>
+
+                {/* List existing variants */}
+                {productVariants.length > 0 && (
+                  <div className="space-y-3">
+                    {productVariants.map((variant, variantIndex) => (
+                      <div key={variantIndex} className="border rounded-lg p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {variant.is_default && (
+                              <Badge variant="default" className="text-xs">Padrão</Badge>
+                            )}
+                            <span className="font-medium">{variant.name}</span>
+                          </div>
+                          <div className="flex gap-1">
+                            {!variant.is_default && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleSetDefaultVariant(variantIndex)}
+                                disabled={saving}
+                                title="Definir como padrão"
+                              >
+                                <Star size={14} />
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleRemoveVariant(variantIndex)}
+                              disabled={saving}
+                            >
+                              <Trash2 size={14} />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Variant images */}
+                        {variant.images && variant.images.length > 0 && (
+                          <div className="grid grid-cols-4 gap-2">
+                            {variant.images.map((img, imgIndex) => {
+                              const url = productImagesService.getPublicUrl(img.image_url);
+                              return (
+                                <div key={imgIndex} className="relative group rounded overflow-hidden border">
+                                  <img
+                                    src={url}
+                                    alt={`${variant.name} ${imgIndex + 1}`}
+                                    className="w-full h-16 object-cover"
+                                  />
+                                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      className="w-full h-full"
+                                      onClick={() => handleRemoveVariantImage(variantIndex, imgIndex)}
+                                      disabled={saving}
+                                    >
+                                      <Trash2 size={12} />
+                                    </Button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Add images to variant */}
+                        <div className="flex gap-2">
+                          <Input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            disabled={saving}
+                            onChange={(e) => {
+                              const files = Array.from(e.target.files || []);
+                              setNewVariantImages(files);
+                            }}
+                          />
+                          <Button
+                            size="sm"
+                            onClick={() => handleAddVariantImages(variantIndex)}
+                            disabled={saving || newVariantImages.length === 0}
+                          >
+                            <Plus size={14} />
+                            Fotos
+                          </Button>
+                        </div>
+
+                        {/* Preview new images */}
+                        {newVariantImages.length > 0 && editingVariantIndex === variantIndex && (
+                          <div className="flex gap-2 flex-wrap">
+                            {newVariantImages.map((file, idx) => (
+                              <img
+                                key={idx}
+                                src={URL.createObjectURL(file)}
+                                alt="preview"
+                                className="w-16 h-16 object-cover rounded"
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Image Upload Section */}
             <div className="space-y-2 pt-4 border-t">

@@ -1,4 +1,6 @@
 import { OpportunityStage, OrderStage, Role } from '@/constants/domain';
+import { ProductVariant } from '@/services/productsService';
+import { Category } from '@/services/categoriesService';
 
 export interface Profile {
   id: string;
@@ -14,10 +16,17 @@ export interface Product {
   id: string;
   name: string;
   description: string;
-  price: number;
+  price?: number;
   image_url?: string;
-  is_public: boolean;
+  is_public?: boolean;
+  active: boolean;
+  images: any[];
+  metadata: any;
+  featured: boolean;
+  on_promotion: boolean;
   created_at: string;
+  categories?: Category[];
+  variants?: ProductVariant[];
 }
 
 export interface Lead {

@@ -1,20 +1,23 @@
 import { supabase } from '@/core/supabaseClient';
+import { retryOnAbort } from '@/core/retryOnAbort';
 
 export const settingsService = {
   async getSetting(key: string): Promise<string | null> {
     try {
-      const { data, error } = await supabase
-        .from('app_settings')
-        .select('value')
-        .eq('key', key)
-        .maybeSingle();
+      return await retryOnAbort(async () => {
+        const { data, error } = await supabase
+          .from('app_settings')
+          .select('value')
+          .eq('key', key)
+          .maybeSingle();
 
-      if (error) {
-        console.error('[settingsService.getSetting]', error.message);
-        return null;
-      }
+        if (error) {
+          console.error('[settingsService.getSetting]', error.message);
+          return null;
+        }
 
-      return data?.value ?? null;
+        return data?.value ?? null;
+      });
     } catch (error) {
       console.error('[settingsService.getSetting]', error);
       return null;

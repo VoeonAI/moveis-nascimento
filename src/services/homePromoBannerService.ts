@@ -1,4 +1,5 @@
 import { supabase } from '@/core/supabaseClient';
+import { retryOnAbort } from '@/core/retryOnAbort';
 
 export interface HomePromoBanner {
   id: string;
@@ -14,21 +15,23 @@ export interface HomePromoBanner {
 export const homePromoBannerService = {
   async getPromoBanner(): Promise<HomePromoBanner | null> {
     try {
-      const { data, error } = await supabase
-        .from('home_promo_banner')
-        .select('*')
-        .eq('active', true)
-        .order('updated_at', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      return await retryOnAbort(async () => {
+        const { data, error } = await supabase
+          .from('home_promo_banner')
+          .select('*')
+          .eq('active', true)
+          .order('updated_at', { ascending: false })
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-      if (error) {
-        console.error('[homePromoBannerService] getPromoBanner error:', error);
-        return null;
-      }
+        if (error) {
+          console.error('[homePromoBannerService] getPromoBanner error:', error);
+          return null;
+        }
 
-      return data ?? null;
+        return data ?? null;
+      });
     } catch (error) {
       console.error('[homePromoBannerService] getPromoBanner unexpected error:', error);
       return null;

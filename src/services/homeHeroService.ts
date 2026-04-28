@@ -1,4 +1,5 @@
 import { supabase } from '@/core/supabaseClient';
+import { retryOnAbort } from '@/core/retryOnAbort';
 
 export interface HomeHero {
   id: string;
@@ -13,24 +14,31 @@ export interface HomeHero {
 
 export const homeHeroService = {
   async getHomeHero(): Promise<HomeHero | null> {
-    const { data, error } = await supabase
-      .from('home_hero')
-      .select('id, title, highlight_word, image_url, image_alt, active, created_at, updated_at')
-      .eq('active', true)
-      .order('updated_at', { ascending: false })
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    try {
+      return await retryOnAbort(async () => {
+        const { data, error } = await supabase
+          .from('home_hero')
+          .select('id, title, highlight_word, image_url, image_alt, active, created_at, updated_at')
+          .eq('active', true)
+          .order('updated_at', { ascending: false })
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-    console.log('[homeHeroService] hero ativo retornado:', data);
-    console.log('[homeHeroService] erro:', error);
+        console.log('[homeHeroService] hero ativo retornado:', data);
+        console.log('[homeHeroService] erro:', error);
 
-    if (error) {
+        if (error) {
+          console.error('[homeHeroService] getHomeHero error:', error);
+          throw error;
+        }
+
+        return data ?? null;
+      });
+    } catch (error) {
       console.error('[homeHeroService] getHomeHero error:', error);
       throw error;
     }
-
-    return data ?? null;
   },
 
   async upsertHomeHero(payload: HomeHero): Promise<HomeHero> {

@@ -19,10 +19,10 @@ import WeeklyHighlights from '@/components/home/WeeklyHighlights';
 import HowToBuySection from '@/components/home/HowToBuySection';
 import ProductGrid from '@/components/home/ProductGrid';
 import Footer from '@/components/layout/Footer';
-import { homeHeroService } from '@/services/homeHeroService';
+import { homeHeroService, HomeHero } from '@/services/homeHeroService';
 
 const HomeNew = () => {
-  const [hero, setHero] = useState<null>(null);
+  const [hero, setHero] = useState<HomeHero | null>(null);
 
   useEffect(() => {
     const loadHero = async () => {

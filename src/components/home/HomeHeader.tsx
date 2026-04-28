@@ -1,9 +1,9 @@
-import { supabase } from '@/core/supabaseClient';
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Menu, X, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { settingsService } from '@/services/settingsService';
 
 const HomeHeader = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -13,18 +13,8 @@ const HomeHeader = () => {
 
   useEffect(() => {
     const loadWhatsappNumber = async () => {
-      const { data, error } = await supabase
-        .from('app_settings')
-        .select('value')
-        .eq('key', 'store_whatsapp_e164')
-        .single();
-
-      if (error) {
-        console.error('Erro ao carregar WhatsApp da loja:', error);
-        return;
-      }
-
-      setWhatsappNumber(data?.value || '');
+      const value = await settingsService.getStoreWhatsApp();
+      setWhatsappNumber(value || '');
     };
 
     loadWhatsappNumber();

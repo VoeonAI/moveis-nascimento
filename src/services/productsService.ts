@@ -1,4 +1,5 @@
 import { supabase } from '@/core/supabaseClient';
+import { retryOnAbort } from '@/core/retryOnAbort';
 import { Category } from './categoriesService';
 
 export interface ProductVariantImage {
@@ -56,81 +57,83 @@ export interface ProductsFilter {
 export const productsService = {
   async listPublicProducts(filter?: ProductsFilter): Promise<Product[]> {
     try {
-      let query = supabase
-        .from('products')
-        .select(`
-          id, name, description, images, metadata, active, featured, on_promotion,
-          product_categories (
-            categories (*)
-          ),
-          product_variants (
-            id, product_id, name, slug, is_default, created_at, updated_at,
-            product_variant_images (
-              id, variant_id, image_url, sort_order, created_at
+      return await retryOnAbort(async () => {
+        let query = supabase
+          .from('products')
+          .select(`
+            id, name, description, images, metadata, active, featured, on_promotion,
+            product_categories (
+              categories (*)
+            ),
+            product_variants (
+              id, product_id, name, slug, is_default, created_at, updated_at,
+              product_variant_images (
+                id, variant_id, image_url, sort_order, created_at
+              )
             )
-          )
-        `)
-        .eq('active', true)
-        .order('created_at', { ascending: false });
+          `)
+          .eq('active', true)
+          .order('created_at', { ascending: false });
 
-      // Filter by category slug
-      if (filter?.categorySlug) {
-        query = query.contains('product_categories.categories.slug', filter.categorySlug);
-      }
+        // Filter by category slug
+        if (filter?.categorySlug) {
+          query = query.contains('product_categories.categories.slug', filter.categorySlug);
+        }
 
-      // Filter by search query (name or description)
-      if (filter?.q) {
-        query = query.or(`name.ilike.%${filter.q}%,description.ilike.%${filter.q}%`);
-      }
+        // Filter by search query (name or description)
+        if (filter?.q) {
+          query = query.or(`name.ilike.%${filter.q}%,description.ilike.%${filter.q}%`);
+        }
 
-      const { data, error } = await query;
+        const { data, error } = await query;
 
-      if (error) {
-        console.error('[productsService.listPublicProducts] Query error:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-        });
-        return [];
-      }
+        if (error) {
+          console.error('[productsService.listPublicProducts] Query error:', {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+          });
+          return [];
+        }
 
-      // Transform data to include categories array and variants
-      return (data || []).map((product: any) => {
-        // Processar variantes e definir imagens principais
-        const variants = (product.product_variants || []).map((v: any) => {
-          // Encontrar imagem primária desta variação
-          const primaryVariantImage = (product.product_image_variants || []).find(
-            (iv: any) => iv.variant_id === v.id && iv.is_primary
-          );
-          
+        // Transform data to include categories array and variants
+        return (data || []).map((product: any) => {
+          // Processar variantes e definir imagens principais
+          const variants = (product.product_variants || []).map((v: any) => {
+            // Encontrar imagem primária desta variação
+            const primaryVariantImage = (product.product_image_variants || []).find(
+              (iv: any) => iv.variant_id === v.id && iv.is_primary
+            );
+            
+            return {
+              ...v,
+              primary_image: primaryVariantImage?.image_url || undefined,
+            };
+          });
+
+          // Sort variants: default first, then by name
+          variants.sort((a: ProductVariant, b: ProductVariant) => {
+            if (a.is_default) return -1;
+            if (b.is_default) return 1;
+            return a.name.localeCompare(b.name);
+          });
+
           return {
-            ...v,
-            primary_image: primaryVariantImage?.image_url || undefined,
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            images: product.images,
+            metadata: product.metadata,
+            active: product.active,
+            featured: product.featured,
+            on_promotion: product.on_promotion,
+            created_at: product.created_at,
+            categories: product.product_categories?.map((pc: any) => pc.categories) || [],
+            variants,
+            image_variants: product.product_image_variants || [],
           };
         });
-
-        // Sort variants: default first, then by name
-        variants.sort((a: ProductVariant, b: ProductVariant) => {
-          if (a.is_default) return -1;
-          if (b.is_default) return 1;
-          return a.name.localeCompare(b.name);
-        });
-
-        return {
-          id: product.id,
-          name: product.name,
-          description: product.description,
-          images: product.images,
-          metadata: product.metadata,
-          active: product.active,
-          featured: product.featured,
-          on_promotion: product.on_promotion,
-          created_at: product.created_at,
-          categories: product.product_categories?.map((pc: any) => pc.categories) || [],
-          variants,
-          image_variants: product.product_image_variants || [],
-        };
       });
     } catch (error: any) {
       console.error('[productsService.listPublicProducts] Unexpected error:', error);
@@ -211,81 +214,83 @@ export const productsService = {
 
   async listAllProducts(filter?: ProductsFilter): Promise<Product[]> {
     try {
-      let query = supabase
-        .from('products')
-        .select(`
-          id, name, description, images, metadata, active, featured, on_promotion,
-          product_categories (
-            categories (*)
-          ),
-          product_variants (
-            id, product_id, name, slug, is_default, created_at, updated_at,
-            product_variant_images (
-              id, variant_id, image_url, sort_order, created_at
+      return await retryOnAbort(async () => {
+        let query = supabase
+          .from('products')
+          .select(`
+            id, name, description, images, metadata, active, featured, on_promotion,
+            product_categories (
+              categories (*)
+            ),
+            product_variants (
+              id, product_id, name, slug, is_default, created_at, updated_at,
+              product_variant_images (
+                id, variant_id, image_url, sort_order, created_at
+              )
             )
-          )
-        `)
-        .eq('active', true)
-        .order('created_at', { ascending: false });
+          `)
+          .eq('active', true)
+          .order('created_at', { ascending: false });
 
-      // Filter by category slug
-      if (filter?.categorySlug) {
-        query = query.contains('product_categories.categories.slug', filter.categorySlug);
-      }
+        // Filter by category slug
+        if (filter?.categorySlug) {
+          query = query.contains('product_categories.categories.slug', filter.categorySlug);
+        }
 
-      // Filter by search query
-      if (filter?.q) {
-        query = query.or(`name.ilike.%${filter.q}%,description.ilike.%${filter.q}%`);
-      }
+        // Filter by search query
+        if (filter?.q) {
+          query = query.or(`name.ilike.%${filter.q}%,description.ilike.%${filter.q}%`);
+        }
 
-      const { data, error } = await query;
+        const { data, error } = await query;
 
-      if (error) {
-        console.error('[productsService.listAllProducts] Query error:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-        });
-        return [];
-      }
+        if (error) {
+          console.error('[productsService.listAllProducts] Query error:', {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+          });
+          return [];
+        }
 
-      // Transform data to include categories array and variants
-      return (data || []).map((product: any) => {
-        // Processar variantes e definir imagens principais
-        const variants = (product.product_variants || []).map((v: any) => {
-          // Encontrar imagem primária desta variação
-          const primaryVariantImage = (product.product_image_variants || []).find(
-            (iv: any) => iv.variant_id === v.id && iv.is_primary
-          );
-          
+        // Transform data to include categories array and variants
+        return (data || []).map((product: any) => {
+          // Processar variantes e definir imagens principais
+          const variants = (product.product_variants || []).map((v: any) => {
+            // Encontrar imagem primária desta variação
+            const primaryVariantImage = (product.product_image_variants || []).find(
+              (iv: any) => iv.variant_id === v.id && iv.is_primary
+            );
+            
+            return {
+              ...v,
+              primary_image: primaryVariantImage?.image_url || undefined,
+            };
+          });
+
+          // Sort variants: default first, then by name
+          variants.sort((a: ProductVariant, b: ProductVariant) => {
+            if (a.is_default) return -1;
+            if (b.is_default) return 1;
+            return a.name.localeCompare(b.name);
+          });
+
           return {
-            ...v,
-            primary_image: primaryVariantImage?.image_url || undefined,
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            images: product.images,
+            metadata: product.metadata,
+            active: product.active,
+            featured: product.featured,
+            on_promotion: product.on_promotion,
+            created_at: product.created_at,
+            categories: product.product_categories?.map((pc: any) => pc.categories) || [],
+            variants,
+            image_variants: product.product_image_variants || [],
           };
         });
-
-        // Sort variants: default first, then by name
-        variants.sort((a: ProductVariant, b: ProductVariant) => {
-          if (a.is_default) return -1;
-          if (b.is_default) return 1;
-          return a.name.localeCompare(b.name);
-        });
-
-        return {
-          id: product.id,
-          name: product.name,
-          description: product.description,
-          images: product.images,
-          metadata: product.metadata,
-          active: product.active,
-          featured: product.featured,
-          on_promotion: product.on_promotion,
-          created_at: product.created_at,
-          categories: product.product_categories?.map((pc: any) => pc.categories) || [],
-          variants,
-          image_variants: product.product_image_variants || [],
-        };
       });
     } catch (error: any) {
       console.error('[productsService.listAllProducts] Unexpected error:', error);

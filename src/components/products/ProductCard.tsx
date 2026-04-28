@@ -20,6 +20,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const coverUrl = coverPath ? productImagesService.getPublicUrl(coverPath) : '';
   const category = product.categories?.[0]?.name || 'Preço sob consulta';
 
+  console.log('[ProductCard] Imagem cover:', coverPath);
+  console.log('[ProductCard] Cover URL:', coverUrl);
+
   return (
     <Link to={`/product/${product.id}`} className="group block">
       <div className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden">

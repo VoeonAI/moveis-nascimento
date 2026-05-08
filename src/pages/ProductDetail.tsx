@@ -17,8 +17,13 @@ import ProductCard from '@/components/products/ProductCard';
 import Footer from '@/components/layout/Footer';
 import { trackProductInterest } from '@/services/productClicksService';
 import { trackEvent } from '@/services/funnelTrackingService';
+import { settingsService } from '@/services/settingsService';
 
 const ProductDetail = () => {
+  // DIAGNÓSTICO: Marcador de versão — confirma se produção carregou código novo
+  // Build timestamp: 2025-01-09-colors-v2-diagnostic
+  console.log('[ProductDetail] BUILD_VERSION: colors-v2-diagnostic-20250109');
+
   const { id } = useParams<{ id: string }>();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -60,14 +65,31 @@ const ProductDetail = () => {
   // Check if product has variants
   const hasVariants = product?.variants && product.variants.length > 0;
 
-  // PATCH CIRÚRGICO: Função utilitária simples para verificar se imagem carrega
+  // PATCH CIRÚRGICO: Função utilitária para verificar se imagem carrega
+  // Usa Image() como fallback quando fetch HEAD falha (CORS em produção)
   const checkImage = async (url: string): Promise<boolean> => {
+    // Tentativa 1: fetch HEAD (rápido, mas pode falhar por CORS)
     try {
-      const res = await fetch(url, { method: 'HEAD' });
-      return res.ok;
-    } catch {
-      return false;
+      const res = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
+      console.log('[ProductDetail] checkImage HEAD result:', { url, status: res.status, ok: res.ok });
+      if (res.ok) return true;
+    } catch (err) {
+      console.warn('[ProductDetail] checkImage HEAD failed:', { url, error: (err as Error).message, name: (err as Error).name });
     }
+
+    // Tentativa 2: Image() (não afetado por CORS, mas mais lento)
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        console.log('[ProductDetail] checkImage Image() success:', url);
+        resolve(true);
+      };
+      img.onerror = () => {
+        console.warn('[ProductDetail] checkImage Image() failed:', url);
+        resolve(false);
+      };
+      img.src = url;
+    });
   };
 
   // PATCH CIRÚRGICO: Estado para imagens válidas da galeria
@@ -122,20 +144,19 @@ const ProductDetail = () => {
   // PATCH CIRÚRGICO: Lista de imagens com URLs resolvidas (pré-validação)
   const resolvedCurrentImages = useMemo(() => {
     console.log('[ProductDetail] 🔍 resolvedCurrentImages calculation:');
-    const resolved = currentImages
+    const mapped = currentImages
       .map(img => {
         const rawPath = typeof img === 'string' ? img : (img.image_url || img.url || String(img));
         const resolvedUrl = productImagesService.resolveProductImageUrl(rawPath);
-        return {
-          rawPath,
-          resolvedUrl,
-          hasValidUrl: !!resolvedUrl && resolvedUrl !== rawPath
-        };
-      })
-      .filter(img => img.hasValidUrl);
+        const hasValidUrl = !!resolvedUrl && resolvedUrl !== rawPath;
+        console.log('[ProductDetail]   → resolved:', { rawPath, resolvedUrl, hasValidUrl });
+        return { rawPath, resolvedUrl, hasValidUrl };
+      });
+    const resolved = mapped.filter(img => img.hasValidUrl);
     
     console.log('[ProductDetail]   → Total raw paths:', currentImages.length);
     console.log('[ProductDetail]   → Valid resolved URLs:', resolved.length);
+    console.log('[ProductDetail]   → Filtered out:', mapped.filter(img => !img.hasValidUrl).map(img => img.rawPath));
     
     return resolved;
   }, [currentImages]);
@@ -171,21 +192,24 @@ const ProductDetail = () => {
       });
 
       setGalleryValidImages(validImages);
-
-      // Reset mainImageOverride se imagem atual quebrou
-      if (mainImageOverride) {
-        const stillValid = validImages.some(img => img.resolvedUrl === mainImageOverride);
-        if (!stillValid) {
-          console.log('[ProductDetail]   🔄 Resetting mainImageOverride (broken image)');
-          setMainImageOverride(null);
-        }
-      }
+      // Reset de mainImageOverride agora é feito pelo useEffect separado abaixo
     };
 
     validateGalleryImages();
   }, [resolvedCurrentImages]);
 
   // Get main image URL
+  // PATCH: useEffect separado para resetar mainImageOverride quando quebra (evita side-effect no useMemo)
+  useEffect(() => {
+    if (mainImageOverride) {
+      const stillValid = galleryValidImages.some(img => img.resolvedUrl === mainImageOverride);
+      if (!stillValid) {
+        console.log('[ProductDetail] 🔄 Resetting mainImageOverride (broken image)');
+        setMainImageOverride(null);
+      }
+    }
+  }, [mainImageOverride, galleryValidImages]);
+
   const mainImageUrl = useMemo(() => {
     console.log('[ProductDetail] 🔍 mainImageUrl calculation:');
     
@@ -198,7 +222,7 @@ const ProductDetail = () => {
         return mainImageOverride;
       } else {
         console.log('[ProductDetail]   ⚠️ Override is broken, falling back');
-        setMainImageOverride(null);
+        // NÃO chamar setState aqui — useEffect acima cuida disso
       }
     }
     
@@ -259,20 +283,9 @@ const ProductDetail = () => {
   // Load store WhatsApp
   const loadStoreWhatsApp = async () => {
     try {
-      const { data, error } = await supabase
-        .from('app_settings')
-        .select('value')
-        .eq('key', 'store_whatsapp_e164')
-        .maybeSingle();
-
-      if (error) {
-        console.warn('[ProductDetail] Failed to load store WhatsApp:', error.message);
-        setStoreWhatsApp(null);
-        return;
-      }
-
-      if (data?.value && /^\d{10,15}$/.test(data.value)) {
-        setStoreWhatsApp(data.value);
+      const value = await settingsService.getStoreWhatsApp();
+      if (value && /^\d{10,15}$/.test(value)) {
+        setStoreWhatsApp(value);
       } else {
         setStoreWhatsApp(null);
       }
@@ -564,7 +577,8 @@ const ProductDetail = () => {
   console.log('═══════════════════════════════════════════════════');
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50" data-build-version="colors-v2-diagnostic-20250109">
+      {/* DIAGNÓSTICO: Marcador invisível para confirmar versão do build na produção */}
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Breadcrumb */}
         <nav className="mb-6">

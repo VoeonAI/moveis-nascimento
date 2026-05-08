@@ -143,23 +143,24 @@ export const productsService = {
 
   async getProductById(id: string): Promise<Product | null> {
     try {
-      const { data, error } = await supabase
-        .from('products')
-        .select(`
-          id, name, description, images, metadata, active, featured, on_promotion, created_at,
-          product_categories (
-            categories (*)
-          ),
-          product_variants (
-            id, product_id, name, slug, is_default, created_at, updated_at
-          ),
-          product_image_variants (
-            id, product_id, image_url, variant_id, is_primary, created_at
-          )
-        `)
-        .eq('active', true)
-        .eq('id', id)
-        .single();
+      return await retryOnAbort(async () => {
+        const { data, error } = await supabase
+          .from('products')
+          .select(`
+            id, name, description, images, metadata, active, featured, on_promotion, created_at,
+            product_categories (
+              categories (*)
+            ),
+            product_variants (
+              id, product_id, name, slug, is_default, created_at, updated_at
+            ),
+            product_image_variants (
+              id, product_id, image_url, variant_id, is_primary, created_at
+            )
+          `)
+          .eq('active', true)
+          .eq('id', id)
+          .single();
 
       if (error) {
         console.error('[productsService.getProductById] Query error:', {
@@ -206,6 +207,7 @@ export const productsService = {
         variants,
         image_variants: data.product_image_variants || [],
       };
+      });
     } catch (error: any) {
       console.error('[productsService.getProductById] Unexpected error:', error);
       return null;

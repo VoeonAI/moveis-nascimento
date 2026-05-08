@@ -6,24 +6,14 @@ import {
   UpdateAiInformativeInput 
 } from '@/services/aiInformativesService';
 import { showSuccess, showError } from '@/utils/toast';
-import { 
-  Button, 
-  Card, 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogHeader, 
-  DialogTitle, 
-  Input, 
-  Label, 
-  Textarea, 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue,
-  Badge
-} from '@/components/ui';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { 
   Plus, 
   Edit, 
@@ -34,8 +24,6 @@ import {
   Calendar,
   AlertCircle
 } from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 
 type StatusType = 'active' | 'scheduled' | 'expired' | 'inactive';
 
@@ -201,7 +189,14 @@ const AiInformatives = () => {
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return null;
-    return format(new Date(dateStr), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   return (

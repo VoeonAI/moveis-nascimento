@@ -700,9 +700,9 @@ const ProductDetail = () => {
               {product.name}
             </h1>
 
-            {/* Price */}
+            {/* Price - PATCH VISUAL: Ocultar exibição pública do preço */}
             <div className="flex items-center justify-between">
-              <div className="text-3xl lg:text-4xl font-bold text-green-600">
+              <div className="text-3xl lg:text-4xl font-bold text-green-600 hidden">
                 {canSeePrice ? getPrice(product) : 'Preço sob consulta'}
               </div>
               
@@ -787,7 +787,7 @@ const ProductDetail = () => {
               
               <Button
                 onClick={() => {
-                  console.log('[ProductDetail] "Quais as condições?" clicked for product:', product?.id);
+                  console.log('[ProductDetail] "Qual é o valor?" clicked for product:', product?.id);
                   
                   // Registra interesse de forma não-bloqueante
                   if (product?.id) {
@@ -804,7 +804,7 @@ const ProductDetail = () => {
                 size="lg"
                 className="w-full py-6 text-lg font-semibold rounded-xl border-2 border-gray-300 hover:border-green-600 hover:text-green-600 transition-all"
               >
-                Quais as condições?
+                Qual é o valor?
               </Button>
             </div>
 

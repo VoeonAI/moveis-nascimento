@@ -13,7 +13,8 @@ import {
   X,
   LogOut,
   AlertCircle,
-  BarChart3
+  BarChart3,
+  Bot
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -54,6 +55,12 @@ const sidebarItems = [
     path: '/app/products-dashboard', 
     label: 'Inteligência de Produtos', 
     icon: BarChart3,
+    roles: [Role.MASTER, Role.GESTOR]
+  },
+  { 
+    path: '/app/ai-informatives', 
+    label: 'Informativos IA', 
+    icon: Bot,
     roles: [Role.MASTER, Role.GESTOR]
   },
   { 

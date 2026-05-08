@@ -1,4 +1,5 @@
 import Installers from "./pages/app/Installers";
+import AiInformatives from "./pages/app/AiInformatives";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -120,6 +121,12 @@ const App = () => (
               <Route path="installers" element={
                 <PermissionGate allowedRoles={[Role.MASTER, Role.GESTOR]}>
                   <Installers />
+                </PermissionGate>
+              } />
+
+              <Route path="ai-informatives" element={
+                <PermissionGate allowedRoles={[Role.MASTER, Role.GESTOR]}>
+                  <AiInformatives />
                 </PermissionGate>
               } />
 

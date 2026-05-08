@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Settings, Users, Package, FileText, Wrench } from 'lucide-react';
+import { Home, Settings, Users, Package, FileText, Wrench, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface NavItem {
@@ -35,6 +35,11 @@ const navItems: NavItem[] = [
     label: 'Serviços',
     path: '/app/services',
     icon: Wrench,
+  },
+  {
+    label: 'Informativos IA',
+    path: '/app/ai-informatives',
+    icon: Bot,
   },
   {
     label: 'Configurações',

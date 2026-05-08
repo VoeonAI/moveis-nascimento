@@ -66,10 +66,10 @@ export const productsService = {
               categories (*)
             ),
             product_variants (
-              id, product_id, name, slug, is_default, created_at, updated_at,
-              product_variant_images (
-                id, variant_id, image_url, sort_order, created_at
-              )
+              id, product_id, name, slug, is_default, created_at, updated_at
+            ),
+            product_image_variants (
+              id, product_id, image_url, variant_id, is_primary, created_at
             )
           `)
           .eq('active', true)
@@ -225,10 +225,10 @@ export const productsService = {
               categories (*)
             ),
             product_variants (
-              id, product_id, name, slug, is_default, created_at, updated_at,
-              product_variant_images (
-                id, variant_id, image_url, sort_order, created_at
-              )
+              id, product_id, name, slug, is_default, created_at, updated_at
+            ),
+            product_image_variants (
+              id, product_id, image_url, variant_id, is_primary, created_at
             )
           `)
           .eq('active', true)

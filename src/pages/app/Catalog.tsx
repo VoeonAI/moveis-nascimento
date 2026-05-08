@@ -420,6 +420,9 @@ const Catalog = () => {
       }
 
       // Handle variants
+      // Map old variant IDs (including empty ones for new variants) to new DB IDs
+      const variantIdMap = new Map<string, string>();
+
       for (const variant of productVariants) {
         // Create or update variant
         let variantId = variant.id;
@@ -451,6 +454,9 @@ const Catalog = () => {
             })
             .eq('id', variantId);
         }
+
+        // Store mapping: old ID (or temp empty string) → new DB ID
+        variantIdMap.set(variant.id || `__temp_${variant.slug}`, variantId);
       }
 
       // Handle image-variant associations
@@ -460,19 +466,33 @@ const Catalog = () => {
         .delete()
         .eq('product_id', productId);
 
-      // Then insert all associations from state
+      // Then insert all associations from state, remapping variant IDs
       if (productImageVariants.length > 0) {
-        // Create associations
-        const associations = productImageVariants.map(iv => ({
-          product_id: productId,
-          image_url: iv.image_url,
-          variant_id: iv.variant_id,
-          is_primary: iv.is_primary,
-        }));
+        // Build associations with remapped variant IDs
+        const associations = productImageVariants.map(iv => {
+          // Find the new DB ID for this variant
+          let resolvedVariantId = iv.variant_id;
+          if (!resolvedVariantId || !variantIdMap.has(resolvedVariantId)) {
+            // Try to find by the temp key (slug-based) for new variants
+            const tempKey = `__temp_${productVariants.find(v => v.id === iv.variant_id)?.slug || ''}`;
+            resolvedVariantId = variantIdMap.get(tempKey) || variantIdMap.get(iv.variant_id) || iv.variant_id;
+          } else {
+            resolvedVariantId = variantIdMap.get(iv.variant_id)!;
+          }
 
-        await supabase
-          .from('product_image_variants')
-          .insert(associations);
+          return {
+            product_id: productId,
+            image_url: iv.image_url,
+            variant_id: resolvedVariantId,
+            is_primary: iv.is_primary,
+          };
+        }).filter(a => a.variant_id); // Safety: skip any with empty variant_id
+
+        if (associations.length > 0) {
+          await supabase
+            .from('product_image_variants')
+            .insert(associations);
+        }
       }
 
       showSuccess(editingProduct ? 'Produto atualizado com sucesso' : 'Produto criado com sucesso');

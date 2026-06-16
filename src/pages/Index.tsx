@@ -151,8 +151,30 @@ const Index = () => {
       // Carregar todas as categorias (não apenas as raiz)
       setAllCategories(categoriesData);
       
+      // Helper: verificar se uma categoria raiz tem produtos diretos ou em descendentes
+      const getSubtreeIds = (rootId: string, visited = new Set<string>()): string[] => {
+        if (visited.has(rootId)) return [];
+        visited.add(rootId);
+        const ids = [rootId];
+        const children = categoriesData.filter((c: any) => c.parent_id === rootId);
+        children.forEach((child: any) => {
+          ids.push(...getSubtreeIds(child.id, visited));
+        });
+        return ids;
+      };
+
+      const rootHasProducts = (rootId: string) => {
+        const subtreeIds = getSubtreeIds(rootId);
+        return productsData.some((p: any) =>
+          p.categories && p.categories.some((cat: any) => subtreeIds.includes(cat.id))
+        );
+      };
+
       // Filtrar apenas categorias raiz para exibir na barrinha (parent_id is null)
-      const rootCategories = categoriesData.filter((cat: any) => !cat.parent_id);
+      // Ocultar raízes que não têm produtos diretos nem produtos em descendentes
+      const rootCategories = categoriesData
+        .filter((cat: any) => !cat.parent_id)
+        .filter((cat: any) => rootHasProducts(cat.id));
       setCategories(rootCategories);
       setAllProducts(productsData);
       setProducts(productsData);

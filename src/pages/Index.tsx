@@ -147,11 +147,11 @@ const Index = () => {
         productsService.listPublicProducts(),
         categoriesService.listActiveCategories(),
       ]);
-      
+
       // Carregar todas as categorias (não apenas as raiz)
       setAllCategories(categoriesData);
-      
-      // Helper: verificar se uma categoria raiz tem produtos diretos ou em descendentes
+
+      // Helper: obter todos os IDs de uma categoria e suas descendentes (recursivo)
       const getSubtreeIds = (rootId: string, visited = new Set<string>()): string[] => {
         if (visited.has(rootId)) return [];
         visited.add(rootId);
@@ -163,6 +163,7 @@ const Index = () => {
         return ids;
       };
 
+      // Verificar se uma categoria raiz tem produtos diretos ou em descendentes
       const rootHasProducts = (rootId: string) => {
         const subtreeIds = getSubtreeIds(rootId);
         return productsData.some((p: any) =>
@@ -170,12 +171,32 @@ const Index = () => {
         );
       };
 
-      // Filtrar apenas categorias raiz para exibir na barrinha (parent_id is null)
-      // Ocultar raízes que não têm produtos diretos nem produtos em descendentes
+      // IDs de categorias que têm produtos diretos
+      const categoryIdsWithDirectProducts = new Set<string>();
+      productsData.forEach((p: any) => {
+        if (p.categories) {
+          p.categories.forEach((cat: any) => {
+            if (cat.id) categoryIdsWithDirectProducts.add(cat.id);
+          });
+        }
+      });
+
+      // Categorias visíveis: raízes com produtos + subcategorias com produtos diretos
       const rootCategories = categoriesData
         .filter((cat: any) => !cat.parent_id)
         .filter((cat: any) => rootHasProducts(cat.id));
-      setCategories(rootCategories);
+
+      const subCategoriesWithProducts = categoriesData
+        .filter((cat: any) => cat.parent_id !== null)
+        .filter((cat: any) => categoryIdsWithDirectProducts.has(cat.id));
+
+      // Ordenar: raízes primeiro (alfabeticamente), depois subcategorias (alfabeticamente)
+      const visibleCategories = [
+        ...rootCategories.sort((a: any, b: any) => a.name.localeCompare(b.name)),
+        ...subCategoriesWithProducts.sort((a: any, b: any) => a.name.localeCompare(b.name)),
+      ];
+
+      setCategories(visibleCategories);
       setAllProducts(productsData);
       setProducts(productsData);
     } catch (error) {
@@ -193,8 +214,15 @@ const Index = () => {
 
     // Category filter - filtrar por categoria pai incluindo TODAS as subcategorias (recursivo)
     if (selectedCategory !== 'all') {
-      const categorySlugs = getCategorySlugs(selectedCategory);
-      
+      // Verificar se a categoria selecionada é raiz ou subcategoria
+      const selectedCat = allCategories.find((cat: any) => cat.slug === selectedCategory);
+      const isRootCategory = selectedCat && !selectedCat.parent_id;
+
+      // Se for raiz, incluir todas as subcategorias descendentes; se for subcategoria, usar slug exato
+      const categorySlugs = isRootCategory
+        ? getCategorySlugs(selectedCategory)
+        : [selectedCategory];
+
       // Guard: processar apenas se categorySlugs for válido
       if (categorySlugs && categorySlugs.length > 0) {
         filtered = filtered.filter(p => {
@@ -202,9 +230,9 @@ const Index = () => {
           if (!p.categories || p.categories.length === 0) {
             return false;
           }
-          
+
           // Guard: filtrar apenas produtos que têm categories com slug válido
-          return p.categories.some(cat => 
+          return p.categories.some(cat =>
             cat.slug && categorySlugs.includes(cat.slug)
           );
         });

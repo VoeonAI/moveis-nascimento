@@ -1,0 +1,92 @@
+{
+  "name": "Moveis Nascimento - Agente Comercial IA via Webhook",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "moveis-nascimento-agent",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "9b7d5c7d-8dcb-4d42-b9f1-65b5b2410001",
+      "name": "Webhook - Entrada WhatsApp",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -520,
+        0
+      ],
+      "webhookId": "moveis-nascimento-agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst body = input.body ?? input;\n\nconst DEFAULT_FUNCTIONS_URL = 'https://kbpkdnptzvsvoujirfwe.supabase.co/functions/v1';\nconst functionsUrl = ($env.SUPABASE_FUNCTIONS_URL || DEFAULT_FUNCTIONS_URL).replace(/\\/$/, '');\nconst agentToken = $env.AGENT_TOKEN || $env.SUPABASE_AGENT_TOKEN || 'SUBSTITUA_PELO_TOKEN_HASH';\nconst publicSiteUrl = ($env.PUBLIC_SITE_URL || '').replace(/\\/$/, '');\n\nfunction first(...values) {\n  return values.find((value) => value !== undefined && value !== null && String(value).trim() !== '');\n}\n\nfunction digits(value) {\n  return String(value || '').replace(/\\D/g, '');\n}\n\nfunction normalizePhone(value) {\n  let cleaned = digits(value);\n  if (!cleaned) return '';\n  if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);\n  if (!cleaned.startsWith('55')) cleaned = `55${cleaned}`;\n  return cleaned;\n}\n\nfunction getIncomingMessage(payload) {\n  return String(first(\n    payload.content,\n    payload.message?.content,\n    payload.message?.text,\n    payload.data?.message?.conversation,\n    payload.data?.message?.extendedTextMessage?.text,\n    payload.data?.message?.imageMessage?.caption,\n    payload.data?.message?.videoMessage?.caption,\n    payload.data?.body,\n    payload.text,\n    payload.body,\n    payload.message\n  ) || '').trim();\n}\n\nfunction getIncomingPhone(payload) {\n  const raw = first(\n    payload.sender?.phone_number,\n    payload.contact?.phone_number,\n    payload.conversation?.contact_inbox?.source_id,\n    payload.data?.key?.remoteJid,\n    payload.data?.sender,\n    payload.key?.remoteJid,\n    payload.sender,\n    payload.from,\n    payload.phone,\n    payload.remoteJid\n  );\n  return normalizePhone(raw);\n}\n\nfunction getIncomingName(payload) {\n  return String(first(\n    payload.sender?.name,\n    payload.contact?.name,\n    payload.data?.pushName,\n    payload.pushName,\n    payload.name,\n    payload.customer_name\n  ) || 'Cliente WhatsApp').trim();\n}\n\nfunction extractUuid(text) {\n  return (String(text || '').match(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i) || [])[0] || '';\n}\n\nfunction extractCity(text, payload) {\n  const explicit = first(payload.city, payload.data?.city, payload.context?.city);\n  if (explicit) return String(explicit).trim();\n  const match = String(text || '').match(/(?:em|de|para)\\s+([a-zA-ZÀ-ÿ\\s]{3,40})$/i);\n  return match ? match[1].trim() : '';\n}\n\nfunction classifyIntent(message, payload) {\n  const lower = message.toLowerCase();\n  const productId = first(payload.product_id, payload.data?.product_id, payload.context?.product_id, extractUuid(message)) || '';\n\n  if (/\\b(rastre|rastreio|pedido|entrega|status|acompanhar|chegou|chega|encomenda)\\b/i.test(lower)) {\n    return { intent: 'order_tracking', productId };\n  }\n\n  if (/\\b(humano|atendente|vendedor|consultor|pessoa|falar com alguem|me liga|ligar|whatsapp)\\b/i.test(lower)) {\n    return { intent: 'human_handoff', productId };\n  }\n\n  if (/\\b(montador|montagem|instalador|instalação|instalacao|montar)\\b/i.test(lower)) {\n    return { intent: 'assemblers', productId };\n  }\n\n  if (productId || /\\b(preço|preco|valor|quanto|detalhe|medida|dimensão|dimensao|estoque|disponível|disponivel|parcel)\\b/i.test(lower)) {\n    return { intent: productId ? 'product_detail' : 'product_search', productId };\n  }\n\n  if (/\\b(interesse|interessado|quero|gostei|comprar|compraria|orçamento|orcamento|proposta|reservar|fechar)\\b/i.test(lower)) {\n    return { intent: 'lead_interest', productId };\n  }\n\n  if (/\\b(sofá|sofa|guarda|roupa|mesa|cadeira|cama|rack|painel|cozinha|modulado|armário|armario|produto|móvel|movel|catálogo|catalogo|tem)\\b/i.test(lower)) {\n    return { intent: 'product_search', productId };\n  }\n\n  return { intent: 'fallback', productId };\n}\n\nasync function callAgent(path, { method = 'GET', query = {}, body: requestBody } = {}) {\n  const queryString = Object.entries(query)\n    .filter(([, value]) => value !== undefined && value !== null && String(value) !== '')\n    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)\n    .join('&');\n\n  const url = `${functionsUrl}/${path}${queryString ? `?${queryString}` : ''}`;\n  const options = {\n    method,\n    url,\n    headers: {\n      'Content-Type': 'application/json',\n      'x-agent-token': agentToken,\n    },\n    json: true,\n  };\n\n  if (requestBody) options.body = requestBody;\n\n  return await this.helpers.httpRequest(options);\n}\n\nfunction productUrl(product) {\n  if (!product) return '';\n  if (product.public_url?.startsWith('http')) return product.public_url;\n  if (publicSiteUrl) return `${publicSiteUrl}/product/${product.id}`;\n  return product.public_url || `/product/${product.id}`;\n}\n\nfunction summarizeProducts(products = []) {\n  if (!products.length) return 'Não encontrei produtos com esse termo. Você pode me dizer o tipo de móvel ou ambiente que procura?';\n  const lines = products.slice(0, 5).map((product, index) => {\n    const url = productUrl(product);\n    return `${index + 1}. ${product.name}${product.category_name ? ` (${product.category_name})` : ''}${url ? ` - ${url}` : ''}`;\n  });\n  return `Encontrei estas opções:\\n${lines.join('\\n')}\\n\\nSe quiser, me diga o número ou envie o link do produto para eu registrar seu interesse.`;\n}\n\nfunction summarizeAssemblers(assemblers = []) {\n  if (!assemblers.length) return 'Não encontrei montadores ativos para essa cidade agora. Posso chamar um atendente para verificar uma indicação?';\n  return `Encontrei estes montadores:\\n${assemblers.slice(0, 5).map((item, index) => `${index + 1}. ${item.name}${item.city ? ` - ${item.city}` : ''}${item.phone ? ` - ${item.phone}` : ''}`).join('\\n')}`;\n}\n\nfunction summarizeOrders(orders = []) {\n  if (!orders.length) return 'Não encontrei pedidos recentes vinculados a esse telefone. Se quiser, posso chamar um atendente para verificar manualmente.';\n  return `Encontrei pedido(s) recente(s):\\n${orders.slice(0, 5).map((order, index) => `${index + 1}. ${order.product_name || order.order_id} - ${order.order_stage} - ID: ${order.order_id}`).join('\\n')}\\n\\nPara consultar um pedido específico, envie o ID do pedido.`;\n}\n\nconst message = getIncomingMessage(body);\nconst phone = getIncomingPhone(body);\nconst customerName = getIncomingName(body);\nconst city = extractCity(message, body);\nconst { intent, productId } = classifyIntent(message, body);\n\nlet reply = '';\nlet leadId = null;\nlet apiResult = null;\nlet nextAction = 'send_reply';\n\ntry {\n  if (!message) {\n    reply = 'Oi! Recebi sua mensagem, mas não consegui ler o conteúdo. Pode mandar novamente?';\n  } else if (intent === 'product_search') {\n    apiResult = await callAgent('agent_products_search', { query: { q: message, limit: 5 } });\n    reply = apiResult.ok ? summarizeProducts(apiResult.products) : `Não consegui buscar produtos agora: ${apiResult.error || 'erro desconhecido'}`;\n  } else if (intent === 'product_detail') {\n    let detailId = productId;\n    if (!detailId) {\n      const search = await callAgent('agent_products_search', { query: { q: message, limit: 1 } });\n      detailId = search.products?.[0]?.id || '';\n    }\n\n    if (!detailId) {\n      reply = 'Me envie o link ou o ID do produto para eu consultar os detalhes.';\n    } else {\n      apiResult = await callAgent('agent_product_by_id', { query: { id: detailId } });\n      const product = apiResult.product;\n      if (apiResult.ok && product) {\n        const price = product.private?.price ? `\\nValor: R$ ${product.private.price}` : '';\n        const stock = product.private?.stock_status ? `\\nEstoque: ${product.private.stock_status}` : '';\n        const terms = product.private?.payment_terms ? `\\nCondições: ${product.private.payment_terms}` : '';\n        reply = `${product.name}\\n${product.description || ''}${price}${stock}${terms}\\n\\nLink: ${productUrl(product)}\\n\\nQuer que eu registre seu interesse e chame um atendente?`;\n      } else {\n        reply = `Não consegui encontrar esse produto: ${apiResult.error || 'produto não localizado'}`;\n      }\n    }\n  } else if (intent === 'lead_interest') {\n    apiResult = await callAgent('agent_create_lead_interest', {\n      method: 'POST',\n      body: {\n        customer_name: customerName,\n        customer_phone: phone,\n        message,\n        source: 'n8n',\n        context: {\n          intent: 'catalog_interest',\n          product_id: productId || undefined,\n        },\n      },\n    });\n    leadId = apiResult.lead_id || apiResult.lead?.id || null;\n    reply = apiResult.ok\n      ? 'Perfeito, registrei seu interesse. Um atendente pode continuar daqui e te passar os próximos detalhes.'\n      : `Não consegui registrar seu interesse agora: ${apiResult.error || 'erro desconhecido'}`;\n  } else if (intent === 'human_handoff') {\n    const interest = await callAgent('agent_create_lead_interest', {\n      method: 'POST',\n      body: {\n        customer_name: customerName,\n        customer_phone: phone,\n        message: `Cliente pediu atendimento humano. Mensagem original: ${message}`,\n        source: 'n8n',\n        context: { intent: 'human_handoff', product_id: productId || undefined },\n      },\n    });\n    leadId = interest.lead_id || interest.lead?.id || null;\n    if (leadId) {\n      await callAgent('agent_update_lead_status', { method: 'POST', body: { lead_id: leadId, status: 'talking_human' } });\n    }\n    nextAction = 'handoff_human';\n    reply = 'Claro. Vou encaminhar você para um atendente humano continuar o atendimento.';\n  } else if (intent === 'order_tracking') {\n    const explicitOrderId = extractUuid(message);\n    if (explicitOrderId) {\n      apiResult = await callAgent('agent_get_order_status', { query: { order_id: explicitOrderId } });\n      reply = apiResult.ok\n        ? `Seu pedido está em: ${apiResult.order.label}. Última atualização: ${apiResult.order.updated_at}.`\n        : `Não consegui localizar esse pedido: ${apiResult.error || 'pedido não encontrado'}`;\n    } else if (!phone) {\n      reply = 'Para rastrear, me envie o telefone usado no pedido.';\n    } else {\n      apiResult = await callAgent('agent_find_recent_orders_by_phone', { query: { phone } });\n      reply = apiResult.ok ? summarizeOrders(apiResult.orders) : `Não consegui buscar seus pedidos agora: ${apiResult.error || 'erro desconhecido'}`;\n    }\n  } else if (intent === 'assemblers') {\n    apiResult = await callAgent('agent_get_assemblers', { query: { city, limit: 10 } });\n    reply = apiResult.ok ? summarizeAssemblers(apiResult.assemblers) : `Não consegui buscar montadores agora: ${apiResult.error || 'erro desconhecido'}`;\n  } else {\n    if (phone) {\n      apiResult = await callAgent('agent_create_lead_interest', {\n        method: 'POST',\n        body: {\n          customer_name: customerName,\n          customer_phone: phone,\n          message: `Mensagem recebida sem intenção clara: ${message}`,\n          source: 'n8n',\n          context: { intent: 'fallback' },\n        },\n      });\n      leadId = apiResult.lead_id || apiResult.lead?.id || null;\n    }\n    reply = 'Posso te ajudar com catálogo, preço de produto, rastreio de pedido, montadores ou atendimento humano. O que você gostaria de fazer?';\n  }\n} catch (error) {\n  reply = 'Tive uma falha ao consultar o sistema agora. Vou encaminhar para atendimento humano.';\n  nextAction = 'handoff_human';\n  apiResult = { ok: false, error: error.message || String(error) };\n}\n\nreturn [\n  {\n    json: {\n      ok: true,\n      reply,\n      next_action: nextAction,\n      intent,\n      lead_id: leadId,\n      customer: {\n        name: customerName,\n        phone,\n      },\n      source: {\n        provider: body.event ? 'chatwoot' : 'evolution_or_generic',\n        raw_message: message,\n      },\n      debug: {\n        product_id: productId || null,\n        city: city || null,\n        api_result: apiResult,\n      },\n    },\n  },\n];"
+      },
+      "id": "9b7d5c7d-8dcb-4d42-b9f1-65b5b2410002",
+      "name": "Orquestrador IA - Catalogo CRM Pedidos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "9b7d5c7d-8dcb-4d42-b9f1-65b5b2410003",
+      "name": "Responder ao Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        20,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook - Entrada WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Orquestrador IA - Catalogo CRM Pedidos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Orquestrador IA - Catalogo CRM Pedidos": {
+      "main": [
+        [
+          {
+            "node": "Responder ao Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "moveis-nascimento"
+    },
+    {
+      "name": "ia-n8n"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2026-06-05T00:00:00.000Z",
+  "versionId": "moveis-nascimento-agent-webhook-v1"
+}

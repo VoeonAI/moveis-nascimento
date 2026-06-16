@@ -41,6 +41,27 @@ export const WEBHOOK_EVENT_LABELS: Record<WebhookEventType, string> = {
   [WEBHOOK_EVENTS.WEBHOOK_TEST]: 'Teste de Webhook',
 };
 
+function buildTestEnvelope() {
+  return {
+    version: '1.0',
+    event_type: WEBHOOK_EVENTS.WEBHOOK_TEST,
+    event_id: crypto.randomUUID(),
+    occurred_at: new Date().toISOString(),
+    source: {
+      app: 'moveis-nascimento',
+      env: import.meta.env.MODE,
+      channel: 'crm',
+    },
+    data: {
+      ping: true,
+      message: 'Teste manual de webhook',
+    },
+    meta: {
+      triggered_by: 'webhooksManagementService.testEndpoint',
+    },
+  };
+}
+
 export const webhooksManagementService = {
   async listEndpoints(): Promise<WebhookEndpoint[]> {
     try {
@@ -112,8 +133,7 @@ export const webhooksManagementService = {
       const { data, error } = await supabase.functions.invoke('webhooks_dispatch', {
         body: {
           endpointId,
-          eventType: 'webhook.test',
-          payload: { ping: true, at: new Date().toISOString() },
+          envelope: buildTestEnvelope(),
         },
       });
 

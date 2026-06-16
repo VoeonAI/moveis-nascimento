@@ -1,0 +1,20 @@
+services:
+  moveis-mcp:
+    container_name: moveis-mcp
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MCP_PORT: 3030
+      MCP_HOST: 0.0.0.0
+    # Nao exponha publicamente por padrao.
+    # Use somente se precisar testar fora da rede Docker:
+    # ports:
+    #   - "3030:3030"
+    networks:
+      - n8n_network
+
+networks:
+  n8n_network:
+    external: true
+    name: ${N8N_DOCKER_NETWORK:-n8n_default}

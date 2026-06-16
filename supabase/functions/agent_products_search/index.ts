@@ -18,7 +18,7 @@ serve(async (req) => {
     
     if (!agentToken) {
       return new Response(
-        JSON.stringify({ error: 'Missing x-agent-token header' }),
+        JSON.stringify({ ok: false, error: 'Missing x-agent-token header' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -38,7 +38,7 @@ serve(async (req) => {
 
     if (tokenError || !tokenData) {
       return new Response(
-        JSON.stringify({ error: 'Invalid or inactive token' }),
+        JSON.stringify({ ok: false, error: 'Invalid or inactive token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -46,7 +46,7 @@ serve(async (req) => {
     // Check if token has products:read scope
     if (!tokenData.scopes.includes('products:read')) {
       return new Response(
-        JSON.stringify({ error: 'Insufficient permissions' }),
+        JSON.stringify({ ok: false, error: 'Insufficient permissions' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -169,7 +169,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('[agent_products_search] Error:', error)
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ ok: false, error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

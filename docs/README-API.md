@@ -33,6 +33,10 @@
 | **[Checklist n8n](./checklist-validacao-n8n.md)** | Checklist de validação | n8n |
 | **[Payloads Gerais](./payloads-exemplo.json)** | Payloads JSON prontos | n8n |
 | **[Payloads Rastreio](./payloads-rastreio-pedidos.json)** | Payloads de rastreio | n8n |
+| **[Checklist Operacional IA/n8n](./CHECKLIST-INTEGRACAO-IA-N8N.md)** | Conferencia atual dos endpoints, scopes e webhooks | n8n |
+| **[MCP de Atendimento](./MCP-ATENDIMENTO-N8N.md)** | Como ligar o agente do n8n a ferramentas MCP seguras | n8n AI Agent |
+| **[Workflow Agente Comercial](./n8n/workflow-agente-comercial-webhook.json)** | Workflow importavel por Webhook | n8n |
+| **[Guia do Workflow](./n8n/README-WORKFLOW-AGENTE-COMERCIAL.md)** | Como importar e acoplar Evolution/Chatwoot | n8n |
 
 ---
 
@@ -63,7 +67,7 @@
 
 ## 📊 Endpoints Disponíveis
 
-**Total:** 8 endpoints
+**Total:** 9 endpoints de agente
 
 ### 📦 Produtos (2)
 - `agent_products_search` - Buscar produtos
@@ -73,8 +77,9 @@
 - `agent_find_recent_orders_by_phone` - Pedidos por telefone
 - `agent_get_order_status` - Status do pedido
 
-### 📝 Leads (3)
+### 📝 Leads (4)
 - `agent_create_lead` - Criar lead
+- `agent_create_lead_interest` - Criar/reusar lead e registrar interesse da IA
 - `agent_update_lead_status` - Atualizar status
 - `agent_add_lead_note` - Adicionar nota
 
@@ -144,7 +149,7 @@ x-agent-token: {TOKEN_HASH}
 
 ### ⚠️ Timeline Automática de Leads
 
-**Endpoints:** `agent_create_lead`, `agent_update_lead_status`, `agent_add_lead_note`
+**Endpoints:** `agent_create_lead`, `agent_create_lead_interest`, `agent_update_lead_status`, `agent_add_lead_note`
 
 - Qualquer operação cria registro na tabela `lead_timeline`
 - Campo `last_activity_at` é atualizado automaticamente
@@ -192,6 +197,7 @@ x-agent-token: {TOKEN_HASH}
 - [Guia n8n Geral](./guia-n8n-node-config.md)
 - [Guia n8n Rastreio](./guia-n8n-rastreio-pedidos.md)
 - [Checklist n8n](./checklist-validacao-n8n.md)
+- [MCP de Atendimento](./MCP-ATENDIMENTO-N8N.md)
 
 ---
 

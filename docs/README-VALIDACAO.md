@@ -13,6 +13,10 @@
 |-----------|-----------|-------------|
 | **[Validação Completa](./validacao-endpoints-ia.md)** | Documentação detalhada de leads, produtos e pedidos | Para entender profundamente cada endpoint |
 | **[Checklist Compacto](./checklist-validacao-n8n.md)** | Checklist rápido para testes manuais | Para validação rápida no n8n |
+| **[Checklist Operacional IA/n8n](./CHECKLIST-INTEGRACAO-IA-N8N.md)** | Conferencia atual dos endpoints, scopes e webhooks | Para revisar fluxo antes de publicar |
+| **[MCP de Atendimento](./MCP-ATENDIMENTO-N8N.md)** | Como conectar o AI Agent do n8n ao MCP | Para reduzir varios HTTP nodes |
+| **[Workflow Agente Comercial](./n8n/workflow-agente-comercial-webhook.json)** | Workflow importavel via Webhook | Para testar atendimento automatizado |
+| **[Guia do Workflow](./n8n/README-WORKFLOW-AGENTE-COMERCIAL.md)** | Configuracao do workflow com Evolution/Chatwoot | Para implantacao no n8n |
 | **[Payloads JSON](./payloads-exemplo.json)** | Exemplos de payloads prontos | Para copiar e colar nos testes |
 | **[Guia n8n](./guia-n8n-node-config.md)** | Como configurar nós HTTP no n8n | Para criar workflows de teste |
 
@@ -68,14 +72,15 @@ Body: { "name": "Teste", "phone": "11999999999" }
 
 ## 📊 Endpoints Implementados
 
-### Gerenciamento de Leads (5 endpoints)
+### Gerenciamento de Leads e Produtos (6 endpoints)
 | # | Endpoint | Método | Scope | Status |
 |---|----------|--------|-------|--------|
 | 1 | `agent_create_lead` | POST | `leads:write` | ✅ Implementado |
-| 2 | `agent_update_lead_status` | POST | `leads:update` | ✅ Implementado |
-| 3 | `agent_add_lead_note` | POST | `leads:write` | ✅ Implementado |
-| 4 | `agent_products_search` | GET | `products:read` | ✅ Disponível |
-| 5 | `agent_product_by_id` | GET | `products:read` | ✅ Disponível |
+| 2 | `agent_create_lead_interest` | POST | `leads:write` | ✅ Implementado |
+| 3 | `agent_update_lead_status` | POST | `leads:update` | ✅ Implementado |
+| 4 | `agent_add_lead_note` | POST | `leads:write` | ✅ Implementado |
+| 5 | `agent_products_search` | GET | `products:read` | ✅ Disponível |
+| 6 | `agent_product_by_id` | GET | `products:read` | ✅ Disponível |
 
 ### Rastreio de Pedidos (2 endpoints)
 | # | Endpoint | Método | Scope | Status |
@@ -88,7 +93,7 @@ Body: { "name": "Teste", "phone": "11999999999" }
 |---|----------|--------|-------|--------|
 | 8 | `agent_get_assemblers` | GET | `leads:read` ou `products:read` | ✅ Implementado |
 
-**Total:** 8 endpoints implementados
+**Total:** 9 endpoints de agente implementados
 
 ---
 
@@ -168,6 +173,7 @@ Leia **[Documentação Completa](./validacao-endpoints-ia.md)** ou **[Validaçã
 ### Para Configurar n8n
 - **Geral:** [Guia n8n](./guia-n8n-node-config.md)
 - **Rastreio:** [Guia n8n Rastreio](./guia-n8n-rastreio-pedidos.md)
+- **AI Agent via MCP:** [MCP de Atendimento](./MCP-ATENDIMENTO-N8N.md)
 
 ### Para Payloads Prontos
 - **Geral:** [Payloads JSON](./payloads-exemplo.json)
@@ -184,11 +190,15 @@ Leia **[Documentação Completa](./validacao-endpoints-ia.md)** ou **[Validaçã
    - Cria novo lead no sistema
    - Cria automaticamente entrada em `lead_timeline`
 
-2. **Atualizar Status do Lead** - `agent_update_lead_status` (POST)
+2. **Registrar Interesse da IA** - `agent_create_lead_interest` (POST)
+   - Cria ou reutiliza lead pelo telefone
+   - Registra interesse e contexto da conversa em `lead_timeline`
+
+3. **Atualizar Status do Lead** - `agent_update_lead_status` (POST)
    - Altera status do lead
    - Registra mudança na timeline
 
-3. **Adicionar Nota ao Lead** - `agent_add_lead_note` (POST)
+4. **Adicionar Nota ao Lead** - `agent_add_lead_note` (POST)
    - Adiciona nota/observação ao lead
    - Registra na timeline
 
@@ -370,8 +380,8 @@ SELECT * FROM products WHERE id = 'uuid';
 ## 📈 Status Final
 
 ```
-✅ 8 endpoints implementados
-   - 5 de gerenciamento de leads/produtos
+✅ 9 endpoints de agente implementados
+   - 6 de gerenciamento de leads/produtos
    - 2 de rastreio de pedidos
    - 1 de consulta de montadores
 

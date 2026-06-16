@@ -429,11 +429,8 @@ const ProductDetail = () => {
     lines.push(`• Produto: ${product.name}`);
     lines.push(`• Produto ID: ${product.id}`);
     
-    if (publicSiteUrl) {
-      lines.push(`• Link: ${publicSiteUrl}/product/${product.id}`);
-    } else {
-      lines.push(`• Link: (indisponível no ambiente local)`);
-    }
+    const siteUrl = publicSiteUrl || 'https://moveisnascimento.voeagencia.com.br';
+    lines.push(`• Link: ${siteUrl}/product/${product.id}`);
     
     if (formData.message) {
       lines.push(``);
@@ -502,7 +499,7 @@ const ProductDetail = () => {
         phone: formData.phone,
         message: formData.message,
         source: 'site',
-        page_url: publicSiteUrl ? `${publicSiteUrl}/product/${product?.id}` : window.location.href,
+        page_url: (publicSiteUrl || 'https://moveisnascimento.voeagencia.com.br') + `/product/${product?.id}`,
       },
     }).then(({ data, error }) => {
       // Sucesso ou erro do backend é apenas logado, não afeta o usuário que já está no WhatsApp

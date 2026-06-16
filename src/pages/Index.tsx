@@ -70,6 +70,18 @@ const Index = () => {
     loadData();
   }, []);
 
+  // Normalizar texto para busca: minúsculas, sem acento, hífen → espaço, espaços duplicos normalizados
+  const normalizeText = (text: string | null | undefined): string => {
+    if (!text) return '';
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/-/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
   // Helper para obter todos os IDs de uma categoria pai e TODAS as suas descendentes (recursivo)
   // Protegido contra loops/ciclos e com garantia de IDs únicos
   const getDescendantCategoryIds = (parentId: string, visited = new Set<string>()): string[] => {
@@ -212,7 +224,11 @@ const Index = () => {
   useEffect(() => {
     let filtered = [...allProducts];
 
+    // Normalizar query de busca
+    const normalizedQuery = normalizeText(searchQuery);
+
     // Category filter - filtrar por categoria pai incluindo TODAS as subcategorias (recursivo)
+    // Quando há texto de busca, a busca textual tem prioridade; categoria só restringe se explicitamente selecionada
     if (selectedCategory !== 'all') {
       // Verificar se a categoria selecionada é raiz ou subcategoria
       const selectedCat = allCategories.find((cat: any) => cat.slug === selectedCategory);
@@ -239,15 +255,18 @@ const Index = () => {
       }
     }
 
-    // Search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(p => 
-        p.name.toLowerCase().includes(query) || 
-        (p.description && p.description.toLowerCase().includes(query)) ||
-        // Guard: categorias podem ser undefined, adicionar verificação segura
-        (p.categories && p.categories.some(cat => cat.name && cat.name.toLowerCase().includes(query)))
-      );
+    // Search filter: busca textual normalizada em nome, descrição, nome da categoria e slug da categoria
+    if (normalizedQuery) {
+      filtered = filtered.filter(p => {
+        const nameMatch = normalizeText(p.name).includes(normalizedQuery);
+        const descMatch = normalizeText(p.description).includes(normalizedQuery);
+        const categoryMatch = p.categories && p.categories.some((cat: any) => {
+          const catNameMatch = normalizeText(cat.name).includes(normalizedQuery);
+          const catSlugMatch = normalizeText(cat.slug).includes(normalizedQuery);
+          return catNameMatch || catSlugMatch;
+        });
+        return nameMatch || descMatch || categoryMatch;
+      });
     }
 
     // Sort

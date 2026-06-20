@@ -1,17 +1,21 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabasePublishableKey =
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
+if (!supabaseUrl || !supabasePublishableKey) {
   console.error('[supabaseClient] Missing environment variables:', {
     hasUrl: !!supabaseUrl,
-    hasKey: !!supabaseAnonKey,
+    hasKey: !!supabasePublishableKey,
   });
-  throw new Error('VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be defined in environment variables');
+  throw new Error('VITE_SUPABASE_URL and a Supabase publishable key must be defined');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabaseProjectUrl = supabaseUrl.replace(/\/$/, '');
+
+export const supabase = createClient(supabaseProjectUrl, supabasePublishableKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,

@@ -19,6 +19,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { supabaseProjectUrl } from '@/core/supabaseClient';
 
 const sidebarItems = [
   {
@@ -114,7 +115,7 @@ const AppShell = () => {
             {/* Logo */}
             <div className="p-6 border-b">
               <img
-                src="https://kbpkdnptzvsvoujirfwe.supabase.co/storage/v1/object/public/logo-variacoes/Moveis-nascimento---logo-site.png"
+                src={`${supabaseProjectUrl}/storage/v1/object/public/logo-variacoes/Moveis-nascimento---logo-site.png`}
                 alt="Móveis Nascimento"
                 className="h-12 w-auto"
               />

@@ -95,6 +95,48 @@ const tools = [
     },
   },
   {
+    name: 'get_customer_memory',
+    description: 'Busca a memoria longa comercial de um cliente pelo telefone.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        phone: {
+          type: 'string',
+          description: 'Telefone ou WhatsApp do cliente. Ex: 47999999999',
+        },
+      },
+    },
+  },
+  {
+    name: 'add_memory_event',
+    description: 'Registra um evento relevante de memoria longa comercial do cliente.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        phone: {
+          type: 'string',
+          description: 'Telefone ou WhatsApp do cliente. Ex: 47999999999',
+        },
+        message: {
+          type: 'string',
+          description: 'Fato relevante para lembrar no futuro. Ex: cliente prefere moveis claros',
+        },
+        message_type: {
+          type: 'string',
+          description: 'Tipo do evento. Ex: preference, family, budget, urgency, product_interest, objection, location',
+        },
+        session_id: {
+          type: 'string',
+          description: 'ID da sessao/conversa, se disponivel',
+        },
+        metadata: {
+          type: 'string',
+          description: 'JSON opcional em texto com detalhes estruturados. Ex: {"color":"branco"}',
+        },
+      },
+    },
+  },
+  {
     name: 'request_human_attendant',
     description: 'Registra o pedido de atendimento humano, cria/reutiliza lead quando necessario e marca o lead como talking_human.',
     inputSchema: {
@@ -220,16 +262,34 @@ function normalizeCategory(value) {
   return category;
 }
 
-function normalizeLeadPhone(phone = '') {
-  return String(phone).replace(/\D/g, '');
+function normalizeBrazilPhone(input = '') {
+  const digits = String(input).replace(/\D/g, '');
+  let canonical = digits;
+
+  if (digits.length === 10 || digits.length === 11) {
+    canonical = `55${digits}`;
+  } else if (digits.startsWith('55') && (digits.length === 12 || digits.length === 13)) {
+    canonical = digits;
+  }
+
+  const variants = new Set();
+  if (canonical) variants.add(canonical);
+
+  const withoutCountryCode = canonical.startsWith('55') && (canonical.length === 12 || canonical.length === 13)
+    ? canonical.slice(2)
+    : canonical;
+
+  if (withoutCountryCode) variants.add(withoutCountryCode);
+  if (withoutCountryCode.length === 11) variants.add(withoutCountryCode.slice(-11));
+
+  return {
+    canonical,
+    variants: [...variants],
+  };
 }
 
-function normalizeBrazilPhone(phone = '') {
-  let cleaned = normalizeLeadPhone(phone);
-  if (!cleaned.startsWith('55')) {
-    cleaned = cleaned.startsWith('0') ? `55${cleaned.slice(1)}` : `55${cleaned}`;
-  }
-  return cleaned;
+function phoneVariantsFilter(variants) {
+  return `in.(${variants.join(',')})`;
 }
 
 function publicProductUrl(id) {
@@ -429,11 +489,12 @@ async function registerCustomerInterest(args) {
   const now = new Date().toISOString();
   const source = optionalString(args.source) || 'n8n';
   const customerName = optionalString(args.customer_name);
-  const normalizedPhone = normalizeLeadPhone(customerPhone);
+  const { canonical: normalizedPhone, variants: phoneVariants } = normalizeBrazilPhone(customerPhone);
   const existingLead = await selectOne('leads', {
     select: '*',
-    phone: `eq.${normalizedPhone}`,
+    phone: phoneVariantsFilter(phoneVariants),
     archived: 'is.false',
+    order: 'created_at.asc',
   });
 
   let lead = existingLead;
@@ -532,11 +593,12 @@ async function findLeadByPhone(args) {
   const phone = cleanString(args.phone);
   if (!phone) return { ok: false, error: 'Missing required parameter: phone' };
 
-  const normalizedPhone = normalizeLeadPhone(phone);
+  const { variants: phoneVariants } = normalizeBrazilPhone(phone);
   const lead = await selectOne('leads', {
     select: 'id,name,phone,channel,status,created_at,last_activity_at,archived',
-    phone: `eq.${normalizedPhone}`,
+    phone: phoneVariantsFilter(phoneVariants),
     archived: 'is.false',
+    order: 'created_at.asc',
   });
 
   if (!lead) {
@@ -560,6 +622,67 @@ async function findLeadByPhone(args) {
     found: true,
     lead,
     timeline: timeline || [],
+  };
+}
+
+async function getCustomerMemory(args) {
+  const phone = cleanString(args.phone);
+  if (!phone) return { ok: false, error: 'Missing required parameter: phone' };
+
+  const { variants: phoneVariants } = normalizeBrazilPhone(phone);
+  const memory = await selectOne('memory_consolidated', {
+    select: '*',
+    phone: phoneVariantsFilter(phoneVariants),
+  });
+
+  const events = await selectRows('memory_events', {
+    select: '*',
+    phone: phoneVariantsFilter(phoneVariants),
+    order: 'created_at.desc',
+    limit: 10,
+  });
+
+  return {
+    ok: true,
+    found: Boolean(memory || (events && events.length > 0)),
+    memory: memory || null,
+    events: events || [],
+  };
+}
+
+function parseMemoryMetadata(value) {
+  const metadata = cleanString(value);
+  if (!metadata) return {};
+
+  try {
+    const parsed = JSON.parse(metadata);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+    return { raw: metadata };
+  } catch {
+    return { raw: metadata };
+  }
+}
+
+async function addMemoryEvent(args) {
+  const phone = cleanString(args.phone);
+  const message = cleanString(args.message);
+  const messageType = cleanString(args.message_type);
+
+  if (!phone) return { ok: false, error: 'Missing required field: phone' };
+  if (!message) return { ok: false, error: 'Missing required field: message' };
+  if (!messageType) return { ok: false, error: 'Missing required field: message_type' };
+
+  const event = await insertOne('memory_events', {
+    phone: normalizeBrazilPhone(phone).canonical,
+    message,
+    message_type: messageType,
+    session_id: optionalString(args.session_id) || null,
+    metadata: parseMemoryMetadata(args.metadata),
+  });
+
+  return {
+    ok: true,
+    event,
   };
 }
 
@@ -595,6 +718,65 @@ async function updateLeadStatus(leadId, status) {
   };
 }
 
+function getTimeZoneParts(date, timeZone) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+    weekday: 'short',
+  }).formatToParts(date);
+
+  return Object.fromEntries(parts.map((part) => [part.type, part.value]));
+}
+
+function localDateTimeToUtc(year, month, day, hour, minute, timeZone) {
+  const utcGuess = Date.UTC(year, month - 1, day, hour, minute, 0);
+  const parts = getTimeZoneParts(new Date(utcGuess), timeZone);
+  const representedAsUtc = Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day),
+    Number(parts.hour),
+    Number(parts.minute),
+    Number(parts.second),
+  );
+  return new Date(utcGuess - (representedAsUtc - utcGuess));
+}
+
+function calculateHumanFollowUpAt(now = new Date()) {
+  const timeZone = 'America/Sao_Paulo';
+  const parts = getTimeZoneParts(now, timeZone);
+  const weekday = parts.weekday;
+  const hour = Number(parts.hour);
+  const isWeekend = weekday === 'Sat' || weekday === 'Sun';
+
+  if (!isWeekend && hour < 18) return now.toISOString();
+
+  const localDate = new Date(Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day),
+  ));
+
+  do {
+    localDate.setUTCDate(localDate.getUTCDate() + 1);
+  } while (localDate.getUTCDay() === 0 || localDate.getUTCDay() === 6);
+
+  return localDateTimeToUtc(
+    localDate.getUTCFullYear(),
+    localDate.getUTCMonth() + 1,
+    localDate.getUTCDate(),
+    9,
+    0,
+    timeZone,
+  ).toISOString();
+}
+
 async function requestHumanAttendant(args) {
   let leadId = cleanString(args.lead_id);
   let interest = null;
@@ -620,12 +802,53 @@ async function requestHumanAttendant(args) {
   if (!leadId) return { ok: false, error: 'Unable to determine lead_id for human handoff', interest };
 
   const status = await updateLeadStatus(leadId, 'talking_human');
+  let followUp = null;
+
+  if (status?.ok) {
+    const now = new Date();
+    const followUpAt = calculateHumanFollowUpAt(now);
+
+    try {
+      await updateRows('leads', { id: `eq.${leadId}` }, {
+        follow_up_needed: true,
+        follow_up_at: followUpAt,
+        last_activity_at: now.toISOString(),
+      });
+
+      const event = await insertOne('lead_timeline', {
+        lead_id: leadId,
+        type: 'followup_set',
+        message: 'Follow-up criado automaticamente após solicitação de atendimento humano',
+        meta: {
+          follow_up_at: followUpAt,
+          source: 'mcp',
+          reason: 'human_attendant_requested',
+        },
+        created_by: null,
+      });
+
+      followUp = {
+        created: true,
+        follow_up_needed: true,
+        follow_up_at: followUpAt,
+        event_id: event?.id || null,
+      };
+    } catch (error) {
+      console.error('[requestHumanAttendant] Follow-up creation failed:', error.message);
+      followUp = {
+        created: false,
+        error: error.message || String(error),
+      };
+    }
+  }
+
   return {
     ok: Boolean(status?.ok),
     lead_id: leadId,
     message: status?.ok ? 'Lead marked for human attendance' : status?.error || 'Failed to update lead status',
     interest,
     status,
+    follow_up: followUp,
   };
 }
 
@@ -633,13 +856,13 @@ async function findRecentOrdersByPhone(args) {
   const phone = cleanString(args.phone);
   if (!phone) return { ok: false, error: 'Missing required parameter: phone' };
 
-  const normalizedPhone = normalizeBrazilPhone(phone);
+  const { variants: phoneVariants } = normalizeBrazilPhone(phone);
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
   const orders = await selectRows('orders', {
     select: 'id,customer_phone,current_stage,created_at,updated_at,internal_code',
-    customer_phone: `eq.${normalizedPhone}`,
+    customer_phone: phoneVariantsFilter(phoneVariants),
     created_at: `gte.${ninetyDaysAgo.toISOString()}`,
     order: 'created_at.desc',
     limit: 50,
@@ -717,6 +940,10 @@ async function executeTool(name, args = {}) {
       return await addLeadNote(args);
     case 'find_lead_by_phone':
       return await findLeadByPhone(args);
+    case 'get_customer_memory':
+      return await getCustomerMemory(args);
+    case 'add_memory_event':
+      return await addMemoryEvent(args);
     case 'request_human_attendant':
       return await requestHumanAttendant(args);
     case 'find_recent_orders_by_phone':

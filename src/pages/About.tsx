@@ -23,6 +23,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { normalizeBrazilPhone } from "@/utils/phone";
 
 import {
     MessageCircle,
@@ -324,7 +325,7 @@ const About = () => {
             body: {
                 product_id: null,
                 name: formData.name,
-                phone: formData.phone,
+                phone: normalizeBrazilPhone(formData.phone),
                 message: `Contato via página Sobre Nós. ${formData.message}`,
                 source: "site",
                 page_url: window.location.href

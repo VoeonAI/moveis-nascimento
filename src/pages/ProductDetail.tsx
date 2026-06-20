@@ -18,6 +18,7 @@ import Footer from '@/components/layout/Footer';
 import { trackProductInterest } from '@/services/productClicksService';
 import { trackEvent } from '@/services/funnelTrackingService';
 import { settingsService } from '@/services/settingsService';
+import { normalizeBrazilPhone } from '@/utils/phone';
 
 const ProductDetail = () => {
   // DIAGNÓSTICO: Marcador de versão — confirma se produção carregou código novo
@@ -496,7 +497,7 @@ const ProductDetail = () => {
       body: {
         product_id: product?.id,
         name: formData.name,
-        phone: formData.phone,
+        phone: normalizeBrazilPhone(formData.phone),
         message: formData.message,
         source: 'site',
         page_url: (publicSiteUrl || 'https://moveisnascimento.voeagencia.com.br') + `/product/${product?.id}`,

@@ -23,8 +23,27 @@ function log(level: 'info' | 'error', requestId: string, message: string, data?:
   console.log(JSON.stringify(logEntry))
 }
 
-function normalizePhone(phone: string): string {
-  return phone.replace(/\D/g, '');
+function normalizeBrazilPhone(input: string): { canonical: string; variants: string[] } {
+  const digits = String(input || '').replace(/\D/g, '')
+  let canonical = digits
+
+  if (digits.length === 10 || digits.length === 11) {
+    canonical = `55${digits}`
+  } else if (digits.startsWith('55') && (digits.length === 12 || digits.length === 13)) {
+    canonical = digits
+  }
+
+  const variants = new Set<string>()
+  if (canonical) variants.add(canonical)
+
+  const withoutCountryCode = canonical.startsWith('55') && (canonical.length === 12 || canonical.length === 13)
+    ? canonical.slice(2)
+    : canonical
+
+  if (withoutCountryCode) variants.add(withoutCountryCode)
+  if (withoutCountryCode.length === 11) variants.add(withoutCountryCode.slice(-11))
+
+  return { canonical, variants: [...variants] }
 }
 
 const DUPLICATE_WINDOW_MINUTES = 10;
@@ -52,7 +71,8 @@ serve(async (req) => {
     }
 
     const { product_id, name, phone, message, source = 'site', page_url } = body
-    const normalizedPhone = phone ? normalizePhone(phone) : null;
+    const phoneIdentity = phone ? normalizeBrazilPhone(phone) : { canonical: '', variants: [] }
+    const normalizedPhone = phoneIdentity.canonical || null
 
     log('info', requestId, 'Request received', {
       product_id,
@@ -102,7 +122,7 @@ serve(async (req) => {
       const { data: existingLead } = await supabase
         .from('leads')
         .select('*')
-        .eq('phone', normalizedPhone)
+        .in('phone', phoneIdentity.variants)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()

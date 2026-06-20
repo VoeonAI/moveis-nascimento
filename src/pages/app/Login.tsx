@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/core/supabaseClient';
+import React, { useEffect, useState } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { supabase, supabaseProjectUrl } from '@/core/supabaseClient';
+import { useAuth } from '@/core/auth/AuthProvider';
 import { Eye, EyeOff } from 'lucide-react';
 
 const Login = () => {
@@ -9,6 +10,15 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+
+  useEffect(() => {
+    if (user) navigate('/app/pipeline', { replace: true });
+  }, [navigate, user]);
+
+  if (!authLoading && user) {
+    return <Navigate to="/app/pipeline" replace />;
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +61,7 @@ const Login = () => {
         {/* Logo Centralizado */}
         <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginBottom: '2rem' }}>
           <img
-            src="https://kbpkdnptzvsvoujirfwe.supabase.co/storage/v1/object/public/logo-variacoes/Moveis-nascimento---logo-site.png"
+            src={`${supabaseProjectUrl}/storage/v1/object/public/logo-variacoes/Moveis-nascimento---logo-site.png`}
             alt="Móveis Nascimento"
             style={{ height: '5.5rem', width: 'auto', maxWidth: '100%' }}
           />

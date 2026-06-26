@@ -95,6 +95,19 @@ const tools = [
     },
   },
   {
+    name: 'get_customer_commercial_history',
+    description: 'Busca o historico comercial completo do cliente pelo telefone, incluindo lead, oportunidades e pedidos.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        phone: {
+          type: 'string',
+          description: 'Telefone ou WhatsApp do cliente. Ex: 47999999999',
+        },
+      },
+    },
+  },
+  {
     name: 'get_customer_memory',
     description: 'Busca a memoria longa comercial de um cliente pelo telefone.',
     inputSchema: {
@@ -625,6 +638,91 @@ async function findLeadByPhone(args) {
   };
 }
 
+async function getCustomerCommercialHistory(args) {
+  const phone = cleanString(args.phone);
+  if (!phone) return { ok: false, error: 'Missing required parameter: phone' };
+
+  const { variants: phoneVariants } = normalizeBrazilPhone(phone);
+  const lead = await selectOne('leads', {
+    select: 'id,name,phone,channel,status,notes,archived,created_at,updated_at',
+    phone: phoneVariantsFilter(phoneVariants),
+    order: 'created_at.asc',
+  });
+
+  const opportunities = lead
+    ? await selectRows('opportunities', {
+        select: 'id,lead_id,product_id,stage,value,assigned_to,archived,created_at,updated_at',
+        lead_id: `eq.${lead.id}`,
+        order: 'created_at.desc',
+      })
+    : [];
+
+  const opportunityIds = (opportunities || []).map((opportunity) => opportunity.id).filter(Boolean);
+  const orderSelect = 'id,opportunity_id,lead_id,current_stage,customer_name,customer_phone,delivery_date,delivery_address,internal_code,notes,created_at,updated_at';
+  const orderQueries = [
+    selectRows('orders', {
+      select: orderSelect,
+      customer_phone: phoneVariantsFilter(phoneVariants),
+      order: 'created_at.desc',
+    }),
+  ];
+
+  if (lead) {
+    orderQueries.push(
+      selectRows('orders', {
+        select: orderSelect,
+        lead_id: `eq.${lead.id}`,
+        order: 'created_at.desc',
+      }),
+    );
+  }
+
+  if (opportunityIds.length > 0) {
+    orderQueries.push(
+      selectRows('orders', {
+        select: orderSelect,
+        opportunity_id: `in.(${opportunityIds.join(',')})`,
+        order: 'created_at.desc',
+      }),
+    );
+  }
+
+  const orderResults = await Promise.all(orderQueries);
+  const ordersById = new Map();
+  for (const order of orderResults.flat()) {
+    if (order?.id) ordersById.set(order.id, order);
+  }
+
+  const orders = [...ordersById.values()]
+    .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+    .map((order) => ({
+      ...order,
+      order_stage: order.current_stage,
+    }));
+  const sortedOpportunities = [...(opportunities || [])].sort(
+    (a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime(),
+  );
+  const wonOpportunities = sortedOpportunities.filter((opportunity) => opportunity.stage === 'won');
+  const found = Boolean(lead || orders.length > 0);
+
+  return {
+    ok: true,
+    found,
+    lead: lead || null,
+    has_purchased: wonOpportunities.length > 0 || orders.length > 0,
+    opportunities: sortedOpportunities,
+    won_opportunities: wonOpportunities,
+    orders,
+    summary: {
+      total_opportunities: sortedOpportunities.length,
+      total_won: wonOpportunities.length,
+      total_orders: orders.length,
+      latest_order_status: orders[0]?.current_stage || null,
+      latest_commercial_stage: sortedOpportunities[0]?.stage || null,
+    },
+  };
+}
+
 async function getCustomerMemory(args) {
   const phone = cleanString(args.phone);
   if (!phone) return { ok: false, error: 'Missing required parameter: phone' };
@@ -940,6 +1038,8 @@ async function executeTool(name, args = {}) {
       return await addLeadNote(args);
     case 'find_lead_by_phone':
       return await findLeadByPhone(args);
+    case 'get_customer_commercial_history':
+      return await getCustomerCommercialHistory(args);
     case 'get_customer_memory':
       return await getCustomerMemory(args);
     case 'add_memory_event':

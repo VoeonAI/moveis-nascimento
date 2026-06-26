@@ -324,8 +324,8 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Componente de teste para debug - remover em produção */}
-      <TestTracking />
+      {/* Componente de teste para debug - apenas em desenvolvimento */}
+      {import.meta.env.DEV && <TestTracking />}
       
       {/* Header with Logo and Menu */}
       <HomeHeader />

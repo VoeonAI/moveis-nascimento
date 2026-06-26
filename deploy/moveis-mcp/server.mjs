@@ -108,6 +108,19 @@ const tools = [
     },
   },
   {
+    name: 'get_category_link',
+    description: 'Busca o link publico de uma categoria do catalogo por termo generico.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Categoria ou termo generico buscado pelo cliente. Ex: guarda roupa, sofa, mesa, painel',
+        },
+      },
+    },
+  },
+  {
     name: 'get_customer_memory',
     description: 'Busca a memoria longa comercial de um cliente pelo telefone.',
     inputSchema: {
@@ -309,6 +322,10 @@ function publicProductUrl(id) {
   return PUBLIC_SITE_URL ? `${PUBLIC_SITE_URL}/product/${id}` : `/product/${id}`;
 }
 
+function publicCatalogSearchUrl(term) {
+  return PUBLIC_SITE_URL && term ? `${PUBLIC_SITE_URL}/catalog?search=${encodeURIComponent(term)}` : null;
+}
+
 function truncate(text, max = 200) {
   if (!text) return '';
   return text.length > max ? `${text.slice(0, max)}...` : text;
@@ -393,6 +410,123 @@ function productCategories(product) {
   return (product?.product_categories || [])
     .map((pc) => (Array.isArray(pc.categories) ? pc.categories[0] : pc.categories))
     .filter(Boolean);
+}
+
+function normalizeLookupText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function categorySearchTerms(query) {
+  const normalized = normalizeLookupText(query);
+  const terms = new Set([normalized]);
+
+  const aliases = [
+    {
+      match: ['guarda roupa', 'guarda roupas', 'guarda-roupa', 'guarda-roupas', 'roupeiro', 'roupeiros'],
+      terms: ['guarda roupa', 'guarda roupas', 'guarda-roupa', 'guarda-roupas', 'roupeiro', 'roupeiros'],
+    },
+    {
+      match: ['sofa', 'sofas'],
+      terms: ['sofa', 'sofas'],
+    },
+    {
+      match: ['painel tv', 'painel para tv', 'painel', 'paineis', 'painels'],
+      terms: ['painel', 'paineis', 'painels', 'painel tv', 'painel para tv'],
+    },
+  ];
+
+  for (const alias of aliases) {
+    if (alias.match.some((item) => normalized.includes(normalizeLookupText(item)))) {
+      alias.terms.forEach((item) => terms.add(normalizeLookupText(item)));
+    }
+  }
+
+  return [...terms].filter(Boolean);
+}
+
+function categoryMatchScore(category, terms) {
+  const name = normalizeLookupText(category.name);
+  const slug = normalizeLookupText(category.slug);
+  let score = 0;
+
+  for (const term of terms) {
+    if (!term) continue;
+    if (name === term || slug === term) score = Math.max(score, 100);
+    if (name.startsWith(term) || slug.startsWith(term)) score = Math.max(score, 80);
+    if (name.includes(term) || slug.includes(term)) score = Math.max(score, 60);
+    if (term.includes(name) || term.includes(slug)) score = Math.max(score, 45);
+  }
+
+  return score;
+}
+
+async function countActiveProductsForCategory(categoryId) {
+  if (!categoryId) return 0;
+
+  try {
+    const children = await selectRows('categories', {
+      select: 'id',
+      parent_id: `eq.${categoryId}`,
+      active: 'eq.true',
+      limit: 500,
+    });
+    const categoryIds = [categoryId, ...((children || []).map((category) => category.id).filter(Boolean))];
+    const links = await selectRows('product_categories', {
+      select: 'product_id',
+      category_id: `in.(${categoryIds.join(',')})`,
+      limit: 1000,
+    });
+    const productIds = [...new Set((links || []).map((link) => link.product_id).filter(Boolean))];
+    if (productIds.length === 0) return 0;
+
+    const products = await selectRows('products', {
+      select: 'id',
+      id: `in.(${productIds.join(',')})`,
+      active: 'eq.true',
+      limit: productIds.length,
+    });
+    return Array.isArray(products) ? products.length : 0;
+  } catch {
+    try {
+      const products = await selectRows('products', {
+        select: 'id',
+        category_id: `eq.${categoryId}`,
+        active: 'eq.true',
+        limit: 1000,
+      });
+      return Array.isArray(products) ? products.length : 0;
+    } catch {
+      return 0;
+    }
+  }
+}
+
+async function countActiveProductsByText(terms) {
+  const products = await selectRows('products', {
+    select: 'id,name,description,product_categories(categories(id,name,slug))',
+    active: 'eq.true',
+    limit: 1000,
+  });
+
+  const matchingIds = new Set();
+  for (const product of products || []) {
+    const haystack = normalizeLookupText([
+      product.name,
+      product.description,
+      ...productCategories(product).flatMap((category) => [category.name, category.slug]),
+    ].filter(Boolean).join(' '));
+
+    if (terms.some((term) => haystack.includes(normalizeLookupText(term)))) {
+      matchingIds.add(product.id);
+    }
+  }
+
+  return matchingIds.size;
 }
 
 async function getCategorySlugs(category) {
@@ -491,6 +625,54 @@ async function getProductDetails(args) {
   });
   if (!product) return { ok: false, error: 'Product not found' };
   return { ok: true, product: transformProductDetails(product) };
+}
+
+async function getCategoryLink(args) {
+  const query = normalizeLookupText(args.query);
+  if (!query) {
+    return { ok: true, found: false, category: null, suggestions: [] };
+  }
+
+  const terms = categorySearchTerms(query);
+  const categories = await selectRows('categories', {
+    select: 'id,name,slug,active,sort_order,parent_id',
+    active: 'eq.true',
+    order: 'sort_order.asc,name.asc',
+    limit: 500,
+  });
+
+  const ranked = (categories || [])
+    .map((category) => ({
+      category,
+      score: categoryMatchScore(category, terms),
+    }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return (a.category.sort_order || 0) - (b.category.sort_order || 0);
+    });
+
+  const best = ranked[0]?.category || null;
+  if (!best) {
+    return { ok: true, found: false, category: null, suggestions: [] };
+  }
+
+  let productCount = await countActiveProductsForCategory(best.id);
+  if (productCount === 0) {
+    productCount = await countActiveProductsByText(categorySearchTerms(`${best.name} ${best.slug} ${query}`));
+  }
+
+  return {
+    ok: true,
+    found: true,
+    category: {
+      id: best.id,
+      name: best.name,
+      slug: best.slug,
+      url: publicCatalogSearchUrl(best.name),
+      product_count: productCount,
+    },
+  };
 }
 
 async function registerCustomerInterest(args) {
@@ -1040,6 +1222,8 @@ async function executeTool(name, args = {}) {
       return await findLeadByPhone(args);
     case 'get_customer_commercial_history':
       return await getCustomerCommercialHistory(args);
+    case 'get_category_link':
+      return await getCategoryLink(args);
     case 'get_customer_memory':
       return await getCustomerMemory(args);
     case 'add_memory_event':

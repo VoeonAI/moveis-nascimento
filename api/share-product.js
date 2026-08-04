@@ -81,6 +81,35 @@ function errorPage(status, title, message) {
   );
 }
 
+function logStep(step, details = {}) {
+  console.log('[share-product]', step, details);
+}
+
+async function fetchSupabaseJson({ step, url, serviceRoleKey }) {
+  logStep(step, { url: url.toString() });
+
+  const response = await fetch(url, {
+    headers: {
+      apikey: serviceRoleKey,
+      authorization: `Bearer ${serviceRoleKey}`,
+    },
+  });
+
+  logStep(`${step}:response`, { status: response.status, ok: response.ok });
+
+  if (!response.ok) {
+    const body = (await response.text()).slice(0, 500);
+    console.error('[share-product] Supabase response error', {
+      step,
+      status: response.status,
+      body,
+    });
+    throw new Error(`${step} failed with Supabase HTTP ${response.status}`);
+  }
+
+  return response.json();
+}
+
 export default {
   async fetch(request) {
     if (request.method !== 'GET' && request.method !== 'HEAD') {
@@ -89,43 +118,40 @@ export default {
 
     const requestUrl = new URL(request.url);
     const id = requestUrl.searchParams.get('id') || '';
+    logStep('validate_env', { productId: id });
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
       return errorPage(404, 'Produto não encontrado', 'O produto informado não está disponível.');
     }
 
     const supabaseUrl = process.env.SUPABASE_URL;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    logStep('validate_env:values', {
+      hasSupabaseUrl: Boolean(supabaseUrl),
+      hasServiceRoleKey: Boolean(serviceRoleKey),
+      serviceRoleKeyLength: serviceRoleKey?.length || 0,
+    });
     if (!supabaseUrl || !serviceRoleKey) {
       console.error('[share-product] SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing');
       return errorPage(500, 'Compartilhamento indisponível', 'Não foi possível preparar a prévia deste produto.');
     }
 
     const productsUrl = new URL('/rest/v1/products', supabaseUrl);
-    productsUrl.searchParams.set(
-      'select',
-      'id,name,description,price,image_url,images,product_image_variants(image_url,is_primary,created_at)',
-    );
+    productsUrl.searchParams.set('select', 'id,name,description,price,image_url,images');
     productsUrl.searchParams.set('id', `eq.${id}`);
     productsUrl.searchParams.set('active', 'eq.true');
     productsUrl.searchParams.set('limit', '1');
 
     let product;
     try {
-      const response = await fetch(productsUrl, {
-        headers: {
-          apikey: serviceRoleKey,
-          authorization: `Bearer ${serviceRoleKey}`,
-        },
+      const products = await fetchSupabaseJson({
+        step: 'fetch_product',
+        url: productsUrl,
+        serviceRoleKey,
       });
-
-      if (!response.ok) {
-        console.error('[share-product] Supabase request failed', response.status);
-        return errorPage(502, 'Compartilhamento indisponível', 'Não foi possível consultar este produto agora.');
-      }
-
-      [product] = await response.json();
+      [product] = products;
     } catch (error) {
-      console.error('[share-product] Supabase request error', error);
+      console.error('[share-product] fetch_product error.message', error.message);
+      console.error('[share-product] fetch_product error.stack', error.stack);
       return errorPage(502, 'Compartilhamento indisponível', 'Não foi possível consultar este produto agora.');
     }
 
@@ -133,11 +159,34 @@ export default {
       return errorPage(404, 'Produto não encontrado', 'O produto informado não está disponível.');
     }
 
+    try {
+      const variantsUrl = new URL('/rest/v1/product_variants', supabaseUrl);
+      variantsUrl.searchParams.set('select', 'id,product_id,name,slug,is_default,created_at,updated_at');
+      variantsUrl.searchParams.set('product_id', `eq.${id}`);
+
+      const imageVariantsUrl = new URL('/rest/v1/product_image_variants', supabaseUrl);
+      imageVariantsUrl.searchParams.set('select', 'id,product_id,image_url,variant_id,is_primary,created_at');
+      imageVariantsUrl.searchParams.set('product_id', `eq.${id}`);
+
+      const [, imageVariants] = await Promise.all([
+        fetchSupabaseJson({ step: 'fetch_variants', url: variantsUrl, serviceRoleKey }),
+        fetchSupabaseJson({ step: 'fetch_variants:image_variants', url: imageVariantsUrl, serviceRoleKey }),
+      ]);
+      product.product_image_variants = imageVariants;
+    } catch (error) {
+      console.error('[share-product] fetch_variants error.message', error.message);
+      console.error('[share-product] fetch_variants error.stack', error.stack);
+      return errorPage(502, 'Compartilhamento indisponível', 'Não foi possível consultar este produto agora.');
+    }
+
+    logStep('resolve_image');
     const siteUrl = publicSiteUrl(request);
     const productUrl = `${siteUrl}/product/${encodeURIComponent(product.id)}`;
     const shareUrl = `${siteUrl}/share/product/${encodeURIComponent(product.id)}`;
     const description = shortDescription(product.description);
     const imageUrl = resolveProductImage(firstImagePath(product), supabaseUrl);
+    console.error('[share-product] Produto:', id);
+    console.error('[share-product] Imagem:', imageUrl);
     const offerPrice = Number(product.price);
     const jsonLd = {
       '@context': 'https://schema.org',
@@ -159,6 +208,7 @@ export default {
         : {}),
     };
 
+    logStep('build_html');
     const html = `<!doctype html>
 <html lang="pt-BR">
   <head>

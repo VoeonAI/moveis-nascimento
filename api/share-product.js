@@ -39,16 +39,20 @@ function firstImagePath(product) {
   const primaryVariant = imageVariants.find((image) => image?.is_primary && image?.image_url);
 
   if (primaryVariant?.image_url) return primaryVariant.image_url;
-  if (imageVariants[0]?.image_url) return imageVariants[0].image_url;
+  const firstVariantImage = imageVariants.find((image) => image?.image_url);
+  if (firstVariantImage?.image_url) return firstVariantImage.image_url;
 
   const images = Array.isArray(product.images) ? product.images : [];
-  const firstImage = images.find(Boolean);
+  const firstImage = images.find((image) => {
+    if (typeof image === 'string') return Boolean(image.trim());
+    return Boolean(image?.image_url || image?.url);
+  });
   if (typeof firstImage === 'string') return firstImage;
   if (firstImage && typeof firstImage === 'object') {
     return firstImage.image_url || firstImage.url || null;
   }
 
-  return product.image_url || null;
+  return null;
 }
 
 function resolveProductImage(imagePath, supabaseUrl) {
@@ -136,7 +140,7 @@ export default {
     }
 
     const productsUrl = new URL('/rest/v1/products', supabaseUrl);
-    productsUrl.searchParams.set('select', 'id,name,description,image_url,images');
+    productsUrl.searchParams.set('select', 'id,name,description,images,active');
     productsUrl.searchParams.set('id', `eq.${id}`);
     productsUrl.searchParams.set('active', 'eq.true');
     productsUrl.searchParams.set('limit', '1');

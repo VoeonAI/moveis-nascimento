@@ -136,7 +136,7 @@ export default {
     }
 
     const productsUrl = new URL('/rest/v1/products', supabaseUrl);
-    productsUrl.searchParams.set('select', 'id,name,description,price,image_url,images');
+    productsUrl.searchParams.set('select', 'id,name,description,image_url,images');
     productsUrl.searchParams.set('id', `eq.${id}`);
     productsUrl.searchParams.set('active', 'eq.true');
     productsUrl.searchParams.set('limit', '1');
@@ -187,7 +187,6 @@ export default {
     const imageUrl = resolveProductImage(firstImagePath(product), supabaseUrl);
     console.error('[share-product] Produto:', id);
     console.error('[share-product] Imagem:', imageUrl);
-    const offerPrice = Number(product.price);
     const jsonLd = {
       '@context': 'https://schema.org',
       '@type': 'Product',
@@ -195,17 +194,6 @@ export default {
       description,
       image: imageUrl,
       url: productUrl,
-      ...(Number.isFinite(offerPrice) && offerPrice >= 0
-        ? {
-            offers: {
-              '@type': 'Offer',
-              price: offerPrice,
-              priceCurrency: 'BRL',
-              availability: 'https://schema.org/InStock',
-              url: productUrl,
-            },
-          }
-        : {}),
     };
 
     logStep('build_html');

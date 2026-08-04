@@ -2,6 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/share/product/:id",
+      "destination": "/api/share-product?id=:id"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

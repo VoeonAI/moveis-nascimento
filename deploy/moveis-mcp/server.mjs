@@ -322,6 +322,10 @@ function publicProductUrl(id) {
   return PUBLIC_SITE_URL ? `${PUBLIC_SITE_URL}/product/${id}` : `/product/${id}`;
 }
 
+function shareProductUrl(id) {
+  return PUBLIC_SITE_URL ? `${PUBLIC_SITE_URL}/share/product/${id}` : null;
+}
+
 function publicCatalogSearchUrl(term) {
   return PUBLIC_SITE_URL && term ? `${PUBLIC_SITE_URL}/catalog?search=${encodeURIComponent(term)}` : null;
 }
@@ -556,6 +560,7 @@ function transformProductSummary(product) {
     category_name: category?.name || null,
     image,
     public_url: publicProductUrl(product.id),
+    product_url: shareProductUrl(product.id),
   };
 }
 
@@ -572,6 +577,7 @@ function transformProductDetails(product) {
       slug: category.slug,
     })),
     public_url: publicProductUrl(product.id),
+    product_url: shareProductUrl(product.id),
     raw: { metadata },
     private: {
       internal_code: metadata.internal_code || metadata.sku || null,

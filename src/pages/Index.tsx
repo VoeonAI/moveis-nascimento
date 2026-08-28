@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { productsService } from '@/services/productsService';
 import { categoriesService } from '@/services/categoriesService';
 import { Product } from '@/services/productsService';
@@ -17,25 +17,43 @@ import HomeHeader from '@/components/home/HomeHeader';
 
 const Index = () => {
   const { profile } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [allCategories, setAllCategories] = useState<any[]>([]); // Todas as categorias, incluindo subcategorias
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  // Estado inicial vem da URL: a URL é fonte válida de estado do catálogo
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get('search') || '');
+  const [selectedCategory, setSelectedCategory] = useState<string>(() => searchParams.get('category') || 'all');
   const [sortBy, setSortBy] = useState<string>('newest');
   const [whatsappNumber, setWhatsappNumber] = useState('');
-  const [searchParams] = useState(new URLSearchParams());
-  const searchFromUrl = searchParams.get('search') || '';
-  const categoryFromUrl = searchParams.get('category') || '';
-  
+
+  // URL → estado: links diretos e navegação (voltar/avançar) alimentam os filtros existentes
   useEffect(() => {
-    setSearchQuery(searchFromUrl);
-    if (categoryFromUrl) {
-      setSelectedCategory(categoryFromUrl);
-    }
-  }, [searchFromUrl, categoryFromUrl]);
+    const urlSearch = searchParams.get('search') || '';
+    const urlCategory = searchParams.get('category') || 'all';
+    setSearchQuery((prev) => (prev === urlSearch ? prev : urlSearch));
+    setSelectedCategory((prev) => (prev === urlCategory ? prev : urlCategory));
+  }, [searchParams]);
+
+  // Estado → URL: mudanças nos filtros refletem na URL sem reload, preservando category + search
+  useEffect(() => {
+    const nextSearch = searchQuery.trim();
+    const nextCategory = selectedCategory === 'all' ? '' : selectedCategory;
+    const currentSearch = searchParams.get('search') || '';
+    const currentCategory = searchParams.get('category') || '';
+
+    if (currentSearch === nextSearch && currentCategory === nextCategory) return;
+
+    const params = new URLSearchParams(searchParams);
+    if (nextSearch) params.set('search', nextSearch);
+    else params.delete('search');
+    if (nextCategory) params.set('category', nextCategory);
+    else params.delete('category');
+
+    setSearchParams(params, { replace: true });
+  }, [searchQuery, selectedCategory, searchParams, setSearchParams]);
 
   useEffect(() => {
     const loadWhatsappNumber = async () => {
